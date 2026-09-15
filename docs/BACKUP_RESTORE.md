@@ -4,7 +4,49 @@ FotoArchief must back up PostgreSQL metadata, S3-compatible object storage,
 deployment configuration and required secrets separately. A backup is not a
 recovery control until a restore has been tested.
 
-## What to back up
+## Consistent local-volume backup scripts
+
+On a Linux Docker host, from the application checkout:
+
+```sh
+export COMPOSE_FILE=deploy/compose.yaml
+sh scripts/backup-compose.sh /private/backups/fotoarchief-2026-09-16
+```
+
+The destination must not exist. The script stops the web, worker and scheduler
+services while collecting a custom PostgreSQL dump and the private `storage/app`
+tree. It resumes only services which were previously running, including on an
+error. Stop any additional replicas or external writers yourself first.
+`SHA256SUMS`, `FORMAT` and `VERSION` identify the matching recovery set.
+Protect the backup as a secret: installation state includes the application key
+and database/storage credentials. Copy it encrypted to a second location.
+Checksums detect accidental damage; they do not authenticate untrusted backups.
+
+The automatic volume procedure refuses S3, mixed disks and unassigned legacy
+file locations rather than claiming to have backed up absent originals. Those
+installations need the object-storage snapshot procedure below together with a
+database dump and installation-state backup during the same write-free window.
+Webhosting operators can use their provider's PostgreSQL dump/file backup tools
+with that same consistency requirement; these scripts require Docker Compose.
+
+Restore into a **separate empty stack** using the same image version, database
+name/user/password and private installation hostname (normally `postgres`):
+
+```sh
+export COMPOSE_PROJECT_NAME=fotoarchief-restore
+export APP_HTTP_PORT=8081
+sh scripts/restore-compose.sh /private/backups/fotoarchief-2026-09-16 --confirm-empty-target
+```
+
+The restore verifies checksums, refuses a non-empty database or private storage,
+rejects unsafe archive entries and uses a single-transaction `pg_restore`.
+It does not run `--clean`, erase volumes, regenerate keys or reopen onboarding.
+On failure it leaves application services stopped; investigate before retrying
+in a new empty target. Verify account login, original checksums and previews
+before serving traffic. An existing installation must never be used as a test
+restore destination.
+
+## Backup contents
 
 - PostgreSQL database: authoritative metadata, workflow state, audit events and
   object keys.

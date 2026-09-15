@@ -127,6 +127,10 @@ try {
     copy($source.'/deploy/.env.example', $deploy.'/.env.example');
     copy($source.'/docs/DEPLOYMENT_STACKS.md', $deploy.'/DEPLOYMENT_STACKS.md');
     copy($package.'/BUILD.json', $deploy.'/BUILD.json');
+    mkdir($deploy.'/scripts', 0700);
+    copy($source.'/scripts/backup-compose.sh', $deploy.'/scripts/backup-compose.sh');
+    copy($source.'/scripts/restore-compose.sh', $deploy.'/scripts/restore-compose.sh');
+    copy($source.'/docs/BACKUP_RESTORE.md', $deploy.'/BACKUP_RESTORE.md');
     $names = ["fotoarchief-v{$version}-webhosting.zip", "fotoarchief-v{$version}-deploy.zip"];
     foreach ($names as $name) {
         if (file_exists($output.'/'.$name)) {
