@@ -17,6 +17,41 @@ runtime proof. Both Compose templates pass the Compose parser.
 
 ## Import contract
 
+### Manager-specific procedure
+
+**Komodo:** select the target server/Periphery and create a Compose Stack.
+Use a file/repository stack with `deploy/compose.yaml` as its Compose path, or
+paste the YAML into the UI-managed Compose definition. Set the interpolation
+variables from `deploy/.env.example` in that stack's private environment.
+Review the resolved Compose, then deploy the stack. Do not create three separate
+application deployments: app, worker and scheduler must share the same named
+`app-storage` volume and image.
+
+**Dockhand:** first enable authentication under Settings > Authentication and
+configure the Docker environment. Keep this administrative interface on a LAN
+or VPN; Docker management access is effectively host administrative access.
+Create a stack with the image-only Compose definition and supply its private
+environment variables before deployment. No relative bind-mount paths are used,
+so the application does not depend on Dockhand's own data-directory mapping.
+If a Git-backed stack is used, keep its private environment outside Git.
+
+For both managers, validate the resolved `APP_IMAGE` and port binding before
+deploying. A loaded CI image can be used on that same Docker daemon without
+registry credentials (`fotoarchief-ci:<source-commit>`). For deployment to other
+servers, distribute/load the saved image or publish it to your own registry;
+do not configure automatic pull of a local-only CI tag.
+
+After deployment, open the web service, retrieve the private setup code through
+the app's terminal, connect to `postgres:5432` and complete onboarding. Upload a
+photo, wait for the worker and verify its private preview. Redeploy the same
+stack without deleting volumes and verify that setup stays closed and the photo
+remains. Use the empty-target restore drill before updating an existing archive.
+
+References: [Komodo introduction](https://komo.do/docs/intro) and
+[Dockhand manual](https://dockhand.pro/manual/). UI details vary by manager
+version. These are documented import procedures, **not evidence of a completed
+manager UI acceptance run**; record the exact version and result when run.
+
 Create a Compose stack in Komodo or Dockhand using the contents of
 `deploy/compose.yaml`, or select that path from a repository checkout if the
 manager supports it. Supply the template variables in the manager's Compose
