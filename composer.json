@@ -1,0 +1,68 @@
+{
+  "name": "flux76/fotoarchief",
+  "type": "project",
+  "description": "Laravel modular-monolith MVP foundation for the FotoArchief historical image bank.",
+  "keywords": [
+    "laravel",
+    "archive",
+    "modular-monolith"
+  ],
+  "license": "proprietary",
+  "require": {
+    "php": "~8.5.0",
+    "ext-exif": "*",
+    "ext-fileinfo": "*",
+    "ext-gd": "*",
+    "laravel/framework": "^13.0",
+    "league/flysystem-aws-s3-v3": "^3.0"
+  },
+  "require-dev": {
+    "fakerphp/faker": "^1.24",
+    "larastan/larastan": "^3.0",
+    "laravel/pint": "^1.25",
+    "mockery/mockery": "^1.6",
+    "nunomaduro/collision": "^8.9.5",
+    "pestphp/pest": "^4.0",
+    "pestphp/pest-plugin-laravel": "^4.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/",
+      "Database\\Factories\\": "database/factories/",
+      "Database\\Seeders\\": "database/seeders/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "analyse": "phpstan analyse --configuration=phpstan.neon.dist",
+    "lint": "pint --test",
+    "format": "pint",
+    "test": "pest",
+    "post-autoload-dump": [
+      "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+      "@php artisan package:discover --ansi"
+    ],
+    "post-create-project-cmd": [
+      "@php artisan key:generate --ansi"
+    ]
+  },
+  "extra": {
+    "laravel": {
+      "dont-discover": []
+    }
+  },
+  "config": {
+    "optimize-autoloader": false,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}

@@ -1,0 +1,143 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "8.5"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, intl, zip, gd, exif
+
+      - name: Detect Composer project
+        id: project
+        shell: bash
+        run: |
+          if [[ -f composer.json ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::composer.json is not present yet; Composer quality checks are pending the Laravel scaffold."
+          fi
+
+      - name: Require deterministic dependency lock
+        if: steps.project.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if [[ ! -f composer.lock ]]; then
+            echo "::error::composer.lock must be committed for deterministic dependency installation."
+            exit 1
+          fi
+
+      - name: Validate Composer metadata
+        if: steps.project.outputs.exists == 'true'
+        run: composer validate --strict --no-check-publish
+
+      - name: Install Composer dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Audit locked dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: composer audit --locked --no-interaction
+
+      - name: Detect quality scripts
+        if: steps.project.outputs.exists == 'true'
+        id: scripts
+        shell: bash
+        run: |
+          php -r '
+          $composer = json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR);
+          $scripts = $composer["scripts"] ?? [];
+          foreach (["lint", "analyse", "test"] as $script) {
+              printf("%s=%s\n", $script, array_key_exists($script, $scripts) ? "true" : "false");
+          }
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Check formatting and lint
+        if: steps.scripts.outputs.lint == 'true'
+        run: composer lint
+
+      - name: Static analysis
+        if: steps.scripts.outputs.analyse == 'true'
+        run: composer analyse
+
+      - name: Test
+        if: steps.scripts.outputs.test == 'true'
+        run: composer test
+
+  container:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      APP_IMAGE: fotoarchief-ci:${{ github.sha }}
+      APP_URL: http://localhost:8080
+      DB_PASSWORD: ci-disposable-database
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate stack configuration
+        run: docker compose -f deploy/compose.yaml config --quiet
+      - name: Build production image
+        run: docker build --tag "$APP_IMAGE" .
+      - name: Start HTTP service without configured database or object storage
+        run: docker compose -f deploy/compose.yaml up -d --wait app
+      - name: Validate Apache and PHP
+        run: |
+          docker compose -f deploy/compose.yaml exec -T app apache2ctl -t
+          docker compose -f deploy/compose.yaml exec -T app php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 5 ? 0 : 1);'
+          curl --fail http://localhost:8080/up
+          curl --fail http://localhost:8080/api/status
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/.env)" = 403
+      - name: Verify pending onboarding state and immutable generated key
+        run: |
+          ! docker compose -f deploy/compose.yaml logs app | grep -F 'Private installatiecode:'
+          if docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready; then
+            echo "::error::Fresh container must remain pending until the wizard completes."
+            exit 1
+          fi
+          before="$(docker compose -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          docker compose -f deploy/compose.yaml restart app
+          docker compose -f deploy/compose.yaml up -d --wait app
+          after="$(docker compose -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          test "$before" = "$after"
+          if docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready; then
+            echo "::error::Restart must not mark onboarding complete."
+            exit 1
+          fi
+      - name: Verify restart persistence
+        run: |
+          curl --fail http://localhost:8080/up
+      - name: Collect failure logs
+        if: failure()
+        run: docker compose -f deploy/compose.yaml logs --no-color
+      - name: Stop disposable test stack
+        if: always()
+        run: docker compose -f deploy/compose.yaml down --volumes
