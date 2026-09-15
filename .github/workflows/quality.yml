@@ -103,6 +103,12 @@ jobs:
       DB_PASSWORD: ci-disposable-database
     steps:
       - uses: actions/checkout@v4
+      - name: Set up smoke-test PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          extensions: curl, gd, zip
       - name: Validate stack configuration
         run: docker compose -f deploy/compose.yaml config --quiet
       - name: Build production image
@@ -135,9 +141,67 @@ jobs:
       - name: Verify restart persistence
         run: |
           curl --fail http://localhost:8080/up
+      - name: Start database and workers
+        run: docker compose -f deploy/compose.yaml up -d --wait postgres worker scheduler
+      - name: Accept complete HTTP photo workflow
+        env:
+          SMOKE_SETUP_CODE_FILE: ${{ runner.temp }}/fotoarchief-setup-code
+        run: |
+          umask 077
+          docker compose -f deploy/compose.yaml exec -T app cat storage/app/installation/setup-code.txt > "$SMOKE_SETUP_CODE_FILE"
+          php tests/Smoke/http-onboarding.php
+          rm "$SMOKE_SETUP_CODE_FILE"
+          docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready
+          docker compose -f deploy/compose.yaml restart app worker scheduler
+          docker compose -f deploy/compose.yaml up -d --wait app
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 404
+      - name: Save tested Docker image
+        run: |
+          mkdir -p dist
+          docker save "$APP_IMAGE" | gzip > dist/fotoarchief-docker.tar.gz
+          sha256sum dist/fotoarchief-docker.tar.gz > dist/DOCKER-SHA256SUMS
+      - name: Upload tested image for offline installation
+        uses: actions/upload-artifact@v4
+        with:
+          name: fotoarchief-docker-${{ github.sha }}
+          path: |
+            dist/fotoarchief-docker.tar.gz
+            dist/DOCKER-SHA256SUMS
+          retention-days: 14
       - name: Collect failure logs
         if: failure()
         run: docker compose -f deploy/compose.yaml logs --no-color
       - name: Stop disposable test stack
         if: always()
         run: docker compose -f deploy/compose.yaml down --volumes
+
+  webhosting:
+    name: Production PHP archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, gd, exif, fileinfo, zip
+      - name: Build locked production packages
+        run: php scripts/build-release.php
+      - name: Verify uploadable package without development dependencies
+        run: |
+          mkdir "$RUNNER_TEMP/webhosting"
+          unzip -q dist/*-webhosting.zip -d "$RUNNER_TEMP/webhosting"
+          cd "$RUNNER_TEMP/webhosting"
+          test ! -d vendor/pestphp
+          test ! -f .env
+          test ! -f storage/app/installation/state.json
+          php artisan --version
+          php artisan installation:prepare --quiet-code
+          php artisan route:list --except-vendor > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fotoarchief-php-${{ github.sha }}
+          path: dist/
+          retention-days: 14

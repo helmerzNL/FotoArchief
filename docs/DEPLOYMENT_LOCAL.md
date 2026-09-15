@@ -201,3 +201,18 @@ Create private prefixes or buckets for:
 
 The app stores object keys and checksums in PostgreSQL. It must not depend on
 provider-specific object URLs or store photo binaries in PostgreSQL.
+# Automated distribution acceptance
+
+The pull-request workflow builds the Apache image on Linux and exercises the
+HTTP wizard, real PostgreSQL, login, image upload, a running ingest worker,
+private JPEG delivery, anonymous denial and installation persistence on restart.
+Successful runs retain a loadable `fotoarchief-docker.tar.gz` for 14 days, with
+SHA-256 checksums. Download the artifact, then use `docker load -i
+fotoarchief-docker.tar.gz`; its tag is `fotoarchief-ci:<source-commit>`.
+Use that exact tag as `APP_IMAGE` when testing the image-only stack locally.
+The separate PHP artifact includes Composer production dependencies and does
+not need Composer on the hosting server.
+
+These checks do not establish Komodo/Dockhand UI import acceptance, S3 provider
+compatibility or production readiness. A passing workflow run, not merely the
+presence of a workflow file, is the evidence of a successful image build.
