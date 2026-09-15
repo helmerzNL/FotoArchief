@@ -39,8 +39,20 @@ A verified version tag will identify one source revision and:
 - Checksums, dependency/license notices and release notes including migration,
   backup and operator configuration instructions.
 
-These outputs and their publishing workflow do not exist yet. Build them from
-the same tested commit and dependency lock, not from a developer's working tree.
+Build the PHP and deployment archives from a clean committed checkout using
+`php scripts/build-release.php --composer=/absolute/path/composer.phar`.
+The builder installs only locked production dependencies, retains their licence
+files, adds a dependency-licence inventory and records the exact source commit
+in `BUILD.json`. It rejects tracked modifications and existing output archives.
+Outputs are written to ignored `dist/` (override with `--output=/private/path`).
+ZIP entries are sorted with fixed timestamps and permissions for repeatability;
+Composer and PHP versions must also match when comparing repeated builds.
+The archive contains readable PHP and ready-to-use browser assets. The host
+needs PHP 8.5 with the extensions from Composer, PostgreSQL, writable private
+storage and cron/worker access, but does not need Composer or Node.js.
+Set the hosting document root to `public/`; never expose the package root.
+Container build and deployment acceptance remain separate release gates.
+Build all formats from the same tested commit and dependency lock.
 Keep container registry location configurable; do not embed a private registry
 or a company-specific domain into application behavior.
 
