@@ -67,7 +67,11 @@ afterEach(function (): void {
 
 it('redirects fresh visits to setup and keeps API unavailable while liveness works', function (): void {
     $this->get('/')->assertRedirect('/setup');
-    $this->get('/setup')->assertOk()->assertSee('Installatiecode')->assertDontSee('disposable-db-password');
+    $this->get('/setup')->assertOk()
+        ->assertSee('Installatiecode')
+        ->assertSee('pdo_pgsql')
+        ->assertSee('geen AI-service')
+        ->assertDontSee('disposable-db-password');
     $this->getJson('/api/status')->assertStatus(503);
     $this->get('/up')->assertOk();
     $this->post('/setup/complete', installationInput())->assertForbidden();

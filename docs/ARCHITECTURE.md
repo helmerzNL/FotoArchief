@@ -144,6 +144,23 @@ accessibility, API, integration, E2E, ingest/retry, bulk/import/export,
 backup/restore and performance validation on a representative 50,000-asset
 dataset.
 
+## AI image understanding and semantic search
+
+AI is an optional module, not a prerequisite for onboarding, login, ingest or
+ordinary metadata search. The approved decision gate is documented in
+[AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md): local/organisation-owned
+HTTP AI service first, optional external provider only by explicit opt-in, and
+PostgreSQL with `pgvector` as the first supported vector backend where the
+database host provides that extension. PostgreSQL remains the source of truth;
+AI vectors are derived candidates and never an authorization boundary.
+
+Generated descriptions, tags and visual search embeddings are tied to the
+current primary file version, checksum, provider/model space and embedding
+generation. They cannot automatically update metadata or publication state.
+Admin and public semantic search must reapply existing ownership, rights,
+privacy, publication and soft-delete predicates before returning counts or
+results.
+
 ## Deferred architecture decisions
 
 1. Exact Laravel UI approach (Blade/Livewire/Inertia) after admin workflow
@@ -152,4 +169,6 @@ dataset.
    onboarding currently creates a hashed local-password administrator.
 3. Malware-scanning implementation and allowed archival-format policy.
 4. Secondary backup provider, retention, RPO and RTO.
-5. IIIF server/viewer implementation after MVP demand and source-format review.
+5. Concrete AI provider endpoints, model weights and external processing terms
+   per installation, after the step-39 proof gate passes.
+6. IIIF server/viewer implementation after MVP demand and source-format review.

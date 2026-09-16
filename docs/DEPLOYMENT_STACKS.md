@@ -27,6 +27,15 @@ variables from `deploy/.env.example` in that stack's private environment.
 Review the resolved Compose, then deploy the stack. Do not create three separate
 application deployments: app, worker and scheduler must share the same named
 `app-storage` volume and image.
+The placeholder-only `deploy/komodo-stack.example.toml` mirrors Komodo's
+documented Stack fields (`server`, `run_directory`, `file_paths`,
+`project_name`, `environment`, `poll_for_updates`, `auto_update` and
+`send_alerts`). Copy it into your private Komodo resource configuration, replace
+the server name, public `APP_URL`, proxy settings, image tag/digest and
+PostgreSQL password, then import/deploy it from Komodo. Keep
+`auto_update=false` for FotoArchief release tags; use `poll_for_updates=true`
+only as a visible manager update indicator unless you deliberately operate a
+rolling tag with a tested rollback path.
 
 **Dockhand:** first enable authentication under Settings > Authentication and
 configure the Docker environment. Keep this administrative interface on a LAN
@@ -41,6 +50,15 @@ deploying. A loaded CI image can be used on that same Docker daemon without
 registry credentials (`fotoarchief-ci:<source-commit>`). For deployment to other
 servers, distribute/load the saved image or publish it to your own registry;
 do not configure automatic pull of a local-only CI tag.
+
+For HTTPS behind a reverse proxy, set `APP_URL` to the exact public origin
+including scheme and non-standard port. Set `TRUSTED_PROXIES` to only the
+proxy IP address or CIDR that injects `X-Forwarded-*` headers, and set
+`SESSION_SECURE_COOKIE=true`. Passkeys use the configured `APP_URL` as their
+Relying Party origin and reject a browser ceremony from any other origin.
+`http://localhost` is accepted only for local tests; production passkeys require
+HTTPS. Physical or phone passkey acceptance still requires a real authenticator
+on the final origin and must be recorded separately from automated tests.
 
 After deployment, open the web service, retrieve the private setup code through
 the app's terminal, connect to `postgres:5432` and complete onboarding. Upload a
@@ -76,6 +94,38 @@ Registry credentials belong in the manager's registry configuration if the
 chosen image is private. Select a verified release tag or digest for `APP_IMAGE`;
 do not infer a working image name from an example.
 
+## Optional local AI service
+
+AI is disabled by default. Operators who run their own AI service can add
+`deploy/ai-local-compose.override.example.yaml` as a private Compose override,
+replace `AI_LOCAL_IMAGE` with their own tested image and set
+`COMPOSE_PROFILES=ai-local`. FotoArchief expects that service to expose:
+
+- `GET /v1/capabilities`;
+- `POST /v1/analyze-image`;
+- `POST /v1/embed-image`;
+- `POST /v1/embed-text`.
+
+The capability response must identify `provider_kind=local`, support image
+analysis plus text/image embeddings and prove both embeddings share one model
+space. After configuring the admin AI settings, run:
+
+```sh
+docker compose exec app php artisan ai:probe-local
+```
+
+This probe is not a GPU/runtime endorsement. Record CPU/GPU, latency, model
+license and proof-set relevance evidence as required by
+[AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md). A normal PHP-ZIP host may
+point `AI_LOCAL_ENDPOINT` at an organisation-owned HTTPS service instead of
+running the model beside PHP.
+
+External AI endpoints use the same `/v1/*` adapter contract but require
+separate admin opt-in, public HTTPS, region/retention documentation and a
+non-zero budget. Put `AI_EXTERNAL_API_KEY` only in the manager's private
+environment or secret store. FotoArchief never falls back from the local
+provider to the external provider after a local error.
+
 ## Operator changes
 
 ### Exchange worker recovery
@@ -100,6 +150,42 @@ EXCHANGE_ABANDONED_CLAIM_SECONDS: ${EXCHANGE_ABANDONED_CLAIM_SECONDS:-1800}
 
 No port or volume mapping changes are required. Preserve the existing
 `app-storage` and `postgres-data` volumes and database password.
+
+### Manager update checks
+
+Komodo's update modes apply to the Stack resource. For pinned FotoArchief
+release tags, prefer `poll_for_updates=true` so Komodo shows an available digest
+change without redeploying unexpectedly. Leave `auto_update=false` unless a
+human has accepted the exact backup, migration and restore procedure for a
+rolling tag. Dockhand does not replace FotoArchief's own release gate; update
+the stack's private `APP_IMAGE` value to the tested tag/digest and redeploy
+without deleting volumes.
+
+For either manager, the acceptance evidence is the same as direct Compose:
+the stack is created by the manager, onboarding completes, a photo is processed
+by the worker, a redeploy preserves volumes, and an upgrade run preserves the
+installer lock, administrator, photo files and application key. A Compose parse
+alone is only a template syntax check.
+
+### Safe Compose upgrade helper
+
+For Docker/manager deployments where the operator can run Docker Compose
+commands, use `scripts/upgrade-compose.sh` after updating the stack's private
+`APP_IMAGE` variable to the exact tested release tag or digest:
+
+```bash
+sh scripts/backup-compose.sh /private/fotoarchief-backup-YYYYMMDD
+APP_IMAGE=ghcr.io/helmerznl/fotoarchief:vX.Y.Z \
+  sh scripts/upgrade-compose.sh /private/fotoarchief-backup-YYYYMMDD
+```
+
+The helper refuses to run without a backup directory containing valid
+`SHA256SUMS`, validates the resolved Compose file, stops only worker and
+scheduler services, starts the new web image, checks that installation is still
+complete, runs `php artisan migrate --force`, then restarts workers/scheduler.
+It does not delete volumes, regenerate keys, reopen setup or run
+`docker compose down --volumes`. If any command fails, stopped background
+services are started again so the operator can restore from the verified backup.
 
 ### OCR and exchange settings
 
@@ -131,6 +217,8 @@ change from the PHP development server to Apache, also see
 [DEPLOYMENT_LOCAL.md](DEPLOYMENT_LOCAL.md).
 
 - Set `APP_IMAGE` (no default) to an available image.
+- Set `APP_URL`, `TRUSTED_PROXIES` and `SESSION_SECURE_COOKIE` as described
+  above before registering passkeys.
 - Set `DB_PASSWORD` (no default) once for the PostgreSQL container. Changing
   this variable does not change a password in an existing database; rotation
   requires changing the database role password as well. The app does not receive

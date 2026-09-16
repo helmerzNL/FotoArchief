@@ -16,12 +16,12 @@ After installation, continue with [photo management](PHOTO_WORKFLOW.md),
 
 ## Hosting prerequisites
 
-- PHP 8.5 and production dependencies, including `pdo_pgsql`, OpenSSL,
-  fileinfo, GD with JPEG/PNG/WebP, EXIF, zip (package exports) and the other
-  extensions required by Composer. The wizard checks GD, EXIF, fileinfo and zip
-  before it writes anything and names the missing one in Dutch: an unpacked
-  release never runs Composer, so nothing else would catch a missing extension
-  until a photo failed to process or an export failed to build.
+- PHP 8.5 and production dependencies, including `pdo`, `pdo_pgsql`, OpenSSL,
+  fileinfo, GD with JPEG/PNG/WebP, EXIF, `intl`, `mbstring`, zip (package
+  exports) and the other extensions required by Composer. The wizard checks
+  these before it writes anything and names each missing extension in Dutch: an
+  unpacked release never runs Composer, so nothing else would catch a missing
+  extension until a photo failed to process or an export failed to build.
 - An **empty PostgreSQL database**, already created by the hosting provider
   or the Compose database service. The wizard creates tables, not the server
   or database itself. Its user needs table, index, constraint and function
@@ -36,18 +36,40 @@ After installation, continue with [photo management](PHOTO_WORKFLOW.md),
 - Writable `storage/` and `bootstrap/cache/`; private installation directory
   permissions 0700 and configuration files 0600 on POSIX.
 - HTTPS outside a local test environment. Ensure the web server/framework
-  correctly recognises HTTPS when a trusted reverse proxy terminates TLS.
+  correctly recognises HTTPS when a trusted reverse proxy terminates TLS. Set
+  `APP_URL` to the exact browser origin before enrolling passkeys. Behind a TLS
+  proxy, set `TRUSTED_PROXIES` to the proxy IP/CIDR and
+  `SESSION_SECURE_COOKIE=true`; do not trust arbitrary client-supplied
+  `X-Forwarded-*` headers.
 - Cron for `php artisan schedule:run`, and a queue worker or a bounded
   `php artisan queue:work ingest --stop-when-empty --max-time=50 --tries=3 --timeout=120`
   cron invocation with a process lock after installation. See
   [the worker requirements](PHOTO_WORKFLOW.md#worker-php-webhosting-en-docker).
   Large archives still require appropriately provisioned workers and storage.
+- AI-image recognition and semantic search are disabled by default. The first
+  installer does **not** require a local AI service or external AI provider.
+  Enable those later from the AI configuration screens after reviewing the
+  privacy and cost scope.
 
 The release workflow builds a readable PHP ZIP with locked production
 dependencies. Its extracted application is checked without Composer or
 development dependencies; the same wizard is also accepted against the actual
 Apache container. Consult [release acceptance](RELEASE_ACCEPTANCE.md) and use
 the matching versioned test-release download.
+
+## Worker and scheduler measurement
+
+After onboarding, system diagnostics no longer infer background health from
+configuration alone. The scheduler records a heartbeat every minute through
+`php artisan operations:heartbeat scheduler`; the Docker entrypoint records a
+worker startup heartbeat before `queue:work` or `queue:listen`, and real ingest
+queue events update the worker heartbeat while jobs are processed. Missing or
+stale heartbeats are shown as operational warnings in `/admin/operations/diagnostics`.
+
+On PHP-ZIP hosting, keep the cron/systemd timer for `schedule:run` and the
+ingest worker under the same application user. If only cron-based
+`queue:work --stop-when-empty` is available, expect the worker heartbeat to be
+recent only after a worker invocation or processed job.
 
 ## Ownership code
 
@@ -84,6 +106,8 @@ is accepted only for local testing. WebAuthn challenges expire after five
 minutes, are stored encrypted, and are consumed once. Login starts without an
 email address by using discoverable passkeys, so the server does not reveal
 whether an account exists during challenge creation.
+If `APP_URL` or the public TLS proxy origin changes, old browser passkey
+ceremonies fail by design; configure the final HTTPS origin first.
 
 Recovery codes are a break-glass login path. Generating codes replaces all
 existing codes, displays the new set only once, stores only framework-hashed
@@ -115,6 +139,12 @@ runtime installation settings are applied after the configuration cache loads.
 Keep the same storage volume and key across web, worker and scheduler.
 `INSTALLATION_ENABLED=false` only disables the module in `APP_ENV=testing`;
 it is not an operator shortcut around production setup.
+
+During upgrades, never delete the installation directory, regenerate the app key
+or rerun the wizard. For Docker deployments, create a verified backup first and
+use `scripts/upgrade-compose.sh` or the equivalent manager procedure: drain
+workers, deploy the exact tested image/archive, run migrations once, then resume
+workers and scheduler with the same persistent storage volume.
 
 ## Failure, retry and recovery
 
@@ -156,6 +186,33 @@ The storage probe establishes credential access, not the provider's complete
 bucket policy. Explicitly disable anonymous bucket access at the provider.
 No production image, Komodo import or Dockhand import is claimed until those
 environments have actually passed their acceptance runs.
+
+### Real S3/Hetzner acceptance
+
+The ordinary test suite uses local or fake storage. To prove a real
+S3-compatible provider such as Hetzner Object Storage, create a disposable
+private bucket/prefix and set only placeholder-free local environment variables
+outside git:
+
+```text
+FOTOARCHIEF_TEST_S3_ENDPOINT=https://...
+FOTOARCHIEF_TEST_S3_REGION=...
+FOTOARCHIEF_TEST_S3_BUCKET=...
+FOTOARCHIEF_TEST_S3_ACCESS_KEY=...
+FOTOARCHIEF_TEST_S3_SECRET_KEY=...
+FOTOARCHIEF_TEST_S3_PATH_STYLE=true
+```
+
+Then run:
+
+```text
+php vendor/bin/pest tests/Feature/Operations/S3ProviderAcceptanceTest.php
+```
+
+The test performs the same write/read/delete installation probe, processes a
+real uploaded image through the S3 disk and verifies private originals plus
+derivatives. It also deletes one queued quarantine object to prove that provider
+read failures stay retryable and do not create clean metadata.
 
 ### PostgreSQL regression test
 

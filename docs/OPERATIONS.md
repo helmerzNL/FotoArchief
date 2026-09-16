@@ -20,11 +20,22 @@ deployments, not required before the onboarding wizard.
 - `postgres`: stores authoritative metadata and workflow state.
 - Redis/Valkey: optional external service when selecting Redis-compatible
   queue/cache/session drivers.
+- S3-compatible object storage: recommended for production originals and
+  derivatives. Hetzner Object Storage is supported through the standard S3
+  settings collected by onboarding; provider acceptance requires the opt-in
+  real S3 test described in [ONBOARDING.md](ONBOARDING.md#real-s3hetzner-acceptance).
 
 The first private pipeline is implemented. A running worker alone does not
 prove job completion. Upload a test image and inspect its preview/status.
 See [PHOTO_WORKFLOW.md](PHOTO_WORKFLOW.md) for statuses, host requirements,
 limits, scanning and exact 0.3.0 operator/upgrade instructions.
+
+System diagnostics measure background activity with persisted heartbeats. The
+scheduler writes one every minute from the Laravel schedule. The worker writes a
+startup heartbeat from the container entrypoint and updates the heartbeat again
+when ingest jobs start, finish or fail. A missing heartbeat means activity has
+not been observed by the application; it is not treated as proof that the
+process is healthy.
 
 ## Routine commands
 
@@ -36,7 +47,34 @@ docker compose logs --tail=100 scheduler
 docker compose exec app php artisan about --only=environment
 docker compose exec app php artisan queue:failed
 docker compose exec scheduler php artisan schedule:list
+docker compose exec scheduler php artisan operations:heartbeat scheduler
+docker compose exec scheduler php artisan operations:check-alerts --dry-run
+sh scripts/backup-copy-encrypted.sh /private/backups/latest /offsite/fotoarchief-latest.tar.gz.enc /private/fotoarchief-backup.key
 ```
+
+## Operational alerts
+
+FotoArchief evaluates the same diagnostics used by the operations page through
+`php artisan operations:check-alerts`. The scheduler runs this hourly. Alerts
+are disabled by default; when incidents are found while disabled, the command
+writes a structured warning to the application log instead of calling any
+external service.
+
+Configure a webhook only with an operator-owned endpoint:
+
+```text
+OPERATIONS_ALERTS_ENABLED=true
+OPERATIONS_ALERT_WEBHOOK_URL=https://ops.example.invalid/fotoarchief
+OPERATIONS_ALERT_MINIMUM_SEVERITY=warning
+OPERATIONS_ALERT_FAILED_INGEST_THRESHOLD=5
+OPERATIONS_ALERT_PENDING_INGEST_THRESHOLD=100
+```
+
+The payload contains the application name, environment, timestamp,
+overall status and incident summaries. It does not include credentials, `.env`
+contents, installation state or image metadata. Use `--dry-run` after changing
+thresholds or routing so the payload can be inspected without sending a
+notification.
 
 ## Upload limits
 

@@ -12,6 +12,10 @@ use Throwable;
 
 class SystemDiagnosticsService
 {
+    public function __construct(
+        private readonly SystemHeartbeatService $heartbeats,
+    ) {}
+
     /**
      * @return array<string, mixed>
      */
@@ -24,6 +28,7 @@ class SystemDiagnosticsService
         $limits = $this->getLimitsDiagnostics();
         $scanner = $this->getScannerDiagnostics();
         $worker = $this->getWorkerDiagnostics();
+        $activity = $this->getActivityDiagnostics();
 
         $allOk = $php['status'] === 'ok'
             && $extensions['status'] === 'ok'
@@ -31,7 +36,8 @@ class SystemDiagnosticsService
             && $database['status'] === 'ok'
             && $limits['status'] === 'ok'
             && $scanner['status'] !== 'error'
-            && $worker['status'] === 'ok';
+            && $worker['status'] === 'ok'
+            && $activity['status'] === 'ok';
 
         $hasWarnings = $php['status'] === 'warning'
             || $extensions['status'] === 'warning'
@@ -39,7 +45,8 @@ class SystemDiagnosticsService
             || $database['status'] === 'warning'
             || $limits['status'] === 'warning'
             || $scanner['status'] === 'warning'
-            || $worker['status'] === 'warning';
+            || $worker['status'] === 'warning'
+            || $activity['status'] === 'warning';
 
         $overallStatus = $allOk ? 'healthy' : ($hasWarnings ? 'warning' : 'critical');
 
@@ -53,6 +60,7 @@ class SystemDiagnosticsService
             'limits' => $limits,
             'scanner' => $scanner,
             'worker' => $worker,
+            'activity' => $activity,
         ];
     }
 
@@ -90,6 +98,7 @@ class SystemDiagnosticsService
             'intl' => 'Vereist voor lokalisatie en datumopmaak.',
             'mbstring' => 'Vereist voor UTF-8 tekenreeksverwerking.',
             'openssl' => 'Vereist voor veilige communicatie en sleutelgeneratie.',
+            'zip' => 'Vereist voor exportpakketten en release-acceptatie.',
         ];
 
         $results = [];
@@ -375,6 +384,28 @@ class SystemDiagnosticsService
             'remediation' => $staleClaims > 0
                 ? "Er zijn {$staleClaims} vastgelopen verwerkingstaken gedetecteerd. Controleer worker-processen of herstart verwerking."
                 : ($failedJobs > 0 ? "Er zijn {$failedJobs} mislukte taken. Bekijk het Verwerkingscentrum voor details en herpogingen." : null),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getActivityDiagnostics(): array
+    {
+        $roles = $this->heartbeats->snapshot();
+        $missing = array_keys(array_filter($roles, static fn (array $role): bool => ! $role['seen']));
+        $stale = array_keys(array_filter($roles, static fn (array $role): bool => (bool) $role['stale']));
+
+        $status = $stale === [] ? 'ok' : 'warning';
+
+        return [
+            'status' => $status,
+            'roles' => $roles,
+            'missing_roles' => $missing,
+            'stale_roles' => $stale,
+            'remediation' => $status === 'ok'
+                ? null
+                : 'Laat de scheduler elke minuut lopen en start minstens een ingest-worker; diagnostics gebruikt echte heartbeats in plaats van alleen configuratie.',
         ];
     }
 

@@ -38,10 +38,17 @@ The Quality workflow provides independent jobs for:
   collection filters must meet **700 ms p95**; public detail must meet **400 ms**.
 - Production Apache Docker build, database-free first start, key persistence,
   complete HTTP onboarding/login/upload/worker/private JPEG and anonymous denial.
+- Safe Compose upgrade procedure requires a verified backup, preserves the
+  installer lock and application key, runs forward migrations before background
+  workers resume, and never deletes volumes as an error-recovery shortcut.
 - A digest-pinned Dockhand v1.0.48 on a disposable runner imports the actual
   Compose and environment templates through its documented API. The independently
   created stack must complete the same HTTP onboarding/photo acceptance. This is
   manager API acceptance, not a browser UI walkthrough or Komodo verification.
+- Komodo support is delivered as a placeholder-only Stack template matching the
+  documented Stack fields and update modes. A real Komodo UI/API import remains
+  environment-specific until a disposable Komodo Core/Periphery test target is
+  supplied.
 - Consistent local-volume backup restored to a different Compose project with
   empty volumes/database; the old account, photos and setup lock must survive.
 - PHP/deployment ZIPs from one clean commit and production dependency lock.
@@ -295,10 +302,33 @@ not establish ingest throughput, multi-user concurrency, S3 latency, image
 delivery performance or production Apache latency.
 
 Accessibility review, real passkey authenticator coverage, manager UI imports,
-S3-provider operations, antivirus detection and OCR accuracy need explicit
-evidence appropriate to the capabilities enabled in a deployment. Do not infer
-those results from unit-test fakes or Compose parsing. Record unresolved gates
-in release notes; never label an incomplete validation set production-ready.
+S3-provider operations, antivirus detection, OCR accuracy and AI capability
+proof need explicit evidence appropriate to the capabilities enabled in a
+deployment. Do not infer those results from unit-test fakes, synthetic timings,
+SQLite, caption-only comparisons or Compose parsing. Record unresolved gates in
+release notes; never label an incomplete validation set production-ready.
+
+AI image-content analysis and semantic visual search must follow
+[AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md): approved non-sensitive
+proof images, explicit local and optional external providers, recorded model
+space/dimensions, resource/privacy/cost notes and a verified vector backend
+before adapters are marked production-ready.
+
+The repository smoke `tests/Smoke/ai-search-contract.php` checks the AI search
+implementation shape: text queries must use the same model-space contract as
+image embeddings, candidate ranking stays bounded, staff results pass
+`AssetPolicy`, public results are rebuilt through
+`Publication::publiclyVisible()`, and public/admin forms expose labels/error
+roles. This is a code contract and accessibility markup check, not live provider
+proof or a substitute for browser/assistive-technology review.
+
+For step 49, the isolated PostgreSQL public benchmark was rerun against a fresh
+50,000-record fixture with exactly 45,000 eligible publications. Anonymous
+public text-plus-collection search measured **418.46 ms p95 < 700 ms**, and
+public detail measured **274.60 ms p95 < 400 ms**, each over 40 measured
+samples after five warmups. The benchmark used synthetic metadata and still
+does not prove live AI provider latency, S3 latency or assistive-technology
+coverage.
 
 ## Running the isolated benchmark
 

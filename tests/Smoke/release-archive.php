@@ -7,7 +7,7 @@ $zip = new ZipArchive;
 if ($file === '' || $zip->open($file) !== true) {
     throw new RuntimeException('Supply an existing webhosting release ZIP.');
 }
-$required = ['artisan', 'public/index.php', 'public/app.css', 'public/uploads.js', 'vendor/autoload.php', 'BUILD.json', 'DEPENDENCY-LICENSES.json', 'VERSION'];
+$required = ['artisan', 'public/index.php', 'public/app.css', 'public/uploads.js', 'vendor/autoload.php', 'BUILD.json', 'DEPENDENCY-LICENSES.json', 'VERSION', 'scripts/upgrade-compose.sh'];
 foreach ($required as $name) {
     if ($zip->locateName($name) === false) {
         throw new RuntimeException('Missing release file: '.$name);

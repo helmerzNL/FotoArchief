@@ -1,0 +1,29 @@
+[[stack]]
+name = "fotoarchief"
+
+[stack.config]
+server = "REPLACE_WITH_KOMODO_SERVER"
+run_directory = "/opt/stacks/fotoarchief"
+file_paths = ["compose.yaml"]
+project_name = "fotoarchief"
+poll_for_updates = true
+auto_update = false
+send_alerts = true
+environment = """
+COMPOSE_PROJECT_NAME=fotoarchief
+APP_IMAGE=ghcr.io/helmerznl/fotoarchief:v0.9.39
+APP_URL=https://fotoarchief.example.org
+APP_BIND_ADDRESS=127.0.0.1
+APP_HTTP_PORT=8080
+TRUSTED_PROXIES=127.0.0.1
+SESSION_SECURE_COOKIE=true
+DB_PASSWORD=REPLACE_WITH_PRIVATE_POSTGRES_PASSWORD
+INGEST_SCANNER=none
+CLAMAV_HOST=127.0.0.1
+CLAMAV_PORT=3310
+CLAMAV_TIMEOUT=30
+CACHE_STORE=file
+SESSION_DRIVER=file
+QUEUE_CONNECTION=database
+DB_QUEUE_RETRY_AFTER=180
+"""

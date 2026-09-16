@@ -86,6 +86,38 @@ it('starts passkey login without asking for an email address', function (): void
     expect(WebAuthnChallenge::query()->where('purpose', 'login')->count())->toBe(1);
 });
 
+it('derives passkey origin from the configured public HTTPS origin and rejects mismatches', function (): void {
+    config(['app.url' => 'https://archief.example.org:8443']);
+    $party = app(WebAuthnRelyingParty::class);
+
+    expect($party->rpId())->toBe('archief.example.org')
+        ->and($party->origin())->toBe('https://archief.example.org:8443');
+
+    $party->assertClientDataOrigin(json_encode(['origin' => 'https://archief.example.org:8443'], JSON_THROW_ON_ERROR));
+
+    expect(fn () => $party->assertClientDataOrigin(json_encode(['origin' => 'https://evil.example.org'], JSON_THROW_ON_ERROR)))
+        ->toThrow(InvalidArgumentException::class, 'WebAuthn origin does not match');
+});
+
+it('refuses non-local insecure passkey origins', function (): void {
+    config(['app.url' => 'http://archief.example.org']);
+
+    expect(fn () => app(WebAuthnRelyingParty::class)->origin())
+        ->toThrow(RuntimeException::class, 'valid HTTPS origin');
+});
+
+it('marks session cookies secure when production HTTPS is configured', function (): void {
+    config(['session.secure' => true]);
+    $user = identitySecurityUser('viewer', 'viewer@example.test');
+
+    $response = $this->post('/login', [
+        'email' => $user->email,
+        'password' => 'a-secure-test-password',
+    ]);
+
+    expect(strtolower((string) $response->headers->getCookies()[0]))->toContain('secure');
+});
+
 it('logs in with a verified discoverable passkey without account enumeration', function (): void {
     $user = identitySecurityUser('viewer', 'viewer@example.test');
     $passkey = UserPasskey::query()->create([

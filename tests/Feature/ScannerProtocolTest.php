@@ -33,3 +33,31 @@ it('uses framed INSTREAM bytes and accepts only explicit scanner confirmation', 
     ['INSTREAM size limit exceeded. ERROR', RuntimeException::class],
     ['unexpected: OK', RuntimeException::class],
 ]);
+
+it('accepts clean bytes and blocks EICAR against a real ClamAV daemon', function (): void {
+    $host = getenv('FOTOARCHIEF_TEST_CLAMAV_HOST');
+    $port = (int) (getenv('FOTOARCHIEF_TEST_CLAMAV_PORT') ?: 3310);
+    if (! is_string($host) || $host === '') {
+        $this->markTestSkipped('Set FOTOARCHIEF_TEST_CLAMAV_HOST to run real ClamAV acceptance.');
+    }
+
+    config([
+        'ingest.scanner' => 'clamav',
+        'ingest.clamav_host' => $host,
+        'ingest.clamav_port' => $port,
+        'ingest.clamav_timeout' => 30,
+    ]);
+
+    $clean = tempnam(sys_get_temp_dir(), 'clamav-clean-');
+    $eicar = tempnam(sys_get_temp_dir(), 'clamav-eicar-');
+    file_put_contents($clean, "FotoArchief ClamAV acceptance\n");
+    file_put_contents($eicar, 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*');
+
+    try {
+        expect(app(MalwareScanner::class)->scan($clean))->toBe('clean');
+        expect(fn () => app(MalwareScanner::class)->scan($eicar))->toThrow(ValidationException::class);
+    } finally {
+        unlink($clean);
+        unlink($eicar);
+    }
+});

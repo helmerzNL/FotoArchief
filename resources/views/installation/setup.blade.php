@@ -4,6 +4,11 @@
     <p class="eyebrow">Eerste installatie</p>
     <h1>Een thuis voor je fotoarchief</h1>
     <p class="intro">Verbind een lege PostgreSQL-database, kies private opslag en maak je beheerdersaccount. De wizard wordt na installatie afgesloten.</p>
+    <div class="notice">
+        De installatiecontrole weigert ontbrekende PHP-vereisten zoals <code>pdo_pgsql</code>, <code>gd</code>, <code>exif</code>, <code>fileinfo</code>, <code>intl</code>, <code>mbstring</code>, <code>openssl</code> en <code>zip</code> voordat er gegevens worden geschreven.
+        AI-beeldherkenning en semantisch zoeken staan standaard uit; deze wizard vereist daarom geen AI-service of externe provider.
+        Na installatie toont de systeemdiagnose echte scheduler- en worker-heartbeats.
+    </div>
     <ol class="steps" aria-label="Installatiestappen">
         <li @if(!$authorized) aria-current="step" @endif>1. Toegang bevestigen</li>
         <li @if($authorized) aria-current="step" @endif>2. Verbinden en instellen</li>

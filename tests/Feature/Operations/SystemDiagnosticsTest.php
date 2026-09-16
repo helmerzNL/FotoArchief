@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\ArchiveOperations\Services\SystemDiagnosticsService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function (): void {
     $this->artisan('migrate');
@@ -79,6 +80,7 @@ it('provides json diagnostics payload when requested', function (): void {
         'limits' => ['status', 'php_upload_max_filesize'],
         'scanner' => ['status', 'scanner'],
         'worker' => ['status', 'queue_driver'],
+        'activity' => ['status', 'roles'],
     ]);
 });
 
@@ -90,5 +92,60 @@ it('runs diagnostics service and reports valid structure', function (): void {
     expect($diagnostics['php']['version'])->toBeString();
     expect($diagnostics['extensions']['extensions'])->toBeArray();
     expect($diagnostics['storage']['disks'])->toBeArray();
-    expect($diagnostics['database']['connected'])->toBeTrue();
+    expect($diagnostics['database']['connected'])->toBeTrue()
+        ->and($diagnostics['activity']['roles'])->toHaveKeys(['worker', 'scheduler']);
+});
+
+it('records scheduler and worker heartbeats for diagnostics', function (): void {
+    expect($this->artisan('operations:heartbeat', ['role' => 'scheduler'])->run())->toBe(0)
+        ->and($this->artisan('operations:heartbeat', ['role' => 'worker', '--state' => 'starting'])->run())->toBe(0);
+
+    $diagnostics = app(SystemDiagnosticsService::class)->getAllDiagnostics();
+
+    expect($diagnostics['activity']['status'])->toBe('ok')
+        ->and($diagnostics['activity']['roles']['scheduler']['seen'])->toBeTrue()
+        ->and($diagnostics['activity']['roles']['scheduler']['stale'])->toBeFalse()
+        ->and($diagnostics['activity']['roles']['worker']['state'])->toBe('starting');
+});
+
+it('sends configured operational alert webhooks without leaking secrets', function (): void {
+    Http::fake([
+        'https://ops.example.test/fotoarchief' => Http::response(['ok' => true], 202),
+    ]);
+    config([
+        'operations.alerts.enabled' => true,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'operations.alerts.minimum_severity' => 'critical',
+        'ingest.scanner' => 'clamav',
+        'ingest.clamav_host' => '127.0.0.1',
+        'ingest.clamav_port' => 9,
+        'ingest.clamav_timeout' => 1,
+    ]);
+
+    $this->artisan('operations:check-alerts')->assertExitCode(0);
+
+    Http::assertSent(function ($request): bool {
+        $payload = $request->data();
+
+        return $request->url() === 'https://ops.example.test/fotoarchief'
+            && ($payload['application'] ?? null) === config('app.name')
+            && collect($payload['incidents'] ?? [])->contains(
+                fn (array $incident): bool => $incident['key'] === 'scanner'
+                    && $incident['severity'] === 'critical'
+            )
+            && ! str_contains(json_encode($payload, JSON_THROW_ON_ERROR), 'secret12345');
+    });
+});
+
+it('dry-runs operational alerts without calling the webhook', function (): void {
+    Http::fake();
+    config([
+        'operations.alerts.enabled' => true,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'ingest.scanner' => 'none',
+    ]);
+
+    $this->artisan('operations:check-alerts', ['--dry-run' => true])->assertExitCode(0);
+
+    Http::assertNothingSent();
 });

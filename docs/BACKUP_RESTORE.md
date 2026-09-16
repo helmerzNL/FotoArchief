@@ -73,6 +73,46 @@ restore destination.
 Keep at least one backup copy outside the primary VPS and outside the active
 object-storage location.
 
+## Encrypted second location
+
+After creating a consistent local or S3/object-storage backup set, copy it to a
+second location only in encrypted form. The helper below wraps an existing
+backup directory in an AES-256-CBC archive with PBKDF2-SHA256, records the
+encrypted checksum and keeps the original backup's `FORMAT`, `VERSION` and
+`SHA256SUMS` inside the encrypted payload:
+
+```sh
+printf '%s\n' 'a long random secret from your password manager' > /private/fotoarchief-backup.key
+chmod 600 /private/fotoarchief-backup.key
+sh scripts/backup-copy-encrypted.sh \
+  /private/backups/fotoarchief-2026-09-16 \
+  /offsite/fotoarchief-2026-09-16.tar.gz.enc \
+  /private/fotoarchief-backup.key
+```
+
+Restore the encrypted copy into a new empty directory before using the normal
+Compose restore helper:
+
+```sh
+sh scripts/backup-restore-encrypted-copy.sh \
+  /offsite/fotoarchief-2026-09-16.tar.gz.enc \
+  /private/restored-backups/fotoarchief-2026-09-16 \
+  /private/fotoarchief-backup.key
+sh scripts/restore-compose.sh /private/restored-backups/fotoarchief-2026-09-16 --confirm-empty-target
+```
+
+The restore helper verifies the encrypted checksum before decrypting, refuses
+unsafe archive entries, extracts into a new directory only and rechecks the
+backup's own `SHA256SUMS`. Store the key outside the application server and
+rotate it under change control. Losing the key makes the second copy unusable;
+storing it beside the copy removes most of the protection.
+
+Use retention at the destination, not by overwriting backup files. Keep enough
+generations to cover accidental deletion and delayed ransomware discovery. For
+S3-based archives, the second location must include the database dump,
+`storage/app/installation`, deployment config and the object-storage snapshot or
+sync result for originals and retained derivatives.
+
 ## Database backup
 
 Example local PostgreSQL dump into the persistent `postgres-backups` volume:

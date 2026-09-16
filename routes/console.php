@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Services\ExternalAiProvider;
+use App\Modules\Ai\Services\LocalAiProvider;
+use App\Modules\ArchiveOperations\Services\OperationalAlertService;
+use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
 use App\Modules\Installation\InstallationStore;
@@ -53,5 +57,50 @@ Artisan::command('exchange:recover-imports', function (MetadataImportService $im
     return 0;
 })->purpose('Release metadata imports abandoned by a stopped worker');
 
+Artisan::command('operations:heartbeat {role : worker or scheduler} {--state=ok : State label stored with the heartbeat}', function (SystemHeartbeatService $heartbeats): int {
+    $role = (string) $this->argument('role');
+    if (! in_array($role, ['worker', 'scheduler'], true)) {
+        $this->error('Rol moet worker of scheduler zijn.');
+
+        return 1;
+    }
+
+    $heartbeats->record($role, (string) $this->option('state'), [
+        'command' => 'operations:heartbeat',
+        'sapi' => PHP_SAPI,
+    ]);
+    $this->info("Heartbeat opgeslagen voor {$role}.");
+
+    return 0;
+})->purpose('Record an operational heartbeat for diagnostics');
+
+Artisan::command('operations:check-alerts {--dry-run : Evaluate alert payload without sending}', function (OperationalAlertService $alerts): int {
+    $result = $alerts->evaluate((bool) $this->option('dry-run'));
+    $incidentCount = count($result['payload']['incidents'] ?? []);
+    $this->info("Operationele meldingen gecontroleerd: {$incidentCount} incident(en), reden: {$result['reason']}.");
+
+    return 0;
+})->purpose('Evaluate diagnostics and send configured operational alerts');
+
+Artisan::command('ai:probe-local', function (LocalAiProvider $provider): int {
+    $capabilities = $provider->probe();
+    $this->info('Lokale AI-provider bereikbaar.');
+    $this->line('Modelruimte: '.(string) ($capabilities['model_space'] ?? 'onbekend'));
+    $this->line('Dimensies: '.(string) ($capabilities['dimensions'] ?? 'onbekend'));
+
+    return 0;
+})->purpose('Probe the explicitly configured local or organisation-owned AI service');
+
+Artisan::command('ai:probe-external', function (ExternalAiProvider $provider): int {
+    $capabilities = $provider->probe();
+    $this->info('Externe AI-provider bereikbaar met expliciete toestemming en budget.');
+    $this->line('Modelruimte: '.(string) ($capabilities['model_space'] ?? 'onbekend'));
+    $this->line('Dimensies: '.(string) ($capabilities['dimensions'] ?? 'onbekend'));
+
+    return 0;
+})->purpose('Probe the explicitly configured external AI service');
+
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();
+Schedule::command('operations:check-alerts')->hourly()->withoutOverlapping();

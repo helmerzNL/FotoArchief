@@ -93,7 +93,7 @@ try {
     $package = $temporary.'/webhosting';
     mkdir($package, 0700);
     $allowed = ['app', 'bootstrap', 'config', 'database', 'public', 'resources', 'routes', 'storage', 'docs'];
-    $allowedFiles = ['artisan', 'composer.json', 'composer.lock', 'VERSION', 'README.md', '.env.example', 'LICENSE'];
+    $allowedFiles = ['artisan', 'composer.json', 'composer.lock', 'VERSION', 'README.md', '.env.example', 'LICENSE', 'scripts/upgrade-compose.sh'];
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS));
     foreach ($iterator as $entry) {
         $relative = str_replace('\\', '/', substr($entry->getPathname(), strlen($source) + 1));

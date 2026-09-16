@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Controllers\AiSemanticSearchController;
+use App\Modules\Ai\Controllers\AiSettingsController;
+use App\Modules\Ai\Controllers\AiSuggestionReviewController;
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
@@ -17,6 +20,14 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+    Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
+    Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
+    Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
+    Route::post('/ai/index', [AiSettingsController::class, 'dispatchIndex'])->name('ai.index');
+    Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
+    Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
+    Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
+    Route::post('/ai/suggestions/{suggestion}/reject', [AiSuggestionReviewController::class, 'reject'])->name('ai.suggestions.reject');
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');

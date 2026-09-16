@@ -101,7 +101,10 @@ De Compose-worker gebruikt al expliciet bovenstaande ingestverbinding.
 niet als schoon. `INGEST_SCANNER=clamav` gebruikt ClamAV's TCP INSTREAM-protocol,
 met een timeout van 30 seconden. Stel `CLAMAV_HOST` en `CLAMAV_PORT` in op een
 bereikbare private daemon; loopback `127.0.0.1:3310` verwijst in Docker naar de
-eigen container. De Compose-stack bevat zelf geen ClamAV-service.
+eigen container. De Compose-stack bevat een optionele ClamAV-service achter het
+profiel `clamav`; zet dan `COMPOSE_PROFILES=clamav`, `INGEST_SCANNER=clamav` en
+`CLAMAV_HOST=clamav`. Zonder dat profiel blijft de applicatie bewust
+ongescand en claimt zij nooit dat bestanden schoon zijn.
 
 Gebruik uitsluitend een afgeschermd netwerk voor dit niet-geauthenticeerde
 protocol. Configureer de daemon voor minstens 104857600 bytes per stream en
@@ -109,6 +112,10 @@ zorg voor actuele signatures. Een onbereikbare scanner of ongeldige respons
 blokkeert verwerking en leidt tot herpogingen; er is geen fallback naar schoon.
 Een schone scan geeft **nooit** publicatietoestemming. `publishable_at` blijft
 leeg en alle previews worden via geautoriseerde, niet-cachebare routes geleverd.
+De Linux-releaseacceptatie start de optionele ClamAV-container, verwerkt een
+schoon testbeeld via de echte worker en controleert dat EICAR door dezelfde
+runtime wordt geweigerd. Lokale ontwikkeltests slaan die echte daemoncontrole
+over tenzij `FOTOARCHIEF_TEST_CLAMAV_HOST` is gezet.
 
 ## Limieten
 

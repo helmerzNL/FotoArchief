@@ -9,6 +9,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +22,19 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->append(InstallationGate::class);
         $middleware->web(append: [EnsureActiveUserSession::class]);
         $middleware->redirectGuestsTo('/login');
+        $trustedProxies = array_values(array_filter(array_map(
+            static fn (string $proxy): string => trim($proxy),
+            explode(',', (string) env('TRUSTED_PROXIES', '')),
+        )));
+        if ($trustedProxies !== []) {
+            $middleware->trustProxies(
+                at: $trustedProxies === ['*'] ? '*' : $trustedProxies,
+                headers: Request::HEADER_X_FORWARDED_FOR
+                    | Request::HEADER_X_FORWARDED_HOST
+                    | Request::HEADER_X_FORWARDED_PORT
+                    | Request::HEADER_X_FORWARDED_PROTO,
+            );
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->dontFlash(['code', 'db_password', 'secret_key', 'access_key']);

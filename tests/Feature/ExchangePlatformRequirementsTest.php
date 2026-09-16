@@ -10,6 +10,7 @@ it('names zip among the extensions onboarding refuses to install without', funct
     // place that can still tell the operator before the archive is in use.
     expect(array_keys(InstallationPlatform::REQUIRED))
         ->toContain('zip')
+        ->toContain('pdo_pgsql')
         ->toContain('gd')
         ->toContain('exif')
         ->toContain('fileinfo');
@@ -33,5 +34,6 @@ it('reports every missing extension in Dutch instead of failing later', function
     // The suite cannot run without these, so the message itself is asserted
     // rather than simulated by unloading an extension.
     expect($missing)->toBe([]);
-    expect(InstallationPlatform::REQUIRED['zip'])->toContain('exportpakketten');
+    expect(InstallationPlatform::REQUIRED['zip'])->toContain('exportpakketten')
+        ->and(InstallationPlatform::REQUIRED['pdo_pgsql'])->toContain('PostgreSQL');
 });
