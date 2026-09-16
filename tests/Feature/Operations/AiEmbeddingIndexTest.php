@@ -40,6 +40,13 @@ beforeEach(function (): void {
         'created_by_user_id' => $this->user->id,
     ])->fresh();
     Storage::disk('local')->put('originals/index-ai.jpg', 'image-index-bytes');
+    $image = imagecreatetruecolor(800, 600);
+    imagefill($image, 0, 0, 0xAABBCC);
+    ob_start();
+    imagejpeg($image, null, 90);
+    $derivative = ob_get_clean();
+    imagedestroy($image);
+    Storage::disk('local')->put('derivatives/index-ai-preview-1200.jpg', $derivative);
     $this->file = AssetFile::query()->create([
         'asset_id' => $this->asset->id,
         'storage_disk' => 'local',
@@ -49,6 +56,7 @@ beforeEach(function (): void {
         'byte_size' => 12345,
         'ingest_status' => 'ready_private',
         'scanner_status' => 'clean',
+        'derivatives' => ['preview1200' => 'derivatives/index-ai-preview-1200.jpg'],
         'is_primary' => true,
     ]);
 

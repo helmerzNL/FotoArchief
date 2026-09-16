@@ -917,6 +917,76 @@
             "batch": "ai"
         },
         {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 52,
+            "kind": "php_string",
+            "text": "De metadata-arme AI-afgeleide ontbreekt.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 57,
+            "kind": "php_string",
+            "text": "De metadata-arme AI-afgeleide kon niet worden gelezen.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 67,
+            "kind": "php_string",
+            "text": "De metadata-arme AI-afgeleide kon niet veilig worden gedecodeerd.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 80,
+            "kind": "php_string",
+            "text": "Geheugen voor de AI-afgeleide kon niet worden gereserveerd.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 90,
+            "kind": "php_string",
+            "text": "De AI-afgeleide kon niet als JPEG worden gecodeerd.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 98,
+            "kind": "php_string",
+            "text": "De gecodeerde AI-afgeleide is niet beschikbaar.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 107,
+            "kind": "php_string",
+            "text": "Het primaire bestand is niet malwaregescand. Activeer eerst ClamAV; probeer de AI-taak daarna opnieuw om het bestand veilig te hercontroleren.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 112,
+            "kind": "php_string",
+            "text": "Tijdelijke opslag voor de malwarecontrole kon niet worden aangemaakt.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 117,
+            "kind": "php_string",
+            "text": "Het bestand kon niet voor de malwarecontrole worden klaargezet.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiSourceImageService.php",
+            "line": 120,
+            "kind": "php_string",
+            "text": "De malwarecontrole heeft het bestand niet als schoon vrijgegeven.",
+            "batch": "ai"
+        },
+        {
             "file": "app/Modules/Ai/Services/AiSuggestionReviewService.php",
             "line": 38,
             "kind": "php_string",

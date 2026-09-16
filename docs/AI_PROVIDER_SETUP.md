@@ -31,6 +31,12 @@ API-sleutels, modellen, kosten en maandbudgetten.
    externe doorgifte. Het gebruikte model komt uit het providerrecord.
 6. Gebruik **Verbinding testen** voordat u betaalde verwerking start.
 
+AI verwerkt alleen primaire bestanden die de malwarecontrole als schoon heeft
+vrijgegeven. Bij een bestaand `unscanned` bestand voert een AI-taak automatisch
+een nieuwe controle uit wanneer ClamAV actief is. Is `INGEST_SCANNER=none`, dan
+stopt de taak met een concrete melding; activeer ClamAV en probeer de taak
+daarna opnieuw.
+
 AI-verwerking gebruikt alleen gevalideerde afgeleiden van maximaal 1024 pixels
 zonder ingebedde metadata. Beeldanalyse maakt uitsluitend suggesties; metadata
 wijzigt pas na menselijke acceptatie. Publieke semantische zoekopdrachten blijven
@@ -86,6 +92,11 @@ runtime source for provider state, API keys, models, costs, and monthly budgets.
 5. Select a provider per capability and explicitly consent to external data
    transfer. The provider record supplies the model.
 6. Use **Test connection** before starting billable processing.
+
+AI processes only primary files that passed malware scanning as clean. For an
+existing `unscanned` file, an AI job automatically performs a new scan when
+ClamAV is active. If `INGEST_SCANNER=none`, the job stops with an explicit
+message; enable ClamAV and retry the job.
 
 AI processing uses only validated derivatives up to 1024 pixels with embedded
 metadata removed. Image analysis creates suggestions only; metadata changes
