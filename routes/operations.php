@@ -7,6 +7,7 @@ use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
+use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
@@ -38,5 +39,12 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
         Route::post('/run', [IntegrityCheckController::class, 'runCheck'])->name('run');
         Route::post('/rebuild-all', [IntegrityCheckController::class, 'rebuildAll'])->name('rebuildAll');
         Route::post('/{file}/rebuild', [IntegrityCheckController::class, 'rebuild'])->name('rebuild');
+    });
+
+    Route::prefix('storage-migration')->name('storage.')->group(function (): void {
+        Route::get('/', [StorageMigrationController::class, 'index'])->name('index');
+        Route::post('/start', [StorageMigrationController::class, 'start'])->name('start');
+        Route::post('/{migration}/cutover', [StorageMigrationController::class, 'cutover'])->name('cutover');
+        Route::post('/{migration}/cleanup', [StorageMigrationController::class, 'cleanup'])->name('cleanup');
     });
 });
