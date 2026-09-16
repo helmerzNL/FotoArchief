@@ -106,6 +106,16 @@ the immediate running-state assertion raced startup. Acceptance now waits up to
 180 seconds for every required service and HTTP liveness, with manager and stack
 diagnostics on failure. It never substitutes a CLI deployment for manager import.
 
+The final operations integration passes **332 tests / 2303 assertions**
+(eight explicit environment skips), whole Pint and Larastan locally.
+Maintenance claim reclaim is 150 seconds, between the 120-second deadline and
+180-second queue visibility. Chunks cover up to 62,500 items per run; exceeding
+the bound fails explicitly with a resumable cursor, rather than reporting success.
+Storage copy also has a 256 MB byte budget and verified-relocation retry guards.
+The production image now exposes a synthetic queued OCR acceptance command;
+CI enables OCR for its disposable worker and verifies actual Dutch/English
+recognition plus the complete database-queue-to-extracted-text path.
+
 Revision `335af19`: **312 tests / 2243 assertions pass**, eight explicit
 environment-gated skips. The real PostgreSQL active-file test separately passes
 **1 test / 11 assertions**; the four real Operations/Portal integration tests
