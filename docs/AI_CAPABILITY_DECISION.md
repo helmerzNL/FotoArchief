@@ -102,8 +102,10 @@ These are implementation defaults until a later measured proof tightens them:
   separation and a kill switch. The implemented administration settings keep AI
   off by default, store no provider secrets, require separate local/external
   opt-ins and reject external localhost/private-network endpoints.
-- Step 41 must persist run status, source file version/checksum, model space,
-  suggestion review state and embedding generation id.
+- Step 41 persists run status, source asset lock version, source file checksum,
+  model space, suggestion review state and embedding generation id in dedicated
+  AI tables. Jobs must compare their stored source snapshot with the current
+  primary file before writing suggestions or embeddings.
 - Steps 42 and 43 must implement local and external adapters behind the same
   contracts with no automatic cross-provider fallback.
 - Step 46 must index real multimodal image embeddings; captions alone are not a

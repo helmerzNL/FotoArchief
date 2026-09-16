@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalogue\Models;
 
+use App\Modules\Ai\Models\AiEmbedding;
+use App\Modules\Ai\Models\AiRun;
+use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ingest\Models\ProcessingJob;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -56,5 +59,23 @@ class AssetFile extends CatalogueModel
     public function processingJobs(): HasMany
     {
         return $this->hasMany(ProcessingJob::class);
+    }
+
+    /** @return HasMany<AiRun, $this> */
+    public function aiRuns(): HasMany
+    {
+        return $this->hasMany(AiRun::class);
+    }
+
+    /** @return HasMany<AiSuggestion, $this> */
+    public function aiSuggestions(): HasMany
+    {
+        return $this->hasMany(AiSuggestion::class);
+    }
+
+    /** @return HasMany<AiEmbedding, $this> */
+    public function aiEmbeddings(): HasMany
+    {
+        return $this->hasMany(AiEmbedding::class);
     }
 }
