@@ -29,6 +29,8 @@ jobs:
         run: |
           test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
           git merge-base --is-ancestor HEAD origin/main
+          latest_tag="$(git tag --merged origin/main --list 'v*' --sort=-v:refname | head -n 1)"
+          test "$GITHUB_REF_NAME" = "$latest_tag"
       - uses: actions/download-artifact@v4
         with:
           name: fotoarchief-php-${{ github.sha }}
@@ -48,12 +50,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           docker load -i dist/fotoarchief-docker.tar.gz
-          image="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_REF_NAME"
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          image="$repository:$GITHUB_REF_NAME"
+          latest_image="$repository:latest"
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker tag "fotoarchief-ci:$GITHUB_SHA" "$image"
           docker push "$image"
+          docker tag "fotoarchief-ci:$GITHUB_SHA" "$latest_image"
+          docker push "$latest_image"
           docker inspect --format '{{index .RepoDigests 0}}' "$image" > dist/IMAGE-DIGEST.txt
           printf 'APP_IMAGE=%s\n' "$image" > dist/IMAGE.txt
+          printf 'APP_IMAGE=%s\n' "$latest_image" > dist/IMAGE-LATEST.txt
           docker logout ghcr.io
       - name: Create persistent test release
         shell: bash
@@ -67,12 +74,15 @@ jobs:
           een Compose-deploymentarchief en de Docker-image die door deze workflow
           is geaccepteerd. Dit is geen certificering van productierijpheid.
 
-          Download IMAGE.txt en IMAGE-DIGEST.txt voor de registrytag en immutable
-          digest. U kunt ook fotoarchief-docker.tar.gz laden met docker load en de
-          APP_IMAGE-waarde uit IMAGE-LOCAL.txt gebruiken; registrycredentials zijn
-          dan niet nodig. De PHP-host vereist PHP 8.5, PostgreSQL, de vereiste
-          extensies en cron/workers. Stel de document root in op public/. Composer
-          is niet nodig op de host.
+          Download IMAGE.txt en IMAGE-DIGEST.txt voor de onveranderlijke
+          versie-tag en digest. IMAGE-LATEST.txt verwijst naar de rolling :latest-tag,
+          die bij iedere geslaagde hoogste SemVer-release naar hetzelfde image wordt
+          bijgewerkt. Gebruik voor reproduceerbare deployments bij voorkeur de
+          versie-tag of digest. U kunt ook fotoarchief-docker.tar.gz laden met
+          docker load en de APP_IMAGE-waarde uit IMAGE-LOCAL.txt gebruiken;
+          registrycredentials zijn dan niet nodig. De PHP-host vereist PHP 8.5,
+          PostgreSQL, de vereiste extensies en cron/workers. Stel de document root
+          in op public/. Composer is niet nodig op de host.
 
           Operatorwijzigingen: stel APP_IMAGE in op de meegeleverde tag of digest.
           Laat DB_PASSWORD voor bestaande volumes ongewijzigd. Behoud app-storage
@@ -92,12 +102,14 @@ jobs:
           a Compose deployment archive and the Docker image accepted by this
           workflow. This is not a production-readiness certification.
 
-          Download IMAGE.txt and IMAGE-DIGEST.txt for the registry tag and immutable
-          digest. Alternatively, load fotoarchief-docker.tar.gz with docker load and
-          use the APP_IMAGE value from IMAGE-LOCAL.txt; no registry credentials are
-          required. The PHP host requires PHP 8.5, PostgreSQL, the required extensions
-          and cron/workers. Set its document root to public/. Composer is not needed
-          on the host.
+          Download IMAGE.txt and IMAGE-DIGEST.txt for the immutable version tag and
+          digest. IMAGE-LATEST.txt references the rolling :latest tag, which is
+          updated to the same image by every successful highest SemVer release. Prefer
+          the version tag or digest for reproducible deployments. Alternatively,
+          load fotoarchief-docker.tar.gz with docker load and use the APP_IMAGE value
+          from IMAGE-LOCAL.txt; no registry credentials are required. The PHP host
+          requires PHP 8.5, PostgreSQL, the required extensions and cron/workers.
+          Set its document root to public/. Composer is not needed on the host.
 
           Operator changes: set APP_IMAGE to the supplied tag or digest. Keep
           DB_PASSWORD unchanged for existing volumes. Preserve app-storage and
