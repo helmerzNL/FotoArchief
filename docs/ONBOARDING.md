@@ -187,6 +187,33 @@ bucket policy. Explicitly disable anonymous bucket access at the provider.
 No production image, Komodo import or Dockhand import is claimed until those
 environments have actually passed their acceptance runs.
 
+### Real S3/Hetzner acceptance
+
+The ordinary test suite uses local or fake storage. To prove a real
+S3-compatible provider such as Hetzner Object Storage, create a disposable
+private bucket/prefix and set only placeholder-free local environment variables
+outside git:
+
+```text
+FOTOARCHIEF_TEST_S3_ENDPOINT=https://...
+FOTOARCHIEF_TEST_S3_REGION=...
+FOTOARCHIEF_TEST_S3_BUCKET=...
+FOTOARCHIEF_TEST_S3_ACCESS_KEY=...
+FOTOARCHIEF_TEST_S3_SECRET_KEY=...
+FOTOARCHIEF_TEST_S3_PATH_STYLE=true
+```
+
+Then run:
+
+```text
+php vendor/bin/pest tests/Feature/Operations/S3ProviderAcceptanceTest.php
+```
+
+The test performs the same write/read/delete installation probe, processes a
+real uploaded image through the S3 disk and verifies private originals plus
+derivatives. It also deletes one queued quarantine object to prove that provider
+read failures stay retryable and do not create clean metadata.
+
 ### PostgreSQL regression test
 
 `tests/Feature/PostgresInstallationTest.php` is opt-in. Supply

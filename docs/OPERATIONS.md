@@ -20,6 +20,10 @@ deployments, not required before the onboarding wizard.
 - `postgres`: stores authoritative metadata and workflow state.
 - Redis/Valkey: optional external service when selecting Redis-compatible
   queue/cache/session drivers.
+- S3-compatible object storage: recommended for production originals and
+  derivatives. Hetzner Object Storage is supported through the standard S3
+  settings collected by onboarding; provider acceptance requires the opt-in
+  real S3 test described in [ONBOARDING.md](ONBOARDING.md#real-s3hetzner-acceptance).
 
 The first private pipeline is implemented. A running worker alone does not
 prove job completion. Upload a test image and inspect its preview/status.
