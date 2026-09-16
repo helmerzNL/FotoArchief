@@ -38,5 +38,27 @@
         </ul>
     </section>
 
+    <section class="card">
+        <h2>Correctie of naam doorgeven</h2>
+        <p class="intro">Herken je iets op deze foto, of klopt er iets niet? Laat het ons weten. Een medewerker beoordeelt elke suggestie voordat er iets wijzigt.</p>
+        <form method="post" action="{{ route('public.photo.suggest', $publication) }}">
+            @csrf
+            <label>Type
+                <select name="suggestion_type" required>
+                    <option value="identification">Ik herken iets of iemand</option>
+                    <option value="correction">Er klopt iets niet</option>
+                </select>
+            </label>
+            <label>Je bericht <textarea name="message" required minlength="5" maxlength="2000"></textarea></label>
+            <label>Je naam (optioneel) <input type="text" name="submitter_name" maxlength="200"></label>
+            <label>Je e-mailadres (optioneel) <input type="email" name="submitter_email" maxlength="255"></label>
+            <div class="honeypot" aria-hidden="true">
+                <label for="website">Laat dit veld leeg</label>
+                <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+            <button type="submit">Versturen</button>
+        </form>
+    </section>
+
     <script src="/viewer.js" defer></script>
 @endsection

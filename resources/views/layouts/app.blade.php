@@ -17,6 +17,7 @@
             <a href="{{ route('catalogue.index') }}">Catalogus</a>
             <a href="{{ route('exchange.index') }}">Uitwisseling</a>
             <a href="{{ route('admin.publications.index') }}">Publicatie</a>
+            <a href="{{ route('admin.suggestions.index') }}">Suggesties</a>
             <a href="{{ route('identity.security.show') }}">Beveiliging</a>
             @can('users.manage')
                 <a href="{{ route('identity.users.index') }}">Identiteit</a>

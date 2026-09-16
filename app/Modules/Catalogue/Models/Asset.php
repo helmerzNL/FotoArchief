@@ -7,6 +7,7 @@ namespace App\Modules\Catalogue\Models;
 use App\Models\User;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use App\Modules\Publication\Models\AssetSuggestion;
 use App\Modules\Publication\Models\Publication;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -140,5 +141,13 @@ class Asset extends CatalogueModel
     public function publication(): HasOne
     {
         return $this->hasOne(Publication::class);
+    }
+
+    /**
+     * @return HasMany<AssetSuggestion, $this>
+     */
+    public function suggestions(): HasMany
+    {
+        return $this->hasMany(AssetSuggestion::class);
     }
 }
