@@ -25,6 +25,8 @@
             <dd>Verwijderde dossiers terugzetten of definitief opruimen.</dd>
             <dt>OCR-tekst</dt>
             <dd>Machinaal gelezen tekst bekijken, corrigeren en doorzoeken.</dd>
+            <dt>AI-instellingen</dt>
+            <dd>Optionele beeldanalyse en semantisch zoeken expliciet aanzetten, begrenzen of met de noodstop blokkeren.</dd>
             <dt>Achtergrondtaken</dt>
             <dd>De voortgang, fouten en herstart van zware bewerkingen.</dd>
         </dl>

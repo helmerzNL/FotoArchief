@@ -10,6 +10,7 @@
 @php
     $operationsNavItems = [
         ['route' => 'admin.operations.diagnostics', 'pattern' => 'admin.operations.diagnostics', 'label' => 'Diagnose', 'abilities' => ['users.manage', 'audit.view']],
+        ['route' => 'admin.operations.ai.edit', 'pattern' => 'admin.operations.ai.*', 'label' => 'AI-instellingen', 'abilities' => ['users.manage']],
         ['route' => 'admin.operations.duplicates.index', 'pattern' => 'admin.operations.duplicates.*', 'label' => 'Duplicaten', 'abilities' => ['assets.update', 'catalogue.manage']],
         ['route' => 'admin.operations.processing.index', 'pattern' => 'admin.operations.processing.*', 'label' => 'Verwerking', 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],
         ['route' => 'admin.operations.integrity.index', 'pattern' => 'admin.operations.integrity.*', 'label' => 'Integriteit', 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],

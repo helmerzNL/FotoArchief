@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-use App\Modules\DataExchange\Services\DataExportService;
-use App\Modules\DataExchange\Services\MetadataImportService;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
+use App\Modules\DataExchange\Services\DataExportService;
+use App\Modules\DataExchange\Services\MetadataImportService;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;

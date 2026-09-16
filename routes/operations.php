@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Controllers\AiSettingsController;
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+    Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
+    Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');

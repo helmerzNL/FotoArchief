@@ -99,7 +99,9 @@ These are implementation defaults until a later measured proof tightens them:
 ## Implementation consequences
 
 - Step 40 must expose explicit configuration, budget limits, provider
-  separation and a kill switch.
+  separation and a kill switch. The implemented administration settings keep AI
+  off by default, store no provider secrets, require separate local/external
+  opt-ins and reject external localhost/private-network endpoints.
 - Step 41 must persist run status, source file version/checksum, model space,
   suggestion review state and embedding generation id.
 - Steps 42 and 43 must implement local and external adapters behind the same
