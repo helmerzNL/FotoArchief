@@ -7,6 +7,9 @@ namespace App\Modules\Ai\Services;
 use App\Models\User;
 use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
+use App\Modules\Catalogue\Models\Asset;
+use App\Modules\Publication\Models\Publication;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -21,8 +24,48 @@ class AiSemanticSearchService
      */
     public function searchAdmin(string $query, string $provider, User $user, int $limit = 10): array
     {
-        $query = trim($query);
         $limit = max(1, min($limit, 25));
+        $ranked = $this->rankEmbeddings($query, $provider, 500);
+        $assets = Asset::query()->whereIn('id', array_column($ranked, 'asset_id'))->get()->keyBy('id');
+        $matches = array_filter($ranked, function (array $match) use ($assets, $user): bool {
+            $asset = $assets->get($match['asset_id']);
+
+            return $asset instanceof Asset && Gate::forUser($user)->allows('view', $asset);
+        });
+
+        usort($matches, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
+
+        return array_slice($matches, 0, $limit);
+    }
+
+    /**
+     * @return Collection<int, Publication>
+     */
+    public function searchPublic(string $query, string $provider, int $limit = 24): Collection
+    {
+        $matches = $this->rankEmbeddings($query, $provider, max(1, min($limit, 24)));
+        if ($matches === []) {
+            return collect();
+        }
+
+        $assetIds = array_column($matches, 'asset_id');
+        $rank = array_flip($assetIds);
+
+        return Publication::query()
+            ->publiclyVisible()
+            ->with(['asset.files'])
+            ->whereIn('asset_id', $assetIds)
+            ->get()
+            ->sortBy(fn (Publication $publication): int => $rank[$publication->asset_id] ?? PHP_INT_MAX)
+            ->values();
+    }
+
+    /**
+     * @return list<array{asset_id: string, accession_number: string|null, title: string|null, score: float, model_space: string}>
+     */
+    private function rankEmbeddings(string $query, string $provider, int $limit): array
+    {
+        $query = trim($query);
         $settings = $this->configuration->effective();
         $errors = [];
 
@@ -74,9 +117,9 @@ class AiSemanticSearchService
             ->latest('indexed_at')
             ->limit($candidateLimit)
             ->get()
-            ->each(function (AiEmbedding $embedding) use (&$matches, $queryEmbedding, $user, $generation): void {
+            ->each(function (AiEmbedding $embedding) use (&$matches, $queryEmbedding, $generation): void {
                 $asset = $embedding->asset;
-                if ($asset === null || ! Gate::forUser($user)->allows('view', $asset)) {
+                if ($asset === null) {
                     return;
                 }
                 $score = $this->cosine($queryEmbedding['embedding'], $embedding->embedding ?? []);

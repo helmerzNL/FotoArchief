@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Publication;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Ai\Services\AiSemanticSearchService;
 use App\Modules\Catalogue\Models\Collection;
 use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Publication\Models\Publication;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -24,18 +26,36 @@ class PublicDiscoveryController extends Controller
 {
     private const PER_PAGE = 24;
 
+    public function __construct(
+        private readonly AiSemanticSearchService $semanticSearch,
+    ) {}
+
     public function search(Request $request): View
     {
         $request->validate([
             'q' => ['nullable', 'string', 'max:200'],
+            'semantic_q' => ['nullable', 'string', 'max:200'],
+            'semantic_provider' => ['nullable', 'string', 'in:local,external'],
             'tag' => ['nullable', 'string', 'max:100'],
             'collection' => ['nullable', 'string', 'max:150'],
             'cursor' => ['nullable', 'ulid'],
         ]);
-        [$publications, $nextCursor] = $this->paginate($this->eligibleQuery($request), $request);
+        $semanticError = null;
+        $semanticQuery = $request->string('semantic_q')->trim()->value();
+        if ($semanticQuery !== '' && ! $request->filled('cursor')) {
+            try {
+                $publications = $this->semanticSearch->searchPublic($semanticQuery, $request->string('semantic_provider')->value() ?: 'local', self::PER_PAGE);
+                $nextCursor = null;
+            } catch (ValidationException $exception) {
+                $semanticError = collect($exception->errors())->flatten()->first();
+                [$publications, $nextCursor] = $this->paginate($this->eligibleQuery($request), $request);
+            }
+        } else {
+            [$publications, $nextCursor] = $this->paginate($this->eligibleQuery($request), $request);
+        }
         $tags = Tag::query()->whereHas('assets.publication', fn (Builder $q) => $q->publiclyVisible())->orderBy('name')->limit(40)->get();
 
-        return view('public.discover', ['publications' => $publications, 'nextCursor' => $nextCursor, 'tags' => $tags]);
+        return view('public.discover', ['publications' => $publications, 'nextCursor' => $nextCursor, 'tags' => $tags, 'semanticError' => $semanticError]);
     }
 
     public function collections(): View

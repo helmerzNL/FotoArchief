@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Ai\Models\AiEmbedding;
+use App\Modules\Ai\Models\AiEmbeddingGeneration;
+use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\Collection;
@@ -11,6 +14,7 @@ use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Publication\Models\Publication;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -103,4 +107,56 @@ it('paginates public search with a keyset cursor instead of skipping or repeatin
     $secondIds = collect($second->viewData('publications'))->pluck('id')->all();
     expect($secondIds)->toHaveCount(6);
     expect(array_intersect($firstIds, $secondIds))->toBeEmpty();
+});
+
+it('semantic public search only renders publicly visible publication candidates', function (): void {
+    $owner = discoveryOwner();
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1',
+        'embeddings_enabled' => '1',
+        'local_provider_enabled' => '1',
+        'local_endpoint' => 'http://127.0.0.1:8088',
+        'max_assets_per_batch' => 10,
+        'derivative_max_pixels' => 512,
+        'request_timeout_seconds' => 15,
+        'monthly_external_budget_cents' => 0,
+    ], $owner);
+    $generation = AiEmbeddingGeneration::query()->create([
+        'provider_kind' => 'local',
+        'provider_name' => 'owned-http',
+        'model_id' => 'clip-public-proof',
+        'model_space' => 'clip-public-proof',
+        'dimensions' => 2,
+        'distance_metric' => 'cosine',
+        'vector_backend' => 'database_json',
+        'status' => AiEmbeddingGeneration::STATUS_ACTIVE,
+        'activated_at' => now(),
+    ]);
+    $visible = discoveryPublishedAsset($owner, 'Publiek plein');
+    $revoked = discoveryPublishedAsset($owner, 'Verborgen plein', ['status' => 'revoked', 'revoked_at' => now()]);
+    foreach ([[$visible, [1.0, 0.0]], [$revoked, [1.0, 0.0]]] as [$asset, $vector]) {
+        $file = $asset->files()->firstOrFail();
+        AiEmbedding::query()->create([
+            'ai_embedding_generation_id' => $generation->id,
+            'asset_id' => $asset->id,
+            'asset_file_id' => $file->id,
+            'source_asset_lock_version' => $asset->lock_version,
+            'source_file_sha256' => $file->sha256,
+            'embedding' => $vector,
+            'indexed_at' => now(),
+            'metadata' => ['modality' => 'image'],
+        ]);
+    }
+    Http::fake([
+        'http://127.0.0.1:8088/v1/embed-text' => Http::response([
+            'embedding' => [1.0, 0.0],
+            'model_space' => 'clip-public-proof',
+            'dimensions' => 2,
+        ]),
+    ]);
+
+    $this->get('/ontdek?semantic_q=plein&semantic_provider=local')
+        ->assertOk()
+        ->assertSee('Publiek plein')
+        ->assertDontSee('Verborgen plein');
 });

@@ -132,6 +132,11 @@ These are implementation defaults until a later measured proof tightens them:
   candidate set. Every result is filtered through the existing AssetPolicy, so
   embeddings rank candidates but SQL ownership/publication rules decide what a
   user may see.
+- Step 48 exposes optional public image-content search on the existing
+  discovery route. The vector result list is only an ordered candidate set;
+  the response is rebuilt through Publication::publiclyVisible(), so revoked,
+  embargoed, privacy-blocked, unclean or lock-version-invalid assets still do
+  not render or affect public pagination.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after
