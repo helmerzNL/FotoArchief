@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\Catalogue\Controllers\CatalogueDashboardController;
 use App\Modules\Catalogue\Controllers\CollectionController;
+use App\Modules\Catalogue\Controllers\LocationController;
 use App\Modules\Catalogue\Controllers\PersonController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,5 +37,18 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name(
         Route::delete('/{person}', [PersonController::class, 'destroy'])->name('destroy');
         Route::post('/{person}/assets', [PersonController::class, 'addAsset'])->name('assets.add');
         Route::delete('/{person}/assets/{asset}', [PersonController::class, 'removeAsset'])->name('assets.remove');
+    });
+
+    // Locations
+    Route::prefix('locations')->name('locations.')->group(function (): void {
+        Route::get('/', [LocationController::class, 'index'])->name('index');
+        Route::get('/create', [LocationController::class, 'create'])->name('create');
+        Route::post('/', [LocationController::class, 'store'])->name('store');
+        Route::get('/{location}', [LocationController::class, 'show'])->name('show');
+        Route::get('/{location}/edit', [LocationController::class, 'edit'])->name('edit');
+        Route::put('/{location}', [LocationController::class, 'update'])->name('update');
+        Route::delete('/{location}', [LocationController::class, 'destroy'])->name('destroy');
+        Route::post('/{location}/assets', [LocationController::class, 'addAsset'])->name('assets.add');
+        Route::delete('/{location}/assets/{asset}', [LocationController::class, 'removeAsset'])->name('assets.remove');
     });
 });
