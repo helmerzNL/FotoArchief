@@ -78,6 +78,15 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+At integration revision `a4e3ed6`, identity, the eight catalogue milestones and
+CSV import/exports pass **135 tests / 1005 assertions**, formatting and level-8
+analysis. Both real PostgreSQL fresh/upgrade tests pass **39 assertions** after
+correcting catalogue user foreign keys to ULIDs. Repeating the same 50,000-record
+private HTTP benchmark after applying the additional migrations gives p95
+**222.38 ms** for listing, **233.24 ms** for filtered listing and **240.81 ms**
+for details, all below their respective limits. The publication and archive
+operations modules are not included in this result.
+
 The benchmark has synthetic metadata and no 50,000-image binary corpus. It does
 not establish ingest throughput, multi-user concurrency, S3 latency or public
 search performance. Public filtered search still needs its own representative
