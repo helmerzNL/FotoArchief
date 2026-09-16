@@ -108,26 +108,47 @@
 
 <section class="card">
     <h2>Archieffoto’s ({{ $assets->count() }} op deze pagina)</h2>
-    <ul class="asset-list">
-    @forelse($assets as $asset)
-        @php($file = $asset->files->first())
-        <li>
-            @if($file && isset($file->derivatives['preview300']))
-                <img class="thumbnail" loading="lazy" src="{{ route('admin.assets.media', [$asset, $file, 'preview300']) }}" alt="">
-            @endif
-            <a href="{{ route('admin.assets.show', $asset) }}">{{ $asset->title ?: $asset->accession_number }}</a>
-            <small>
-                {{ $asset->accession_number }} · {{ $asset->uploads->first()?->status ?? $file?->ingest_status ?? 'Geen upload' }} · {{ $asset->catalogue_status }}
-                @if($asset->date_display) · {{ $asset->date_display }} @elseif($asset->date_earliest) · {{ $asset->date_earliest->format('Y') }} @endif
-            </small>
-        </li>
-    @empty
-        <li>Geen foto’s gevonden binnen jouw zoekopdracht en toegang.</li>
-    @endforelse
-    </ul>
+    <form method="get" action="{{ route('catalogue.bulk.confirm') }}">
+        @if($assets->isNotEmpty())
+            <div style="margin-bottom: 1rem;">
+                <button type="submit">Geselecteerde foto’s batch-bewerken</button>
+            </div>
+        @endif
+
+        <ul class="asset-list">
+        @forelse($assets as $asset)
+            @php($file = $asset->files->first())
+            <li>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="asset_ids[]" value="{{ $asset->id }}">
+                    @if($file && isset($file->derivatives['preview300']))
+                        <img class="thumbnail" loading="lazy" src="{{ route('admin.assets.media', [$asset, $file, 'preview300']) }}" alt="">
+                    @endif
+                    <div>
+                        <a href="{{ route('admin.assets.show', $asset) }}">{{ $asset->title ?: $asset->accession_number }}</a>
+                        <br>
+                        <small>
+                            {{ $asset->accession_number }} · {{ $asset->uploads->first()?->status ?? $file?->ingest_status ?? 'Geen upload' }} · {{ $asset->catalogue_status }} · Versie {{ $asset->lock_version }}
+                            @if($asset->date_display) · {{ $asset->date_display }} @elseif($asset->date_earliest) · {{ $asset->date_earliest->format('Y') }} @endif
+                        </small>
+                    </div>
+                </label>
+            </li>
+        @empty
+            <li>Geen foto’s gevonden binnen jouw zoekopdracht en toegang.</li>
+        @endforelse
+        </ul>
+
+        @if($assets->isNotEmpty())
+            <div style="margin-top: 1rem;">
+                <button type="submit">Geselecteerde foto’s batch-bewerken</button>
+            </div>
+        @endif
+    </form>
+
     @if($nextCursor)
         @php($queryParams = array_merge(request()->query(), ['cursor' => $nextCursor]))
-        <a class="button secondary" href="{{ route('admin.assets.index', $queryParams) }}">Volgende pagina</a>
+        <a class="button secondary" style="margin-top: 1rem; display: inline-block;" href="{{ route('admin.assets.index', $queryParams) }}">Volgende pagina</a>
     @endif
 </section>
 @endsection

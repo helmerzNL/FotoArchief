@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Catalogue\Controllers\BulkAssetController;
 use App\Modules\Catalogue\Controllers\CatalogueDashboardController;
 use App\Modules\Catalogue\Controllers\CollectionController;
 use App\Modules\Catalogue\Controllers\ContributorController;
@@ -12,6 +13,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name('catalogue.')->group(function (): void {
     Route::get('/', [CatalogueDashboardController::class, 'index'])->name('index');
+
+    // Bulk Operations
+    Route::prefix('bulk')->name('bulk.')->group(function (): void {
+        Route::get('/confirm', [BulkAssetController::class, 'create'])->name('confirm');
+        Route::post('/apply', [BulkAssetController::class, 'store'])->name('apply');
+    });
 
     // Collections & Albums
     Route::prefix('collections')->name('collections.')->group(function (): void {
