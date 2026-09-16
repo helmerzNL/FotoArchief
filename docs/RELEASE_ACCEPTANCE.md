@@ -15,6 +15,10 @@ The Quality workflow provides independent jobs for:
   details. p95 limits are **800 ms**, **800 ms** and **400 ms** respectively.
 - Production Apache Docker build, database-free first start, key persistence,
   complete HTTP onboarding/login/upload/worker/private JPEG and anonymous denial.
+- A digest-pinned Dockhand v1.0.48 on a disposable runner imports the actual
+  Compose and environment templates through its documented API. The independently
+  created stack must complete the same HTTP onboarding/photo acceptance. This is
+  manager API acceptance, not a browser UI walkthrough or Komodo verification.
 - Consistent local-volume backup restored to a different Compose project with
   empty volumes/database; the old account, photos and setup lock must survive.
 - PHP/deployment ZIPs from one clean commit and production dependency lock.
@@ -32,6 +36,11 @@ GitHub prerelease and GHCR version tag. `IMAGE-DIGEST.txt` identifies the regist
 digest. `IMAGE-LOCAL.txt` selects the versioned tag included in the offline image
 archive. Publishing a test release does not declare the unresolved gates below
 complete.
+
+The manager acceptance container receives Docker socket access only on the
+ephemeral CI runner, with its HTTP port bound to loopback. It is never bundled
+in FotoArchief's production stack. The test removes its own container, volume
+and application project afterward; do not run it against a shared manager.
 
 ## Local evidence before integrating the expansion
 
