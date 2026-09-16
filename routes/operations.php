@@ -6,6 +6,7 @@ use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
+use App\Modules\ArchiveOperations\Controllers\OcrController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
@@ -56,5 +57,12 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
         Route::delete('/assets/{asset}/purge', [TrashController::class, 'purge'])->name('purge');
         Route::post('/purge-expired', [TrashController::class, 'purgeExpired'])->name('purgeExpired');
         Route::post('/cleanup-orphans', [TrashController::class, 'cleanupOrphans'])->name('cleanupOrphans');
+    });
+
+    Route::prefix('ocr')->name('ocr.')->group(function (): void {
+        Route::get('/', [OcrController::class, 'index'])->name('index');
+        Route::get('/{ocr}', [OcrController::class, 'show'])->name('show');
+        Route::post('/{ocr}', [OcrController::class, 'update'])->name('update');
+        Route::post('/assets/{asset}/dispatch', [OcrController::class, 'dispatchOcr'])->name('dispatch');
     });
 });
