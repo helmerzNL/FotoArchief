@@ -15,7 +15,7 @@ an uploadable PHP archive and a Docker image. See
 [contribution guidance](CONTRIBUTING.md). Public availability and licensing
 remain separate owner decisions; no open-source licence has been selected.
 
-This repository contains the installable foundation and first private photo workflow:
+This repository contains the installable application and the archive expansion:
 
 - a conventional Laravel-oriented directory skeleton;
 - PHP 8.5 / Laravel 13 dependencies resolved in [composer.lock](composer.lock);
@@ -32,15 +32,28 @@ This repository contains the installable foundation and first private photo work
   JSON/CSV and a private ZIP with originals, derivatives, manifest and
   checksums) released through short-lived, re-authorised download links; see
   [data exchange](docs/DATA_EXCHANGE.md);
-- minimal routes, view and tests proving the framework can boot after
-  dependencies are installed.
+- user invitations, role management, deactivation, session revocation, browser
+  passkeys and one-time offline recovery codes;
+- collection hierarchies, people and organisations, historical locations,
+  provenance, tags and synonyms, advanced search, bulk metadata and staff
+  worklists;
+- publication review and revocation, rights/privacy/embargo checks, public
+  discovery and collections, a photo viewer, moderated visitor suggestions,
+  sitemaps and IIIF Presentation 3 manifests (not a full IIIF Image API);
+- diagnostics, duplicate dossiers, scan versions, processing operations,
+  integrity checks, storage relocation, recoverable deletion and optional OCR;
+- reproducible production PHP/deployment archives, container acceptance and a
+  consistent local-volume backup/restore procedure.
 
 No Composer dependencies are vendored. Install the resolved dependency set with
 `composer install`; do not run `composer update` as an installation step.
-The first private ingest pipeline and bulk metadata import are implemented.
-Public publication, OCR and release archives are not implemented yet.
-Local administrator authentication is implemented; passkeys, recovery email
-and the full user-management workflow remain pending.
+The production PHP archive includes locked production dependencies, so Composer
+is not required at the webhost. It is readable Laravel/PHP code, not a separate
+framework-free implementation. PostgreSQL remains required in both formats.
+Recovery uses offline one-time codes; automated recovery email is not promised.
+Implementation and release acceptance are distinct: consult the
+[acceptance ledger](docs/RELEASE_ACCEPTANCE.md) for measured results and remaining
+gates before exposing the archive publicly.
 
 ## Prerequisites
 
@@ -157,6 +170,7 @@ workflow; see [PHOTO_WORKFLOW.md](docs/PHOTO_WORKFLOW.md) for scope and limits.
 
 The [quality workflow](.github/workflows/quality.yml) includes an Apache
 pending-onboarding and persistent-state restart smoke test. That container job has not yet
-run: the current development machine has no Docker engine. No image,
-webhosting ZIP or Komodo/Dockhand installation is runtime-verified. See
+run: the current development machine has no Docker engine. The production PHP ZIP has been built, unpacked without Composer and exercised
+through real HTTP onboarding and queue processing. No Docker image or
+Komodo/Dockhand installation is runtime-verified yet. See
 [ONBOARDING.md](docs/ONBOARDING.md) for the implemented wizard and its test scope.
