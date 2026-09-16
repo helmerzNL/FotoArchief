@@ -16,6 +16,7 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
 {
     public function __construct(
         private readonly AiConfigurationService $configuration,
+        private readonly AiProviderConfigService $providerConfigs,
         private readonly HttpFactory $http,
     ) {}
 
@@ -105,7 +106,7 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
             throw new AiProviderException('External AI provider is not explicitly enabled, consented and budgeted.');
         }
 
-        return $settings;
+        return array_merge($settings, $this->providerConfigs->runtime('external'));
     }
 
     /**
@@ -116,7 +117,7 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
         $request = $this->http->timeout((int) $settings['request_timeout_seconds'])
             ->acceptJson()
             ->asJson();
-        $apiKey = (string) config('ai.external_api_key', '');
+        $apiKey = (string) ($settings['api_key'] ?? '');
         if ($apiKey !== '') {
             $request = $request->withToken($apiKey);
         }

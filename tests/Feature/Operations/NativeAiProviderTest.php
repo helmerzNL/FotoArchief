@@ -3,13 +3,14 @@
 declare(strict_types=1);
 
 use App\Modules\Ai\Exceptions\AiProviderException;
+use App\Modules\Ai\Models\AiProviderConfig;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\Native\AnthropicProvider;
 use App\Modules\Ai\Services\Native\GeminiProvider;
 use App\Modules\Ai\Services\Native\OpenAiProvider;
 use App\Modules\Ai\Services\Native\OpenRouterProvider;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -24,10 +25,13 @@ uses(RefreshDatabase::class);
  */
 function configureNativeProvider(string $provider, array $overrides = []): void
 {
+    $defaultEmbeddingModel = $provider === 'openrouter'
+        ? 'nvidia/llama-nemotron-embed-vl-1b-v2'
+        : 'test-embedding-model';
     $values = array_merge([
         'enabled' => true,
         'vision_model' => 'test-vision-model',
-        'embedding_model' => 'test-embedding-model',
+        'embedding_model' => $defaultEmbeddingModel,
         'cost_cents_per_image' => 1,
         'cost_cents_per_embedding' => 1,
         'monthly_budget_cents' => 100,
@@ -213,10 +217,9 @@ it('embeds an image with an allowlisted OpenRouter multimodal model', function (
 });
 
 it('refuses an OpenRouter embedding model that is not on the multimodal allowlist', function (): void {
-    configureNativeProvider('openrouter', [
-        'embedding_model' => 'text-only/some-model',
-        'embedding_model_allowlist' => ['nvidia/llama-nemotron-embed-vl-1b-v2'],
-    ]);
+    configureNativeProvider('openrouter');
+    AiProviderConfig::query()->where('provider', 'openrouter')
+        ->update(['embedding_model' => 'text-only/some-model']);
 
     expect(fn () => app(OpenRouterProvider::class)->embedImage('jpeg-bytes', ['model' => 'text-only/some-model']))
         ->toThrow(AiProviderException::class, 'staat niet op de toegestane multimodale modellenlijst');

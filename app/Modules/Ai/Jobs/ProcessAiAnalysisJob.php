@@ -7,6 +7,7 @@ namespace App\Modules\Ai\Jobs;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
@@ -34,7 +35,7 @@ class ProcessAiAnalysisJob extends OperationJob
         $failed = 0;
         $resolver = app(AiProviderResolver::class);
         $ledgerService = app(AiBudgetLedgerService::class);
-        $providerConfigs = app(\App\Modules\Ai\Services\AiProviderConfigService::class);
+        $providerConfigs = app(AiProviderConfigService::class);
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'image_analysis') : 0;
 

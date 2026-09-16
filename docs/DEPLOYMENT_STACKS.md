@@ -122,9 +122,11 @@ running the model beside PHP.
 
 External AI endpoints use the same `/v1/*` adapter contract but require
 separate admin opt-in, public HTTPS, region/retention documentation and a
-non-zero budget. Put `AI_EXTERNAL_API_KEY` only in the manager's private
-environment or secret store. FotoArchief never falls back from the local
-provider to the external provider after a local error.
+non-zero budget. Configure the endpoint and encrypted API key in the admin UI.
+Legacy `AI_EXTERNAL_*` values are read only by the one-time upgrade migration
+and may be removed after the imported record passes its connection test.
+FotoArchief never falls back from the local provider to the external provider
+after a local error.
 
 ## Operator changes
 

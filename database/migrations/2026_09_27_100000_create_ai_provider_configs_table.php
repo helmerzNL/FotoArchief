@@ -4,32 +4,79 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('ai_provider_configs')) {
-            return;
+        if (! Schema::hasTable('ai_provider_configs')) {
+            Schema::create('ai_provider_configs', function (Blueprint $table): void {
+                $table->id();
+                $table->string('provider', 30)->unique();
+                $table->boolean('enabled')->default(false);
+                $table->text('api_key')->nullable();
+                $table->string('vision_model', 160)->nullable();
+                $table->string('embedding_model', 160)->nullable();
+                $table->string('endpoint', 255)->nullable();
+                $table->string('provider_region', 120)->nullable();
+                $table->string('retention_notice', 500)->nullable();
+                $table->unsignedInteger('cost_cents_per_image')->default(0);
+                $table->unsignedInteger('cost_cents_per_embedding')->default(0);
+                $table->unsignedInteger('monthly_budget_cents')->default(0);
+                $table->foreignUlid('updated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->timestamps();
+            });
+
+            foreach (self::legacyProviderValues() as $provider => $values) {
+                DB::table('ai_provider_configs')->insertOrIgnore([
+                    'provider' => $provider,
+                    ...$values,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
 
-        Schema::create('ai_provider_configs', function (Blueprint $table): void {
-            $table->id();
-            $table->string('provider', 30)->unique();
-            $table->boolean('enabled')->default(false);
-            $table->text('api_key')->nullable();
-            $table->string('vision_model', 160)->nullable();
-            $table->string('embedding_model', 160)->nullable();
-            $table->unsignedInteger('cost_cents_per_image')->default(0);
-            $table->unsignedInteger('cost_cents_per_embedding')->default(0);
-            $table->unsignedInteger('monthly_budget_cents')->default(0);
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('ai_provider_config_audits')) {
+            Schema::create('ai_provider_config_audits', function (Blueprint $table): void {
+                $table->id();
+                $table->foreignUlid('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->string('provider', 30);
+                $table->string('action', 30);
+                $table->json('changed_fields');
+                $table->timestamp('created_at');
+            });
+        }
+    }
 
-        foreach ([
+    private static function encryptedEnv(string $key): ?string
+    {
+        $value = env($key);
+
+        return is_string($value) && $value !== '' ? Crypt::encryptString($value) : null;
+    }
+
+    /**
+     * @return array<string, array<string, bool|int|string|null>>
+     */
+    private static function legacyProviderValues(): array
+    {
+        return [
+            'external' => [
+                'enabled' => (bool) env('AI_EXTERNAL_ENABLED', false),
+                'api_key' => self::encryptedEnv('AI_EXTERNAL_API_KEY'),
+                'vision_model' => env('AI_EXTERNAL_VISION_MODEL'),
+                'embedding_model' => env('AI_EXTERNAL_EMBEDDING_MODEL'),
+                'endpoint' => env('AI_EXTERNAL_ENDPOINT'),
+                'provider_region' => env('AI_PROVIDER_REGION'),
+                'retention_notice' => env('AI_RETENTION_NOTICE'),
+                'cost_cents_per_image' => (int) env('AI_EXTERNAL_COST_CENTS_PER_IMAGE', 0),
+                'cost_cents_per_embedding' => (int) env('AI_EXTERNAL_COST_CENTS_PER_EMBEDDING', 0),
+                'monthly_budget_cents' => (int) env('AI_EXTERNAL_MONTHLY_BUDGET_CENTS', 0),
+            ],
             'openai' => [
                 'enabled' => (bool) env('AI_OPENAI_ENABLED', false),
                 'api_key' => self::encryptedEnv('AI_OPENAI_API_KEY'),
@@ -66,26 +113,12 @@ return new class extends Migration
                 'cost_cents_per_embedding' => (int) env('AI_OPENROUTER_COST_CENTS_PER_EMBEDDING', 0),
                 'monthly_budget_cents' => (int) env('AI_OPENROUTER_MONTHLY_BUDGET_CENTS', 0),
             ],
-        ] as $provider => $values) {
-            DB::table('ai_provider_configs')->insertOrIgnore([
-                'provider' => $provider,
-                ...$values,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
-
-    }
-
-    private static function encryptedEnv(string $key): ?string
-    {
-        $value = env($key);
-
-        return is_string($value) && $value !== '' ? Crypt::encryptString($value) : null;
+        ];
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('ai_provider_config_audits');
         Schema::dropIfExists('ai_provider_configs');
     }
 };

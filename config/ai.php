@@ -16,9 +16,9 @@ return [
         'gemini_provider_enabled' => false,
         'openrouter_provider_enabled' => false,
         'local_endpoint' => env('AI_LOCAL_ENDPOINT'),
-        'external_endpoint' => env('AI_EXTERNAL_ENDPOINT'),
-        'provider_region' => env('AI_PROVIDER_REGION'),
-        'retention_notice' => env('AI_RETENTION_NOTICE'),
+        'external_endpoint' => null,
+        'provider_region' => null,
+        'retention_notice' => null,
         'max_assets_per_batch' => 25,
         'derivative_max_pixels' => 1024,
         'request_timeout_seconds' => 60,
@@ -36,8 +36,6 @@ return [
         'embeddings_model' => null,
         'embeddings_native_consent' => false,
     ],
-    'external_api_key' => env('AI_EXTERNAL_API_KEY'),
-
     // Native provider adapters call these first-party APIs directly, with no
     // required intermediary gateway/container. base_url is intentionally
     // NOT admin-UI-editable (unlike the custom local/external endpoints,

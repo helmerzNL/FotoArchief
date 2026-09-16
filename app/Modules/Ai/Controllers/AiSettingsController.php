@@ -45,11 +45,14 @@ class AiSettingsController extends Controller
             'enabled' => ['nullable', 'boolean'],
             'vision_model' => ['nullable', 'string', 'max:160'],
             'embedding_model' => ['nullable', 'string', 'max:160'],
+            'endpoint' => ['nullable', 'string', 'max:255'],
+            'provider_region' => ['nullable', 'string', 'max:120'],
+            'retention_notice' => ['nullable', 'string', 'max:500'],
             'cost_cents_per_image' => ['required', 'integer', 'min:0', 'max:1000000'],
             'cost_cents_per_embedding' => ['required', 'integer', 'min:0', 'max:1000000'],
             'monthly_budget_cents' => ['required', 'integer', 'min:0', 'max:100000000'],
         ]);
-        $this->providerConfigs->update($provider, $validated);
+        $this->providerConfigs->update($provider, $validated, $user);
 
         return redirect()->route('admin.operations.ai.edit')->with('status', 'AI-providerinstellingen opgeslagen; vaste endpoints en versies zijn niet wijzigbaar.');
     }
@@ -60,7 +63,7 @@ class AiSettingsController extends Controller
         abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
         abort_unless(in_array($provider, AiProviderConfigService::PROVIDERS, true), 404);
         $request->validate(['api_key' => ['required', 'string', 'max:1000']]);
-        $this->providerConfigs->setApiKey($provider, (string) $request->string('api_key'));
+        $this->providerConfigs->setApiKey($provider, (string) $request->string('api_key'), $user);
 
         return redirect()->route('admin.operations.ai.edit')->with('status', 'API-sleutel opgeslagen. De sleutel wordt niet getoond of teruggegeven.');
     }
@@ -70,7 +73,8 @@ class AiSettingsController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
         abort_unless(in_array($provider, AiProviderConfigService::PROVIDERS, true), 404);
-        $this->providerConfigs->deleteApiKey($provider);
+        $request->validate(['confirm_delete' => ['accepted']]);
+        $this->providerConfigs->deleteApiKey($provider, $user);
 
         return redirect()->route('admin.operations.ai.edit')->with('status', 'API-sleutel verwijderd.');
     }
@@ -86,20 +90,11 @@ class AiSettingsController extends Controller
             'image_analysis_enabled' => ['nullable', 'boolean'],
             'embeddings_enabled' => ['nullable', 'boolean'],
             'local_provider_enabled' => ['nullable', 'boolean'],
-            'external_provider_enabled' => ['nullable', 'boolean'],
             'external_processing_allowed' => ['nullable', 'boolean'],
-            'openai_provider_enabled' => ['nullable', 'boolean'],
-            'anthropic_provider_enabled' => ['nullable', 'boolean'],
-            'gemini_provider_enabled' => ['nullable', 'boolean'],
-            'openrouter_provider_enabled' => ['nullable', 'boolean'],
             'local_endpoint' => ['nullable', 'string', 'max:255'],
-            'external_endpoint' => ['nullable', 'string', 'max:255'],
-            'provider_region' => ['nullable', 'string', 'max:120'],
-            'retention_notice' => ['nullable', 'string', 'max:500'],
             'max_assets_per_batch' => ['required', 'integer', 'min:1', 'max:25'],
             'derivative_max_pixels' => ['required', 'integer', 'min:256', 'max:1024'],
             'request_timeout_seconds' => ['required', 'integer', 'min:5', 'max:60'],
-            'monthly_external_budget_cents' => ['required', 'integer', 'min:0', 'max:10000000'],
             'image_analysis_provider' => ['nullable', 'string', Rule::in(AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS)],
             'image_analysis_model' => ['nullable', 'string', 'max:120'],
             'image_analysis_native_consent' => ['nullable', 'boolean'],

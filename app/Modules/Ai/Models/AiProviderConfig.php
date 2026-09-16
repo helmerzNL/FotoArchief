@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ai\Models;
 
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Model;
 
 class AiProviderConfig extends Model
@@ -21,4 +22,12 @@ class AiProviderConfig extends Model
         'cost_cents_per_embedding' => 'integer',
         'monthly_budget_cents' => 'integer',
     ];
+
+    /** @throws DecryptException */
+    public function decryptedApiKey(): ?string
+    {
+        $apiKey = $this->getAttribute('api_key');
+
+        return is_string($apiKey) && $apiKey !== '' ? $apiKey : null;
+    }
 }
