@@ -757,21 +757,21 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 250,
+            "line": 251,
             "kind": "php_string",
             "text": "Kies een model voor de gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 253,
+            "line": 254,
             "kind": "php_string",
             "text": "Native provider gebruik vereist expliciete toestemming per functie.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 256,
+            "line": 257,
             "kind": "php_string",
             "text": "Schakel de provider eerst in voordat je hem selecteert.",
             "batch": "ai"
