@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\Person;
 use App\Modules\Catalogue\Models\PersonAlias;
+use App\Modules\Catalogue\Services\AssetReference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -179,12 +180,7 @@ class PersonController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $asset = null;
-        if (! empty($data['asset_id'])) {
-            $asset = Asset::query()->whereKey($data['asset_id'])->first();
-        } elseif (! empty($data['accession_number'])) {
-            $asset = Asset::query()->where('accession_number', trim((string) $data['accession_number']))->first();
-        }
+        $asset = AssetReference::resolve($data['asset_id'] ?? null, $data['accession_number'] ?? null);
 
         if ($asset === null) {
             throw ValidationException::withMessages([

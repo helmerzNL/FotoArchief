@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\Worklist;
 use App\Modules\Catalogue\Models\WorklistItem;
+use App\Modules\Catalogue\Services\AssetReference;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -61,6 +62,17 @@ it('runs all catalogue migrations and enforces PostgreSQL foreign key relationsh
             'title' => 'PostgreSQL Asset',
             'created_by_user_id' => $user->id,
         ]);
+
+        $importedAsset = Asset::on('pgsql_test')->create([
+            'id' => '01M2KR9DVV8XP9QW8YN81SVT66',
+            'accession_number' => 'FA-PG-IMPORTED',
+            'created_by_user_id' => $user->id,
+        ]);
+        foreach ([$asset, $importedAsset] as $referenceAsset) {
+            expect(AssetReference::resolve(null, strtoupper($referenceAsset->id))?->id)->toBe($referenceAsset->id)
+                ->and(AssetReference::resolve(null, strtolower($referenceAsset->id))?->id)->toBe($referenceAsset->id)
+                ->and(AssetReference::resolve(null, $referenceAsset->accession_number)?->id)->toBe($referenceAsset->id);
+        }
 
         // 1. Bulk operation
         DB::connection('pgsql_test')->table('bulk_operations')->insert([

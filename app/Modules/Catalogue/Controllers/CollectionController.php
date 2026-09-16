@@ -7,6 +7,7 @@ namespace App\Modules\Catalogue\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\Collection;
+use App\Modules\Catalogue\Services\AssetReference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -158,12 +159,7 @@ class CollectionController extends Controller
             'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $asset = null;
-        if (! empty($data['asset_id'])) {
-            $asset = Asset::query()->whereKey($data['asset_id'])->first();
-        } elseif (! empty($data['accession_number'])) {
-            $asset = Asset::query()->where('accession_number', trim((string) $data['accession_number']))->first();
-        }
+        $asset = AssetReference::resolve($data['asset_id'] ?? null, $data['accession_number'] ?? null);
 
         if ($asset === null) {
             throw ValidationException::withMessages([
