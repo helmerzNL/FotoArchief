@@ -110,6 +110,26 @@ EXCHANGE_ABANDONED_CLAIM_SECONDS: ${EXCHANGE_ABANDONED_CLAIM_SECONDS:-1800}
 No port or volume mapping changes are required. Preserve the existing
 `app-storage` and `postgres-data` volumes and database password.
 
+### Safe Compose upgrade helper
+
+For Docker/manager deployments where the operator can run Docker Compose
+commands, use `scripts/upgrade-compose.sh` after updating the stack's private
+`APP_IMAGE` variable to the exact tested release tag or digest:
+
+```bash
+sh scripts/backup-compose.sh /private/fotoarchief-backup-YYYYMMDD
+APP_IMAGE=ghcr.io/helmerznl/fotoarchief:vX.Y.Z \
+  sh scripts/upgrade-compose.sh /private/fotoarchief-backup-YYYYMMDD
+```
+
+The helper refuses to run without a backup directory containing valid
+`SHA256SUMS`, validates the resolved Compose file, stops only worker and
+scheduler services, starts the new web image, checks that installation is still
+complete, runs `php artisan migrate --force`, then restarts workers/scheduler.
+It does not delete volumes, regenerate keys, reopen setup or run
+`docker compose down --volumes`. If any command fails, stopped background
+services are started again so the operator can restore from the verified backup.
+
 ### OCR and exchange settings
 
 The image includes Tesseract plus Dutch and English trained data. OCR remains

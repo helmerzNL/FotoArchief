@@ -140,6 +140,12 @@ Keep the same storage volume and key across web, worker and scheduler.
 `INSTALLATION_ENABLED=false` only disables the module in `APP_ENV=testing`;
 it is not an operator shortcut around production setup.
 
+During upgrades, never delete the installation directory, regenerate the app key
+or rerun the wizard. For Docker deployments, create a verified backup first and
+use `scripts/upgrade-compose.sh` or the equivalent manager procedure: drain
+workers, deploy the exact tested image/archive, run migrations once, then resume
+workers and scheduler with the same persistent storage volume.
+
 ## Failure, retry and recovery
 
 - Connection-only testing makes no schema changes and stores no credentials.

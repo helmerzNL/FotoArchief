@@ -38,6 +38,9 @@ The Quality workflow provides independent jobs for:
   collection filters must meet **700 ms p95**; public detail must meet **400 ms**.
 - Production Apache Docker build, database-free first start, key persistence,
   complete HTTP onboarding/login/upload/worker/private JPEG and anonymous denial.
+- Safe Compose upgrade procedure requires a verified backup, preserves the
+  installer lock and application key, runs forward migrations before background
+  workers resume, and never deletes volumes as an error-recovery shortcut.
 - A digest-pinned Dockhand v1.0.48 on a disposable runner imports the actual
   Compose and environment templates through its documented API. The independently
   created stack must complete the same HTTP onboarding/photo acceptance. This is
