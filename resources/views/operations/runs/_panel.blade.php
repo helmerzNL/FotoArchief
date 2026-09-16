@@ -46,6 +46,22 @@
                         </td>
                         <td style="padding: 0.75rem; font-size: 0.875rem; color: #dc2626; max-width: 320px;">
                             {{ $run->error_message ?? '-' }}
+                            @if($run->auditEvents->isNotEmpty())
+                                <details style="margin-top: 0.5rem; color: #374151;">
+                                    <summary>Auditlog ({{ $run->auditEvents->count() }})</summary>
+                                    <ol style="padding-left: 1.25rem;">
+                                        @foreach($run->auditEvents as $event)
+                                            <li style="margin-top: 0.35rem;">
+                                                <strong>{{ $event->created_at }}</strong> · {{ $event->event_type }}
+                                                @if($event->message)<br>{{ $event->message }}@endif
+                                                @if($event->context)
+                                                    <details><summary>Technische context</summary><pre class="revision">{{ json_encode($event->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre></details>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ol>
+                                </details>
+                            @endif
                         </td>
                         <td style="padding: 0.75rem;">
                             @if($run->status === 'failed')

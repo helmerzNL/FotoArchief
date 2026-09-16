@@ -9,6 +9,7 @@ use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Jobs\RebuildDerivativesJob;
 use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
+use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
@@ -234,11 +235,18 @@ it('queues a single derivative rebuild and keeps the job timeout inside the work
 });
 
 it('shows the run overview to operators and hides it from viewers', function (): void {
-    app(OperationRunService::class)->dispatchRun(
+    $run = app(OperationRunService::class)->dispatchRun(
         VerifyIntegrityJob::class,
         VerifyIntegrityJob::TYPE,
         $this->admin,
     );
+    OperationRunAuditEvent::query()->create([
+        'operation_run_id' => $run->id,
+        'event_type' => 'ai.analysis.item_failed',
+        'severity' => 'error',
+        'message' => 'Veilige testfout voor het auditlog.',
+        'context' => ['provider' => 'openai', 'attempt' => 1],
+    ]);
 
     $this->actingAs($this->viewer)->get('/admin/operations/runs')->assertForbidden();
 
@@ -246,4 +254,7 @@ it('shows the run overview to operators and hides it from viewers', function ():
     $response->assertOk();
     $response->assertSee('Achtergrondtaken');
     $response->assertSee(VerifyIntegrityJob::TYPE);
+    $response->assertSee('Auditlog (1)');
+    $response->assertSee('Veilige testfout voor het auditlog.');
+    $response->assertSee('Technische context');
 });

@@ -9,6 +9,8 @@ use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
 use App\Modules\ArchiveOperations\Models\OperationRun;
+use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
+use App\Modules\ArchiveOperations\Services\OperationRunService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Services\MalwareScanner;
@@ -121,7 +123,8 @@ it('processes AI analysis in the worker and stores only pending suggestions', fu
     expect($run->status)->toBe(OperationRun::STATUS_COMPLETED)
         ->and($run->processed_items)->toBe(1)
         ->and($this->asset->fresh()->description)->toBeNull()
-        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->where('review_status', AiSuggestion::REVIEW_PENDING)->count())->toBe(3);
+        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->where('review_status', AiSuggestion::REVIEW_PENDING)->count())->toBe(3)
+        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.analysis.item_succeeded')->count())->toBe(1);
 });
 
 it('reports an explicit failure when an existing source file was never malware scanned', function (): void {
@@ -142,6 +145,14 @@ it('reports an explicit failure when an existing source file was never malware s
     expect($run->fresh()->error_message)
         ->toContain('niet malwaregescand')
         ->and($run->fresh()->failed_items)->toBe(0);
+
+    $event = OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->firstOrFail();
+    expect($event->event_type)->toBe('ai.analysis.item_failed')
+        ->and($event->severity)->toBe('error')
+        ->and($event->message)->toContain('Activeer eerst ClamAV')
+        ->and($event->context['provider'])->toBe('local')
+        ->and($event->context['scanner_status'])->toBe('unscanned')
+        ->and($event->context)->not->toHaveKeys(['api_key', 'image_base64', 'response']);
 });
 
 it('rescans an existing unscanned source before sending it to the AI provider', function (): void {
@@ -185,4 +196,31 @@ it('refuses AI batches above the configured limit', function (): void {
 
     expect(fn () => app(AiDispatchService::class)->dispatchImageAnalysis($ids, 'local', $this->user))
         ->toThrow(ValidationException::class, 'Selecteer 1 tot 10 assets');
+});
+
+it('restarts a legacy failed AI run from the first item with clean counters', function (): void {
+    Queue::fake();
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_FAILED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'local', 'cursor' => 1],
+        'result' => ['provider' => 'local'],
+        'total_items' => 1,
+        'processed_items' => 0,
+        'failed_items' => 1,
+        'error_message' => 'Oude fout',
+        'finished_at' => now(),
+    ]);
+
+    app(OperationRunService::class)->retryRun($run, ProcessAiAnalysisJob::class);
+
+    $run->refresh();
+    expect($run->status)->toBe(OperationRun::STATUS_QUEUED)
+        ->and($run->payload['cursor'])->toBe(0)
+        ->and($run->processed_items)->toBe(0)
+        ->and($run->failed_items)->toBe(0)
+        ->and($run->result)->toBeNull()
+        ->and($run->error_message)->toBeNull();
+    Queue::assertPushed(ProcessAiAnalysisJob::class);
 });

@@ -42,6 +42,20 @@ zonder ingebedde metadata. Beeldanalyse maakt uitsluitend suggesties; metadata
 wijzigt pas na menselijke acceptatie. Publieke semantische zoekopdrachten blijven
 achter de actuele publicatie- en rechtencontroles.
 
+### Taakstatus en auditlog
+
+Open **Beheer > Operations > Achtergrondtaken** om AI-taken te volgen. Een taak
+waarvan geen enkel item kon worden verwerkt krijgt de status **Mislukt**, nooit
+**Voltooid**. De kolom **Foutmelding** toont de laatste taakfout. Open
+**Auditlog** voor de gebeurtenissen per poging en foto, inclusief provider,
+model, bronbestand, scannerstatus en exceptionklasse.
+
+Het auditlog bevat geen API-sleutels, afbeeldingsbytes of providerresponses.
+Na een update naar `0.9.49` worden oudere AI-taken die als voltooid met mislukte
+items waren opgeslagen automatisch naar **Mislukt** gecorrigeerd. Gebruik
+**Opnieuw proberen**; FotoArchief start zo'n AI-taak opnieuw met schone tellers
+vanaf het eerste item.
+
 ### Eenmalige upgrade-import
 
 De migratie importeert bestaande `AI_EXTERNAL_*`, `AI_OPENAI_*`,
@@ -102,6 +116,19 @@ AI processing uses only validated derivatives up to 1024 pixels with embedded
 metadata removed. Image analysis creates suggestions only; metadata changes
 only after human acceptance. Public semantic queries remain subject to current
 publication and rights checks.
+
+### Job status and audit log
+
+Open **Administration > Operations > Background jobs** to monitor AI jobs. A
+job that could not process any item receives the **Failed** status, never
+**Completed**. The **Error message** column shows the latest job error. Open
+**Audit log** for events per attempt and photo, including the provider, model,
+source file, scanner status, and exception class.
+
+The audit log never contains API keys, image bytes, or provider responses.
+After updating to `0.9.49`, older AI jobs stored as completed with failed items
+are automatically corrected to **Failed**. Use **Retry**; FotoArchief restarts
+such an AI job with clean counters from the first item.
 
 ### One-time upgrade import
 

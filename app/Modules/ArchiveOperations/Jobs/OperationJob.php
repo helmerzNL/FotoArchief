@@ -127,6 +127,22 @@ abstract class OperationJob implements ShouldQueue
             ])->save();
 
             if ($outcome['finished']) {
+                if ($run->processed_items === 0 && $run->failed_items > 0) {
+                    $run->forceFill([
+                        'status' => OperationRun::STATUS_FAILED,
+                        'claim_token' => null,
+                        'finished_at' => now(),
+                        'result' => array_merge($outcome['result'] ?? [], [
+                            'processed' => $run->processed_items,
+                            'failed' => $run->failed_items,
+                            'truncated' => false,
+                        ]),
+                        'error_message' => $run->error_message ?? 'Geen enkel item kon worden verwerkt. Bekijk het auditlog voor de concrete oorzaak.',
+                    ])->save();
+
+                    return;
+                }
+
                 $run->forceFill([
                     'status' => OperationRun::STATUS_COMPLETED,
                     'claim_token' => null,

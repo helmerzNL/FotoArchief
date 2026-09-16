@@ -8,6 +8,7 @@ use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiOperationAuditService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
 use App\Modules\Ai\Services\AiSourceImageService;
@@ -16,6 +17,7 @@ use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use RuntimeException;
+use Throwable;
 
 class ProcessAiIndexJob extends OperationJob
 {
@@ -38,112 +40,127 @@ class ProcessAiIndexJob extends OperationJob
         $ledgerService = app(AiBudgetLedgerService::class);
         $providerConfigs = app(AiProviderConfigService::class);
         $sourceImages = app(AiSourceImageService::class);
+        $audit = app(AiOperationAuditService::class);
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'embeddings') : 0;
 
         foreach ($slice as $assetId) {
-            $asset = Asset::query()->with('files')->find($assetId);
-            if (! $asset instanceof Asset) {
-                throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
-            }
-            ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
-
-            $sourceLock = (int) $asset->lock_version;
-            $sourceSha = (string) $file->sha256;
-
-            $ledger = $isNative && $costCents > 0 ? $ledgerService->reserve($provider, 'embeddings', $costCents) : null;
+            $asset = null;
+            $file = null;
             try {
-                $embedding = $resolver->resolveEmbeddings($provider)->embedImage($bytes, ['model' => $model]);
-            } catch (\Throwable $exception) {
-                if ($ledger !== null) {
-                    $ledgerService->release($ledger, $costCents);
+                $candidate = Asset::query()->with('files')->find($assetId);
+                if (! $candidate instanceof Asset) {
+                    throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
                 }
+                $asset = $candidate;
+                ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
+
+                $sourceLock = (int) $asset->lock_version;
+                $sourceSha = (string) $file->sha256;
+
+                $ledger = $isNative && $costCents > 0 ? $ledgerService->reserve($provider, 'embeddings', $costCents) : null;
+                try {
+                    $embedding = $resolver->resolveEmbeddings($provider)->embedImage($bytes, ['model' => $model]);
+                } catch (Throwable $exception) {
+                    if ($ledger !== null) {
+                        $ledgerService->release($ledger, $costCents);
+                    }
+
+                    throw $exception;
+                }
+                if ($ledger !== null) {
+                    $ledgerService->consume($ledger, $costCents, $costCents);
+                }
+
+                $asset->refresh();
+                $file->refresh()->load('asset');
+                if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
+                    throw new RuntimeException("Foto {$assetId} is tijdens de AI-indexering gewijzigd. Probeer de taak opnieuw.");
+                }
+
+                $generation = AiEmbeddingGeneration::query()->firstOrCreate(
+                    ['model_space' => $embedding['model_space']],
+                    [
+                        'provider_kind' => $provider,
+                        'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
+                        'model_id' => (string) $embedding['model_space'],
+                        'dimensions' => $embedding['dimensions'],
+                        'distance_metric' => 'cosine',
+                        'vector_backend' => 'database_json',
+                        'status' => AiEmbeddingGeneration::STATUS_ACTIVE,
+                        'activated_at' => now(),
+                        'capability_receipt' => [
+                            'image_embeddings' => true,
+                            'text_embeddings_required_for_queries' => true,
+                            'same_embedding_space' => true,
+                        ],
+                    ],
+                );
+
+                $generation->embeddings()
+                    ->where('asset_file_id', $file->id)
+                    ->whereNull('stale_at')
+                    ->where('source_file_sha256', '!=', $sourceSha)
+                    ->update(['stale_at' => now()]);
+
+                AiEmbedding::query()->updateOrCreate(
+                    [
+                        'ai_embedding_generation_id' => $generation->id,
+                        'asset_file_id' => $file->id,
+                        'source_file_sha256' => $sourceSha,
+                    ],
+                    [
+                        'asset_id' => $asset->id,
+                        'source_asset_lock_version' => $sourceLock,
+                        'embedding' => array_map('floatval', $embedding['embedding']),
+                        'external_vector_id' => null,
+                        'indexed_at' => now(),
+                        'stale_at' => null,
+                        'metadata' => [
+                            'provider' => $provider,
+                            'modality' => 'image',
+                            'source' => 'primary_file',
+                        ],
+                    ],
+                );
+
+                AiRun::query()->firstOrCreate(
+                    ['idempotency_key' => $this->idempotencyKey($provider, $file, $generation)],
+                    [
+                        'run_type' => AiRun::TYPE_EMBEDDING,
+                        'status' => AiRun::STATUS_SUCCEEDED,
+                        'asset_id' => $asset->id,
+                        'asset_file_id' => $file->id,
+                        'source_asset_lock_version' => $sourceLock,
+                        'source_file_sha256' => $sourceSha,
+                        'provider_kind' => $provider,
+                        'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
+                        'model_id' => $generation->model_id,
+                        'model_space' => $generation->model_space,
+                        'input_contract' => [
+                            'modality' => 'image',
+                            'metadata_stripped' => true,
+                            'automatic_metadata_write' => false,
+                        ],
+                        'result_summary' => [
+                            'dimensions' => $embedding['dimensions'],
+                            'vector_backend' => $generation->vector_backend,
+                        ],
+                        'started_at' => now(),
+                        'finished_at' => now(),
+                    ],
+                );
+                $processed++;
+                $audit->succeeded($run, $asset, $file, $provider, $model);
+            } catch (Throwable $exception) {
+                if ($file === null && $asset instanceof Asset) {
+                    $primaryFile = $asset->files->firstWhere('is_primary', true);
+                    $file = $primaryFile instanceof AssetFile ? $primaryFile : null;
+                }
+                $audit->failed($run, $assetId, $asset, $file, $provider, $model, $exception);
 
                 throw $exception;
             }
-            if ($ledger !== null) {
-                $ledgerService->consume($ledger, $costCents, $costCents);
-            }
-
-            $asset->refresh();
-            $file->refresh()->load('asset');
-            if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                throw new RuntimeException("Foto {$assetId} is tijdens de AI-indexering gewijzigd. Probeer de taak opnieuw.");
-            }
-
-            $generation = AiEmbeddingGeneration::query()->firstOrCreate(
-                ['model_space' => $embedding['model_space']],
-                [
-                    'provider_kind' => $provider,
-                    'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
-                    'model_id' => (string) $embedding['model_space'],
-                    'dimensions' => $embedding['dimensions'],
-                    'distance_metric' => 'cosine',
-                    'vector_backend' => 'database_json',
-                    'status' => AiEmbeddingGeneration::STATUS_ACTIVE,
-                    'activated_at' => now(),
-                    'capability_receipt' => [
-                        'image_embeddings' => true,
-                        'text_embeddings_required_for_queries' => true,
-                        'same_embedding_space' => true,
-                    ],
-                ],
-            );
-
-            $generation->embeddings()
-                ->where('asset_file_id', $file->id)
-                ->whereNull('stale_at')
-                ->where('source_file_sha256', '!=', $sourceSha)
-                ->update(['stale_at' => now()]);
-
-            AiEmbedding::query()->updateOrCreate(
-                [
-                    'ai_embedding_generation_id' => $generation->id,
-                    'asset_file_id' => $file->id,
-                    'source_file_sha256' => $sourceSha,
-                ],
-                [
-                    'asset_id' => $asset->id,
-                    'source_asset_lock_version' => $sourceLock,
-                    'embedding' => array_map('floatval', $embedding['embedding']),
-                    'external_vector_id' => null,
-                    'indexed_at' => now(),
-                    'stale_at' => null,
-                    'metadata' => [
-                        'provider' => $provider,
-                        'modality' => 'image',
-                        'source' => 'primary_file',
-                    ],
-                ],
-            );
-
-            AiRun::query()->firstOrCreate(
-                ['idempotency_key' => $this->idempotencyKey($provider, $file, $generation)],
-                [
-                    'run_type' => AiRun::TYPE_EMBEDDING,
-                    'status' => AiRun::STATUS_SUCCEEDED,
-                    'asset_id' => $asset->id,
-                    'asset_file_id' => $file->id,
-                    'source_asset_lock_version' => $sourceLock,
-                    'source_file_sha256' => $sourceSha,
-                    'provider_kind' => $provider,
-                    'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
-                    'model_id' => $generation->model_id,
-                    'model_space' => $generation->model_space,
-                    'input_contract' => [
-                        'modality' => 'image',
-                        'metadata_stripped' => true,
-                        'automatic_metadata_write' => false,
-                    ],
-                    'result_summary' => [
-                        'dimensions' => $embedding['dimensions'],
-                        'vector_backend' => $generation->vector_backend,
-                    ],
-                    'started_at' => now(),
-                    'finished_at' => now(),
-                ],
-            );
-            $processed++;
         }
 
         $nextCursor = $cursor + count($slice);
