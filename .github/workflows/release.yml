@@ -61,25 +61,56 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > "$RUNNER_TEMP/release-notes" <<'NOTES'
-          Test release: readable PHP with locked production dependencies, Compose
-          deployment archive and the Docker image accepted by this workflow.
-          This is not a production-readiness certification.
+          ## Nederlands
 
-          Download IMAGE.txt/IMAGE-DIGEST.txt for the registry tag and immutable digest.
-          Alternatively load fotoarchief-docker.tar.gz with docker load and use the
-          APP_IMAGE value from IMAGE-LOCAL.txt (no registry credentials required).
-          The PHP host needs PHP 8.5, PostgreSQL, required extensions and cron/workers;
-          set its document root to public/. Composer is not needed on the host.
+          Testrelease met leesbare PHP en vergrendelde productieafhankelijkheden,
+          een Compose-deploymentarchief en de Docker-image die door deze workflow
+          is geaccepteerd. Dit is geen certificering van productierijpheid.
 
-          Operator changes: set APP_IMAGE to the supplied tag/digest. Keep DB_PASSWORD
-          unchanged for existing volumes. Preserve app-storage and postgres-data.
-          The HTTP mapping remains ${APP_BIND_ADDRESS:-127.0.0.1}:${APP_HTTP_PORT:-8080}:8080.
-          No new mandatory environment variables are introduced by packaging.
-          Before upgrading, create a verified backup and consult the operational docs.
-          The application file limit is 104857600 bytes; any proxy must allow at least
-          115343360 bytes per request and the configured 300-second request duration.
+          Download IMAGE.txt en IMAGE-DIGEST.txt voor de registrytag en immutable
+          digest. U kunt ook fotoarchief-docker.tar.gz laden met docker load en de
+          APP_IMAGE-waarde uit IMAGE-LOCAL.txt gebruiken; registrycredentials zijn
+          dan niet nodig. De PHP-host vereist PHP 8.5, PostgreSQL, de vereiste
+          extensies en cron/workers. Stel de document root in op public/. Composer
+          is niet nodig op de host.
+
+          Operatorwijzigingen: stel APP_IMAGE in op de meegeleverde tag of digest.
+          Laat DB_PASSWORD voor bestaande volumes ongewijzigd. Behoud app-storage
+          en postgres-data. De HTTP-mapping blijft
+          ${APP_BIND_ADDRESS:-127.0.0.1}:${APP_HTTP_PORT:-8080}:8080. Packaging
+          introduceert geen nieuwe verplichte omgevingsvariabelen. Maak vóór een
+          upgrade een geverifieerde backup en raadpleeg de operationele documentatie.
+          De bestandslimiet van de applicatie is 104857600 bytes; iedere proxy moet
+          minimaal 115343360 bytes per request en de ingestelde requestduur van
+          300 seconden toestaan.
+
+          ---
+
+          ## English
+
+          Test release containing readable PHP with locked production dependencies,
+          a Compose deployment archive and the Docker image accepted by this
+          workflow. This is not a production-readiness certification.
+
+          Download IMAGE.txt and IMAGE-DIGEST.txt for the registry tag and immutable
+          digest. Alternatively, load fotoarchief-docker.tar.gz with docker load and
+          use the APP_IMAGE value from IMAGE-LOCAL.txt; no registry credentials are
+          required. The PHP host requires PHP 8.5, PostgreSQL, the required extensions
+          and cron/workers. Set its document root to public/. Composer is not needed
+          on the host.
+
+          Operator changes: set APP_IMAGE to the supplied tag or digest. Keep
+          DB_PASSWORD unchanged for existing volumes. Preserve app-storage and
+          postgres-data. The HTTP mapping remains
+          ${APP_BIND_ADDRESS:-127.0.0.1}:${APP_HTTP_PORT:-8080}:8080. Packaging
+          introduces no new mandatory environment variables. Before upgrading,
+          create a verified backup and consult the operational documentation.
+          The application file limit is 104857600 bytes; every proxy must allow at
+          least 115343360 bytes per request and the configured request duration of
+          300 seconds.
           NOTES
           cat dist/DOCKER-SHA256SUMS >> dist/SHA256SUMS
           gh release create "$GITHUB_REF_NAME" \
-            --verify-tag --prerelease --title "FotoArchief $GITHUB_REF_NAME" \
+            --verify-tag --prerelease \
+            --title "FotoArchief $GITHUB_REF_NAME — Testrelease / Test release" \
             --notes-file "$RUNNER_TEMP/release-notes" dist/*
