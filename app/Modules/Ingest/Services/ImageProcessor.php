@@ -58,7 +58,12 @@ class ImageProcessor
             if ($sha === false) {
                 throw new RuntimeException('Checksum calculation failed.');
             }
-            if (AssetFile::query()->where('sha256', $sha)->exists()) {
+            if ($existingFile = AssetFile::query()->where('sha256', $sha)->first()) {
+                $upload->update([
+                    'duplicate_of_asset_id' => $existingFile->asset_id,
+                    'duplicate_of_file_id' => $existingFile->id,
+                    'detected_sha256' => $sha,
+                ]);
                 $this->reject('Dit bestand bestaat al in het archief. Er is geen tweede origineel toegevoegd.');
             }
 
