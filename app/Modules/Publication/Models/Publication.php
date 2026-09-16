@@ -80,14 +80,14 @@ class Publication extends CatalogueModel
             ->whereHas('asset.rights', function (Builder $q): void {
                 $q->where('verification_status', 'verified');
             })
-            // Count must be exactly 1, not merely "at least one": if a future
-            // retained-file/reprocessing feature ever leaves two eligible
-            // files on one asset at once, this fails closed instead of
-            // letting the predicate say "public" while the viewer/media/IIIF
-            // routes (see Asset::currentPublicFile(), which mirrors this
-            // exact condition) independently pick whichever file the
-            // database happens to return first - which could be the
-            // superseded one. See docs/CONTRACT_ACTIVE_FILE.md.
+            // Count must be exactly 1, not merely "at least one". Operations'
+            // partial unique index asset_files_single_primary_per_asset
+            // already guarantees at most one is_primary=true row per asset,
+            // so this can only ever disagree with Asset::currentPublicFile()
+            // (which mirrors this exact condition) by finding zero eligible
+            // rows - e.g. a primary file that is not (yet) ready_private/
+            // clean - never by having to arbitrate between two. See
+            // docs/CONTRACT_ACTIVE_FILE.md.
             ->whereHas('asset.files', function (Builder $q): void {
                 $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean');
                 if (Schema::hasColumn('asset_files', 'is_primary')) {

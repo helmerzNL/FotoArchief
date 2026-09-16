@@ -91,13 +91,16 @@ There is no separate "public copy" of a photo and no cache to invalidate:
 - **Which file is "current"**: the predicate, the viewer, its media stream
   and the IIIF manifest all resolve the same single canonical file for an
   asset (`Asset::currentPublicFile()`, mirrored by the predicate's exact-count
-  `whereHas('asset.files', ..., '=', 1)`). This requires exactly one eligible
-  (clean, ready) file; today's ingest only ever produces one, so ordinary
-  photos are unaffected. If a future feature ever leaves more than one
-  eligible file on an asset at once, every public route fails closed (404)
-  rather than guessing which file is current — see
-  [`docs/CONTRACT_ACTIVE_FILE.md`](CONTRACT_ACTIVE_FILE.md) for the full
-  contract and what a future `is_primary` column must guarantee.
+  `whereHas('asset.files', ..., '=', 1)`), requiring exactly one file that is
+  both scan-clean/ready and flagged `is_primary` by Operations' file-versioning
+  schema. The database itself refuses a second primary file per asset
+  (partial unique index `asset_files_single_primary_per_asset`), and
+  replacing a photo's primary scan already bumps `assets.lock_version`, so a
+  primary-file switch forces the same re-review as any other edit before the
+  replacement can go public. If a file is ever demoted without a replacement
+  yet in place, every public route fails closed (404) instead of guessing —
+  see [`docs/CONTRACT_ACTIVE_FILE.md`](CONTRACT_ACTIVE_FILE.md) for the full
+  contract.
 
 ## 3. Download policy options
 
@@ -172,4 +175,5 @@ from visitor input straight into archive metadata.
   image. The manifest is denied with a 404 for any private, embargoed,
   revoked, unscanned or (post-integration) deleted asset, via the same route
   binding used by the human-facing viewer.
+
 

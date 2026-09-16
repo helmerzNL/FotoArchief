@@ -81,22 +81,25 @@ class Asset extends CatalogueModel
      * {@see Publication::scopePubliclyVisible()}
      * already validated.
      *
-     * Deliberately returns null - fail closed - both when no file qualifies
-     * and when more than one does. Today's ingest pipeline only ever
-     * produces one ready_private/clean file per asset, so an original
-     * single-file ingest resolves unambiguously and remains publishable
-     * unchanged. If a future retained-file/reprocessing feature ever leaves
-     * two eligible files at once, this refuses to guess which is current
-     * instead of arbitrarily serving whichever the database happens to
-     * return first.
+     * Deliberately returns null - fail closed - unless exactly one file is
+     * both eligible (`ingest_status = 'ready_private'` and
+     * `scanner_status = 'clean'`) and, once Operations' real
+     * `asset_files.is_primary` column exists (see
+     * docs/CONTRACT_ACTIVE_FILE.md), flagged primary. The database itself
+     * enforces "at most one primary file per asset" with the partial unique
+     * index `asset_files_single_primary_per_asset`
+     * (migration `2026_09_17_240000_enforce_single_primary_asset_file.php`),
+     * so this can only ever disagree with the predicate below by having
+     * *zero* eligible files (e.g. mid-processing, or a since-revoked scan
+     * status) - it never has to arbitrate between two "primary" rows,
+     * because the database already refuses that state.
      *
-     * Forward-compatible: the moment `asset_files.is_primary` (or an
-     * equivalent `is_current` flag) exists - see
-     * docs/CONTRACT_ACTIVE_FILE.md - only the flagged file is considered,
-     * and switching which file is primary is expected to bump lock_version
-     * (or another explicit privacy gate) so the change goes through
-     * re-review like any other edit, exactly like deleted_at in
-     * docs/CONTRACT_SOFT_DELETE.md.
+     * Switching which file is primary already bumps `assets.lock_version`
+     * (see `FileVersionService::activateVersion()`/`ImageProcessor`, owned by
+     * Operations), which forces re-review through the existing
+     * `assets.lock_version = publications.published_lock_version` gate
+     * before the new primary can go public - exactly like any other edit,
+     * per `docs/CONTRACT_SOFT_DELETE.md`'s precedent.
      */
     public function currentPublicFile(): ?AssetFile
     {
