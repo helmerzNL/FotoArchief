@@ -1,14 +1,14 @@
 @extends('layouts.app')
-@section('title', 'Beheer - FotoArchief')
+@section('title', __('onboarding.dashboard.title'))
 @section('content')
-    <p class="eyebrow">Installatie gereed</p>
-    <h1>Welkom, {{ auth()->user()->name }}</h1>
-    <p class="intro">Je beheeromgeving staat klaar. Database, opslag en het eerste account zijn geconfigureerd.</p>
+    <p class="eyebrow">{{ __('onboarding.dashboard.eyebrow') }}</p>
+    <h1>{{ __('onboarding.dashboard.heading', ['name' => auth()->user()->name]) }}</h1>
+    <p class="intro">{{ __('onboarding.dashboard.intro') }}</p>
     <div class="grid">
-        <section class="card"><h2>Database</h2><p>PostgreSQL &middot; {{ config('database.connections.pgsql.database') }}</p></section>
-        <section class="card"><h2>Opslag</h2><p>{{ config('filesystems.default') === 'local' ? 'Lokale private opslag' : 'Private S3-compatible opslag' }}</p></section>
-        <section class="card"><h2>Installatie</h2><p>Wizard vergrendeld. De instellingen blijven bewaard bij een herstart.</p></section>
-        <section class="card"><h2>Eerste foto's</h2><p>Upload private afbeeldingen, volg de verwerking en beschrijf ze voordat er later een publicatieworkflow komt.</p><a class="button" href="{{ route('admin.assets.index') }}">Naar foto's</a></section>
+        <section class="card"><h2>{{ __('onboarding.dashboard.database') }}</h2><p>{{ __('onboarding.dashboard.database_summary', ['database' => config('database.connections.pgsql.database')]) }}</p></section>
+        <section class="card"><h2>{{ __('onboarding.dashboard.storage') }}</h2><p>{{ config('filesystems.default') === 'local' ? __('onboarding.dashboard.storage_local') : __('onboarding.dashboard.storage_s3') }}</p></section>
+        <section class="card"><h2>{{ __('onboarding.dashboard.installation') }}</h2><p>{{ __('onboarding.dashboard.installation_locked') }}</p></section>
+        <section class="card"><h2>{{ __('onboarding.dashboard.first_photos') }}</h2><p>{{ __('onboarding.dashboard.first_photos_help') }}</p><a class="button" href="{{ route('admin.assets.index') }}">{{ __('onboarding.dashboard.first_photos_link') }}</a></section>
     </div>
-    <form method="post" action="/logout">@csrf<button class="secondary" type="submit">Uitloggen</button></form>
+    <form method="post" action="/logout">@csrf<button class="secondary" type="submit">{{ __('shell.nav.logout') }}</button></form>
 @endsection

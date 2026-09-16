@@ -8,6 +8,7 @@ use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\Installation\DeploymentMigrationCoordinator;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -40,6 +41,66 @@ Artisan::command('installation:prepare {--quiet-code : Do not print the private 
 Artisan::command('installation:ready', function (InstallationStore $store): int {
     return $store->completed() ? 0 : 1;
 })->purpose('Exit successfully only after onboarding has completed');
+
+Artisan::command('installation:migrate-ready', function (InstallationStore $store, DeploymentMigrationCoordinator $coordinator): int {
+    if (! $store->completed()) {
+        $this->info('Eerste installatie is nog niet voltooid; automatische databasemigratie wordt overgeslagen.');
+
+        return 0;
+    }
+
+    $this->info('Automatische databasemigratie wordt gecoördineerd.');
+    try {
+        $coordinator->migrate();
+    } catch (Throwable $exception) {
+        $this->line('<error>Automatische databasemigratie is mislukt; de container start niet totdat dit is opgelost.</error>');
+        $this->line('<error>Fouttype: '.$exception::class.'</error>');
+
+        return 1;
+    }
+
+    $this->info('Databaseschema is klaar voor app, worker en scheduler.');
+
+    return 0;
+})->purpose('Coordinate deployment migrations after onboarding before runtime processes start');
+
+Artisan::command('installation:migration-status', function (InstallationStore $store, DeploymentMigrationCoordinator $coordinator): int {
+    if (! $store->completed()) {
+        $this->info('Eerste installatie is nog niet voltooid; deploymentmigraties zijn nog niet van toepassing.');
+
+        return 0;
+    }
+
+    try {
+        $status = $coordinator->status();
+    } catch (Throwable $exception) {
+        $this->line('<error>Migratiestatus kon niet veilig worden bepaald.</error>');
+        $this->line('<error>Fouttype: '.$exception::class.'</error>');
+
+        return 1;
+    }
+
+    if ($status->coordinatorActive) {
+        $this->warn('Een ander proces voert momenteel deploymentmigraties uit.');
+
+        return 1;
+    }
+
+    if (! $status->ready()) {
+        /** @var list<string> $pending */
+        $pending = $status->pendingMigrations ?? [];
+        $this->error('Achterstallige databasemigraties: '.count($pending));
+        foreach ($pending as $migration) {
+            $this->line('  - '.$migration);
+        }
+
+        return 1;
+    }
+
+    $this->info('Databaseschema is actueel; er is geen migratiecoördinator actief.');
+
+    return 0;
+})->purpose('Report whether deployment migrations are active, pending or complete');
 
 Artisan::command('exchange:prune-exports', function (DataExportService $exports): int {
     $pruned = $exports->prune();

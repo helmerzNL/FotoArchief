@@ -15,7 +15,7 @@ it('names zip among the extensions onboarding refuses to install without', funct
         ->toContain('exif')
         ->toContain('fileinfo');
 
-    foreach (InstallationPlatform::REQUIRED as $extension => $purpose) {
+    foreach (InstallationPlatform::requiredPurposes() as $extension => $purpose) {
         expect($purpose)->not->toBe('')
             ->and(extension_loaded($extension))->toBeTrue("extension {$extension} is required to run the test suite");
     }
@@ -34,6 +34,6 @@ it('reports every missing extension in Dutch instead of failing later', function
     // The suite cannot run without these, so the message itself is asserted
     // rather than simulated by unloading an extension.
     expect($missing)->toBe([]);
-    expect(InstallationPlatform::REQUIRED['zip'])->toContain('exportpakketten')
-        ->and(InstallationPlatform::REQUIRED['pdo_pgsql'])->toContain('PostgreSQL');
+    expect(InstallationPlatform::requiredPurposes()['zip'])->toContain('exportpakketten')
+        ->and(InstallationPlatform::requiredPurposes()['pdo_pgsql'])->toContain('PostgreSQL');
 });

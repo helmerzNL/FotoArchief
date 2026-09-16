@@ -22,16 +22,16 @@ class SessionController extends Controller
         ]);
         $key = 'login:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            abort(429, 'Te veel inlogpogingen. Wacht een minuut.');
+            abort(429, __('auth.login.errors.too_many_attempts'));
         }
         RateLimiter::hit($key, 60);
         $credentials['email'] = strtolower($credentials['email']);
         if (! Auth::attempt($credentials)) {
-            throw ValidationException::withMessages(['email' => 'De inloggegevens zijn niet geldig.']);
+            throw ValidationException::withMessages(['email' => __('auth.login.errors.invalid')]);
         }
         if (Auth::user()?->is_active === false) {
             Auth::logout();
-            throw ValidationException::withMessages(['email' => 'De inloggegevens zijn niet geldig.']);
+            throw ValidationException::withMessages(['email' => __('auth.login.errors.invalid')]);
         }
         RateLimiter::clear($key);
         $request->session()->regenerate();

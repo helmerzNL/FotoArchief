@@ -20,7 +20,7 @@ final class InstallationGate
             }
             if (! $complete && ! $request->is('setup', 'setup/*')) {
                 return $request->expectsJson() || $request->is('api/*')
-                    ? response()->json(['message' => 'Installatie is nog niet voltooid.'], 503)
+                    ? response()->json(['message' => __('onboarding.setup.errors.not_complete')], 503)
                     : redirect('/setup');
             }
         }

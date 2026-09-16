@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Modules\Installation\DeploymentMigrationCoordinator;
 use App\Modules\Installation\InstallationStore;
+use App\Modules\Installation\PostgresDeploymentMigrationCoordinator;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -15,6 +17,7 @@ final class InstallationServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(InstallationStore::class, fn ($app) => new InstallationStore($app['config']->get('installation.path')));
+        $this->app->singleton(DeploymentMigrationCoordinator::class, PostgresDeploymentMigrationCoordinator::class);
     }
 
     public function boot(): void

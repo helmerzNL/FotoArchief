@@ -22,24 +22,24 @@ final class InstallationState
     {
         $data = json_decode($json, false, 512, JSON_THROW_ON_ERROR);
         if (! $data instanceof stdClass) {
-            throw new RuntimeException('Installatiestatus is beschadigd.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.state_corrupt'));
         }
         foreach (['id', 'key', 'codeHash', 'phase'] as $field) {
             if (! isset($data->$field) || ! is_string($data->$field)) {
-                throw new RuntimeException('Installatiestatus is onvolledig.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.state_incomplete'));
             }
         }
         if (! in_array($data->phase, ['pending', 'installing', 'complete'], true)
             || ! str_starts_with($data->key, 'base64:')
             || strlen((string) base64_decode(substr($data->key, 7), true)) !== 32
             || ! preg_match('/^[a-f0-9]{64}$/', $data->codeHash)) {
-            throw new RuntimeException('Installatiestatus is ongeldig.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.state_invalid'));
         }
         $settings = isset($data->settings) && $data->settings instanceof stdClass
             ? InstallationSettings::fromObject($data->settings) : null;
         $fingerprint = isset($data->fingerprint) && is_string($data->fingerprint) ? $data->fingerprint : null;
         if ($data->phase !== 'pending' && ($settings === null || $fingerprint === null)) {
-            throw new RuntimeException('Installatieconfiguratie ontbreekt; installatie wordt niet opnieuw geopend.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.config_missing'));
         }
 
         return new self($data->id, $data->key, $data->codeHash, $data->phase, $settings, $fingerprint);

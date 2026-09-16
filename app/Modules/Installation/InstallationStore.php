@@ -19,7 +19,7 @@ final class InstallationStore
         }
         $json = file_get_contents($file);
         if ($json === false) {
-            throw new RuntimeException('Installatiestatus kan niet worden gelezen.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.state_unreadable'));
         }
 
         return InstallationState::decode($json);
@@ -33,7 +33,7 @@ final class InstallationStore
                 return $state;
             }
             if (is_file($this->directory.'/setup-code.txt')) {
-                throw new RuntimeException('Installatiestatus ontbreekt terwijl er al een installatiecode bestaat. Herstel de private installatiemap; de installatie wordt niet opnieuw geopend.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.state_missing_with_code'));
             }
             $code = bin2hex(random_bytes(24));
             $state = new InstallationState(
@@ -65,15 +65,15 @@ final class InstallationStore
     public function locked(Closure $operation): mixed
     {
         if (! is_dir($this->directory) && ! mkdir($this->directory, 0700, true) && ! is_dir($this->directory)) {
-            throw new RuntimeException('Private installatiemap kan niet worden aangemaakt.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.private_directory_failed'));
         }
         $handle = fopen($this->directory.'/installation.lock', 'c');
         if ($handle === false) {
-            throw new RuntimeException('Installatievergrendeling kan niet worden geopend.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.lock_open_failed'));
         }
         try {
             if (! flock($handle, LOCK_EX | LOCK_NB)) {
-                throw new RuntimeException('Er is al een installatie actief. Probeer het straks opnieuw.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.already_running'));
             }
 
             return $operation();
@@ -87,14 +87,14 @@ final class InstallationStore
     {
         $temporary = tempnam($this->directory, 'install-');
         if ($temporary === false) {
-            throw new RuntimeException('Tijdelijke installatieconfiguratie kan niet worden aangemaakt.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.temporary_config_failed'));
         }
         try {
             if (! chmod($temporary, 0600) || file_put_contents($temporary, $content, LOCK_EX) !== strlen($content)) {
-                throw new RuntimeException('Private installatieconfiguratie kan niet worden geschreven.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.config_write_failed'));
             }
             if (! rename($temporary, $this->directory.'/'.$name)) {
-                throw new RuntimeException('Installatieconfiguratie kan niet atomair worden opgeslagen.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.config_save_failed'));
             }
         } finally {
             if (is_file($temporary)) {

@@ -28,12 +28,12 @@ class InstallationRunner
         try {
             $this->storage->check($settings);
         } catch (Throwable $exception) {
-            throw new InstallationFailure('Opslagcontrole mislukt. Controleer het endpoint, de bucket en rechten voor schrijven, lezen en verwijderen. Bij lokale opslag moet storage/app/private schrijfbaar zijn.', 0, $exception);
+            throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.storage_check_failed'), 0, $exception);
         }
         try {
             $this->database->connect($settings);
         } catch (Throwable $exception) {
-            throw new InstallationFailure('Databaseverbinding mislukt. Controleer de PostgreSQL-host, poort, databasenaam, gebruiker, wachtwoord en TLS-instelling.', 0, $exception);
+            throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.database_connection_failed'), 0, $exception);
         }
     }
 
@@ -42,11 +42,11 @@ class InstallationRunner
         $this->store->locked(function () use ($settings, $name, $email, $password): void {
             $state = $this->store->read();
             if ($state === null || $state->phase === 'complete') {
-                throw new InstallationFailure('Deze installatie kan niet worden gestart.');
+                throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.cannot_start'));
             }
             $fingerprint = $settings->fingerprint($email);
             if ($state->fingerprint !== null && ! hash_equals($state->fingerprint, $fingerprint)) {
-                throw new InstallationFailure('Hervat met dezelfde database, opslaginstellingen en beheerder als de eerdere poging.');
+                throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.resume_mismatch'));
             }
             $this->check($settings);
             if ($state->phase === 'pending') {
@@ -57,7 +57,7 @@ class InstallationRunner
                 $this->store->save($state);
             }
             if (Artisan::call('migrate', ['--force' => true]) !== 0) {
-                throw new InstallationFailure('Databasemigratie is niet voltooid. Controleer of de databasegebruiker tabellen en functies mag maken.');
+                throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.migration_failed'));
             }
             DB::transaction(function () use ($state, $name, $email, $password): void {
                 // The receipt makes retry safe if the DB committed but the state-file write failed.
@@ -65,7 +65,7 @@ class InstallationRunner
                     return;
                 }
                 if (User::query()->exists() || DB::table('installation_receipts')->exists()) {
-                    throw new InstallationFailure('Deze database bevat al een andere installatie.');
+                    throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.existing_installation'));
                 }
                 app(DatabaseSeeder::class)->run();
                 $user = User::query()->create([

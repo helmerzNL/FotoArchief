@@ -41,7 +41,11 @@
   },
   "scripts": {
     "analyse": "phpstan analyse --configuration=phpstan.neon.dist",
-    "lint": "pint --test",
+    "lint": [
+      "pint --test",
+      "@php artisan translations:check"
+    ],
+    "translations": "@php artisan translations:check",
     "format": "pint",
     "test": "pest",
     "post-autoload-dump": [
@@ -68,3 +72,4 @@
   "minimum-stability": "stable",
   "prefer-stable": true
 }
+

@@ -31,11 +31,11 @@ final readonly class InstallationSettings
     {
         foreach (['host', 'database', 'username', 'password', 'sslmode', 'disk', 'endpoint', 'region', 'bucket', 'accessKey', 'secretKey'] as $field) {
             if (! isset($data->$field) || ! is_string($data->$field)) {
-                throw new RuntimeException('Installatieconfiguratie is beschadigd; herstel de private configuratie uit de backup.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.config_corrupt'));
             }
         }
         if (! isset($data->port, $data->pathStyle) || ! is_int($data->port) || ! is_bool($data->pathStyle)) {
-            throw new RuntimeException('Installatieconfiguratie heeft een ongeldige structuur.');
+            throw new RuntimeException(InstallationText::get('onboarding.setup.errors.config_invalid_structure'));
         }
 
         return new self($data->host, $data->port, $data->database, $data->username, $data->password, $data->sslmode, $data->disk, $data->endpoint, $data->region, $data->bucket, $data->accessKey, $data->secretKey, $data->pathStyle);

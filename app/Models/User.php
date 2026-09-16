@@ -22,6 +22,7 @@ class User extends Authenticatable
 
     protected $attributes = [
         'is_active' => true,
+        'preferred_locale' => 'nl',
     ];
 
     protected $fillable = [
@@ -31,6 +32,7 @@ class User extends Authenticatable
         'is_active',
         'deactivated_at',
         'session_revoked_at',
+        'preferred_locale',
     ];
 
     protected $hidden = [
@@ -88,5 +90,12 @@ class User extends Authenticatable
         return $this->roles()
             ->whereHas('permissions', fn ($query) => $query->where('key', $permission))
             ->exists();
+    }
+
+    public function preferredLocale(): string
+    {
+        return is_string($this->preferred_locale) && $this->preferred_locale !== ''
+            ? $this->preferred_locale
+            : 'nl';
     }
 }
