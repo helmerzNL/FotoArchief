@@ -77,6 +77,29 @@ do not infer a working image name from an example.
 
 ## Operator changes
 
+### Exchange worker recovery
+
+Existing deployments keep working without adding variables: the new defaults are
+`EXCHANGE_JOB_TIMEOUT_SECONDS=120`, `EXCHANGE_STALE_CLAIM_SECONDS=150` and
+`EXCHANGE_ABANDONED_CLAIM_SECONDS=1800`. A stopped import/export worker can be
+reclaimed after 150 seconds; the job deadline is 120 seconds and the ingest queue
+visibility remains 180 seconds. Keep **timeout < reclaim < visibility**.
+The scheduler marks abandoned claims failed after 1800 seconds, checked every
+15 minutes; that is not a promise of recovery exactly 1800 seconds after a crash.
+
+If customising these values, add them to the private stack interpolation
+environment and copy these exact mappings into the shared application environment
+of a manually maintained Compose file, then redeploy app, worker and scheduler:
+
+```yaml
+EXCHANGE_JOB_TIMEOUT_SECONDS: ${EXCHANGE_JOB_TIMEOUT_SECONDS:-120}
+EXCHANGE_STALE_CLAIM_SECONDS: ${EXCHANGE_STALE_CLAIM_SECONDS:-150}
+EXCHANGE_ABANDONED_CLAIM_SECONDS: ${EXCHANGE_ABANDONED_CLAIM_SECONDS:-1800}
+```
+
+No port or volume mapping changes are required. Preserve the existing
+`app-storage` and `postgres-data` volumes and database password.
+
 ### OCR and exchange settings
 
 The image includes Tesseract plus Dutch and English trained data. OCR remains
