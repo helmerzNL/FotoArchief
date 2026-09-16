@@ -33,6 +33,12 @@ FROM runtime AS application
 COPY --from=dependencies /var/www/html/vendor ./vendor
 COPY . .
 
+LABEL org.opencontainers.image.title="FotoArchief" \
+    org.opencontainers.image.description="Historische beeldbank voor beheer, verrijking, beoordeling en publicatie. / Historical image archive for management, enrichment, review and publication." \
+    org.opencontainers.image.source="https://github.com/helmerzNL/FotoArchief" \
+    org.opencontainers.image.documentation="https://github.com/helmerzNL/FotoArchief#readme" \
+    org.opencontainers.image.vendor="FotoArchief"
+
 RUN mkdir -p \
         bootstrap/cache \
         storage/app \

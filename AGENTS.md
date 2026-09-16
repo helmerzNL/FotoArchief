@@ -61,6 +61,19 @@ changing application structure or domain boundaries.
 
 - Preserve existing docs unless the task explicitly updates the documented
   decision.
+- For native AI provider and model work, create and maintain all user,
+  operator, architecture and release documentation bilingually in the same
+  document: Dutch first as the primary language, followed by an equivalent
+  English section. Keep both language sections synchronized in the same
+  change.
+- Pull request titles and bodies for native AI provider and model work must be
+  bilingual, with Dutch first and English second. Both versions must communicate
+  the same scope, validation evidence, risks and operator actions.
+- GitHub Package descriptions, container image metadata, and GitHub Release
+  titles and bodies must be bilingual for every FotoArchief release, with Dutch
+  first and equivalent English second. Keep technical identifiers, tags,
+  digests, filenames, commands, limits, and operator actions identical between
+  both language sections.
 - Do not modify deployment or CI files owned by another agent unless the task
   explicitly assigns that work.
 - Prefer conventional Laravel structure and names over custom framework

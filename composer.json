@@ -1,7 +1,7 @@
 {
   "name": "flux76/fotoarchief",
   "type": "project",
-  "description": "Laravel modular-monolith MVP foundation for the FotoArchief historical image bank.",
+  "description": "Historische beeldbank op Laravel / Historical image archive built with Laravel.",
   "keywords": [
     "laravel",
     "archive",
