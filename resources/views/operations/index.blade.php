@@ -27,6 +27,8 @@
             <dd>Machinaal gelezen tekst bekijken, corrigeren en doorzoeken.</dd>
             <dt>AI-instellingen</dt>
             <dd>Optionele beeldanalyse en semantisch zoeken expliciet aanzetten, begrenzen of met de noodstop blokkeren.</dd>
+            <dt>AI-suggesties</dt>
+            <dd>Conceptbeschrijvingen en tags controleren voordat metadata verandert.</dd>
             <dt>Achtergrondtaken</dt>
             <dd>De voortgang, fouten en herstart van zware bewerkingen.</dd>
         </dl>

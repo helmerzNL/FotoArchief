@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Ai\Controllers\AiSettingsController;
+use App\Modules\Ai\Controllers\AiSuggestionReviewController;
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
@@ -21,6 +22,9 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
+    Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
+    Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
+    Route::post('/ai/suggestions/{suggestion}/reject', [AiSuggestionReviewController::class, 'reject'])->name('ai.suggestions.reject');
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');

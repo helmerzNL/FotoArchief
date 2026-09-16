@@ -119,6 +119,10 @@ These are implementation defaults until a later measured proof tightens them:
   mechanism. HTTP requests record selected asset ids and provider choice only;
   workers read the current clean primary file, call the chosen provider and
   store suggestions as pending review without metadata writes.
+- Step 45 exposes pending AI suggestions for human review. Accepting a
+  suggestion re-checks the asset lock version and source checksum, writes
+  ordinary metadata/tag changes, increments the asset lock version and records
+  an audit event. Rejecting a suggestion changes only review status.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after
