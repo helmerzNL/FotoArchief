@@ -207,8 +207,8 @@ class AiConfigurationService
             throw ValidationException::withMessages($errors);
         }
 
-        $this->validateCapability($values, 'image_analysis_enabled', 'image_analysis_provider', 'image_analysis_model', 'image_analysis_native_consent', self::IMAGE_ANALYSIS_PROVIDERS, $errors);
-        $this->validateCapability($values, 'embeddings_enabled', 'embeddings_provider', 'embeddings_model', 'embeddings_native_consent', self::EMBEDDINGS_PROVIDERS, $errors);
+        $this->validateCapability($values, 'image_analysis_enabled', 'image_analysis_provider', 'image_analysis_model', 'vision_model', 'image_analysis_native_consent', self::IMAGE_ANALYSIS_PROVIDERS, $errors);
+        $this->validateCapability($values, 'embeddings_enabled', 'embeddings_provider', 'embeddings_model', 'embedding_model', 'embeddings_native_consent', self::EMBEDDINGS_PROVIDERS, $errors);
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -220,7 +220,7 @@ class AiConfigurationService
      * @param  list<string>  $allowedProviders
      * @param  array<string, string>  $errors
      */
-    private function validateCapability(array $values, string $enabledKey, string $providerKey, string $modelKey, string $consentKey, array $allowedProviders, array &$errors): void
+    private function validateCapability(array $values, string $enabledKey, string $providerKey, string $modelKey, string $providerModelKey, string $consentKey, array $allowedProviders, array &$errors): void
     {
         if (! (bool) ($values[$enabledKey] ?? false)) {
             return;
@@ -246,13 +246,14 @@ class AiConfigurationService
             return;
         }
         if (in_array($provider, self::NATIVE_PROVIDERS, true)) {
-            if (trim((string) ($values[$modelKey] ?? '')) === '') {
+            $providerStatus = $this->providerConfigs->status($provider);
+            if (trim((string) ($providerStatus[$providerModelKey] ?? '')) === '') {
                 $errors[$modelKey] = 'Kies een model voor de gekozen provider.';
             }
             if (! (bool) ($values[$consentKey] ?? false)) {
                 $errors[$consentKey] = 'Native provider gebruik vereist expliciete toestemming per functie.';
             }
-            if (! (bool) $this->providerConfigs->status($provider)['enabled']) {
+            if (! (bool) $providerStatus['enabled']) {
                 $errors["{$provider}_provider_enabled"] = 'Schakel de provider eerst in voordat je hem selecteert.';
             }
         }

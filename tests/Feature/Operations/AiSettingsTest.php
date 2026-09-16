@@ -125,7 +125,7 @@ it('allows global AI activation while configured capabilities remain disabled', 
         ->and($settings['image_analysis_ready'])->toBeFalse();
 });
 
-it('accepts an enabled native provider from its database record', function (): void {
+it('uses the database-owned native model when the local model field is empty', function (): void {
     app(AiProviderConfigService::class)->update('openai', [
         'enabled' => true,
         'vision_model' => 'gpt-4.1-mini',
@@ -142,7 +142,7 @@ it('accepts an enabled native provider from its database record', function (): v
         'derivative_max_pixels' => 1024,
         'request_timeout_seconds' => 60,
         'image_analysis_provider' => 'openai',
-        'image_analysis_model' => 'gpt-4.1-mini',
+        'image_analysis_model' => '',
         'image_analysis_native_consent' => '1',
     ]);
 
@@ -150,10 +150,17 @@ it('accepts an enabled native provider from its database record', function (): v
 
     $settings = app(AiConfigurationService::class)->effective();
     expect($settings['openai_ready'])->toBeTrue()
+        ->and($settings['image_analysis_model'])->toBe('gpt-4.1-mini')
         ->and($settings['image_analysis_ready'])->toBeTrue();
 });
 
 it('keeps native provider requirements fail closed for enabled capabilities', function (string $capability, string $provider): void {
+    $providerModelKey = $capability === 'image_analysis' ? 'vision_model' : 'embedding_model';
+    app(AiProviderConfigService::class)->update($provider, [
+        'enabled' => false,
+        $providerModelKey => null,
+    ], $this->admin);
+
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
         'global_enabled' => '1',
         "{$capability}_enabled" => '1',
