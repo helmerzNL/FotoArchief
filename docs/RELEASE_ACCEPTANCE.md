@@ -78,6 +78,36 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+### Integrated browser and package checks
+
+Real Playwright browser interactions against the isolated PostgreSQL-backed
+50,000-record harness exercised password login, catalogue creation, filtered
+photo search, photo detail, exchange and diagnostics pages. The benchmark router
+now serves allowlisted public styles/scripts; traversal and private configuration
+requests still return 404. At a 390-pixel viewport the styled dashboard, photo
+search and diagnostics have no document-level horizontal overflow.
+
+The browser exposed a photo-reference lookup defect: the visible
+"Aanwinstnummer of Foto-ID" field initially rejected an existing photo ULID.
+After integration revision `c52ace5`, submitting the exact same ID succeeds,
+displays "Foto toegevoegd aan collectie", increments the collection count to
+one and links the expected photo. Catalogue regression tests pass **62 / 605**;
+formatting and level-8 analysis pass. The populated collection table still
+overflows the 390-pixel viewport and requires correction before accessibility
+acceptance. These checks are not a WCAG 2.2 AA certification.
+
+The real v0.8.6 production PHP archive from revision `3909bb1` passes the
+archive/provenance contract with **79 production packages**. Its SHA-256 is
+`33a5bfd554e306cac1a1b0399b04e048870bebd4079730db06f44c14985123d2`;
+the deployment ZIP SHA-256 is
+`f8ac9aea69d9da68dead90ecff85ea797bf15dfa33e24c47d0361fc00bc3387b`.
+This intermediate package predates the reference fix, remaining operations
+corrections and public portal; it is not the final 30-feature test release.
+
+Repeating the private 50,000-record HTTP benchmark after all operations
+migrations gives p95 **324.24 / 228.81 / 345.75 ms** for list, filtered list and
+detail, below **800 / 800 / 400 ms** respectively.
+
 After integrating archive diagnostics, duplicates, file versions, processing,
 integrity, storage relocation, trash and OCR, plus the catalogue HTTP workflow
 regression test, revision `fdd38b4` passes **171 tests / 1273 assertions**,
