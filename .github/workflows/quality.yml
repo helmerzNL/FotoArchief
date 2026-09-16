@@ -1,6 +1,7 @@
 name: Quality
 
 on:
+  workflow_call:
   pull_request:
   push:
     branches:
@@ -93,6 +94,70 @@ jobs:
         if: steps.scripts.outputs.test == 'true'
         run: composer test
 
+  postgres:
+    name: PostgreSQL fresh installation and forward upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fotoarchief
+          POSTGRES_PASSWORD: ci-disposable-database
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fotoarchief"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FOTOARCHIEF_TEST_PG_DATABASE: release_onboarding_test
+      FOTOARCHIEF_TEST_PG_UPGRADE_DATABASE: release_workflow_test
+      FOTOARCHIEF_TEST_PG_HOST: 127.0.0.1
+      FOTOARCHIEF_TEST_PG_PORT: "5432"
+      FOTOARCHIEF_TEST_PG_USER: fotoarchief
+      FOTOARCHIEF_TEST_PG_PASSWORD: ci-disposable-database
+      PGPASSWORD: ci-disposable-database
+      FOTOARCHIEF_BENCH_DATABASE: release_benchmark_test
+      FOTOARCHIEF_BENCH_USER: fotoarchief
+      FOTOARCHIEF_BENCH_PASSWORD: ci-disposable-database
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, pdo_sqlite, gd, exif, fileinfo, zip
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Create disposable empty databases
+        run: |
+          createdb -h 127.0.0.1 -U fotoarchief release_onboarding_test
+          createdb -h 127.0.0.1 -U fotoarchief release_workflow_test
+          createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
+      - name: Test real PostgreSQL constraints and upgrade preservation
+        run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php --compact
+      - name: Measure real HTTP on 50000 synthetic records
+        shell: bash
+        run: |
+          php tests/Performance/seed.php
+          php -S 127.0.0.1:8767 -t public tests/Performance/router.php > "$RUNNER_TEMP/performance-server.log" 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8767/login > /dev/null; then break; fi
+            sleep 1
+          done
+          php tests/Performance/measure.php | tee performance.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fotoarchief-performance-${{ github.sha }}
+          path: performance.json
+          if-no-files-found: ignore
+
   container:
     name: Container smoke test
     runs-on: ubuntu-latest
@@ -158,8 +223,11 @@ jobs:
       - name: Save tested Docker image
         run: |
           mkdir -p dist
-          docker save "$APP_IMAGE" | gzip > dist/fotoarchief-docker.tar.gz
-          sha256sum dist/fotoarchief-docker.tar.gz > dist/DOCKER-SHA256SUMS
+          local_image="fotoarchief:$(cat VERSION)"
+          docker tag "$APP_IMAGE" "$local_image"
+          docker save "$APP_IMAGE" "$local_image" | gzip > dist/fotoarchief-docker.tar.gz
+          printf 'APP_IMAGE=%s\n' "$local_image" > dist/IMAGE-LOCAL.txt
+          (cd dist && sha256sum fotoarchief-docker.tar.gz IMAGE-LOCAL.txt > DOCKER-SHA256SUMS)
       - name: Back up the accepted archive consistently
         run: sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-backup"
       - name: Restore into separate empty volumes and database
@@ -178,6 +246,7 @@ jobs:
           path: |
             dist/fotoarchief-docker.tar.gz
             dist/DOCKER-SHA256SUMS
+            dist/IMAGE-LOCAL.txt
           retention-days: 14
       - name: Collect failure logs
         if: failure()
@@ -204,6 +273,7 @@ jobs:
         run: php scripts/build-release.php
       - name: Verify uploadable package without development dependencies
         run: |
+          php tests/Smoke/release-archive.php dist/*-webhosting.zip
           mkdir "$RUNNER_TEMP/webhosting"
           unzip -q dist/*-webhosting.zip -d "$RUNNER_TEMP/webhosting"
           cd "$RUNNER_TEMP/webhosting"

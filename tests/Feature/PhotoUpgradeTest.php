@@ -41,7 +41,7 @@ it('upgrades the previous schema preserving originals then processes and edits o
         $oldAsset = Asset::query()->create(['accession_number' => 'UPGRADE-EXISTING', 'title' => 'Preserved']);
         $oldFile = AssetFile::query()->create(['asset_id' => $oldAsset->id, 'storage_key' => 'legacy/immutable', 'sha256' => str_repeat('c', 64), 'media_type' => 'image/jpeg', 'byte_size' => 45]);
         Artisan::call('migrate', ['--force' => true]);
-        expect(DB::table('migrations')->count())->toBe(5)
+        expect(DB::table('migrations')->count())->toBe(count(glob(database_path('migrations/*.php'))))
             ->and($oldFile->fresh()->sha256)->toBe(str_repeat('c', 64))
             ->and($oldFile->fresh()->storage_key)->toBe('legacy/immutable')
             ->and($oldFile->fresh()->storage_disk)->toBeNull()

@@ -12,7 +12,7 @@ compose_file=${COMPOSE_FILE:-deploy/compose.yaml}
 test "$(cat "$backup/FORMAT")" = fotoarchief-local-backup-v1
 (
     cd "$backup"
-    sha256sum --check SHA256SUMS
+    sha256sum database.dump storage-app.tar VERSION FORMAT | diff - SHA256SUMS
 )
 docker compose -f "$compose_file" stop app worker scheduler
 docker compose -f "$compose_file" up -d --wait postgres

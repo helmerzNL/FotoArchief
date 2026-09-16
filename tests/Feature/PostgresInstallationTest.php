@@ -51,7 +51,7 @@ it('installs against an empty PostgreSQL database and enforces its native constr
         ])->assertSessionHasNoErrors()->assertRedirect('/login');
         expect($store->completed())->toBeTrue();
         expect(DB::table('installation_receipts')->count())->toBe(1);
-        expect(DB::table('migrations')->count())->toBe(5);
+        expect(DB::table('migrations')->count())->toBe(count(glob(database_path('migrations/*.php'))));
         $user = User::query()->sole();
         expect($user->hasPermission('users.manage'))->toBeTrue();
         expect(Hash::check('disposable-postgres-test-password', $user->password))->toBeTrue();

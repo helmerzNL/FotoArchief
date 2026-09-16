@@ -1,0 +1,85 @@
+name: Verified test release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  publish:
+    name: Publish previously tested packages
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate release identity
+        shell: bash
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+          git merge-base --is-ancestor HEAD origin/main
+      - uses: actions/download-artifact@v4
+        with:
+          name: fotoarchief-php-${{ github.sha }}
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: fotoarchief-docker-${{ github.sha }}
+          path: dist
+      - name: Verify artifacts before publication
+        run: |
+          cd dist
+          sha256sum --check SHA256SUMS
+          sha256sum --check DOCKER-SHA256SUMS
+      - name: Publish the image that passed acceptance
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          docker load -i dist/fotoarchief-docker.tar.gz
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$GITHUB_REF_NAME"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker tag "fotoarchief-ci:$GITHUB_SHA" "$image"
+          docker push "$image"
+          docker inspect --format '{{index .RepoDigests 0}}' "$image" > dist/IMAGE-DIGEST.txt
+          printf 'APP_IMAGE=%s\n' "$image" > dist/IMAGE.txt
+          docker logout ghcr.io
+      - name: Create persistent test release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes" <<'NOTES'
+          Test release: readable PHP with locked production dependencies, Compose
+          deployment archive and the Docker image accepted by this workflow.
+          This is not a production-readiness certification.
+
+          Download IMAGE.txt/IMAGE-DIGEST.txt for the registry tag and immutable digest.
+          Alternatively load fotoarchief-docker.tar.gz with docker load and use the
+          APP_IMAGE value from IMAGE-LOCAL.txt (no registry credentials required).
+          The PHP host needs PHP 8.5, PostgreSQL, required extensions and cron/workers;
+          set its document root to public/. Composer is not needed on the host.
+
+          Operator changes: set APP_IMAGE to the supplied tag/digest. Keep DB_PASSWORD
+          unchanged for existing volumes. Preserve app-storage and postgres-data.
+          The HTTP mapping remains ${APP_BIND_ADDRESS:-127.0.0.1}:${APP_HTTP_PORT:-8080}:8080.
+          No new mandatory environment variables are introduced by packaging.
+          Before upgrading, create a verified backup and consult the operational docs.
+          The application file limit is 104857600 bytes; any proxy must allow at least
+          115343360 bytes per request and the configured 300-second request duration.
+          NOTES
+          cat dist/DOCKER-SHA256SUMS >> dist/SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag --prerelease --title "FotoArchief $GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/release-notes" dist/*
