@@ -187,6 +187,17 @@ would prove the schema and not the deployment. Consequently:
   environment, against the real configuration; forcing a testing environment would
   point it at other credentials and prove nothing about the deployment.
 
+### What the test suite can and cannot prove
+
+The suite covers the smoke command's own success path: a stub executable stands in
+for Tesseract, answers `--version` and `--list-langs`, and returns known text. That
+proves the parts this repository owns -- argument construction, the language check,
+output parsing, the queued job writing machine text, and the diagnostics report --
+so a failure in the real pipeline points at the image rather than at this code.
+
+What it cannot prove is recognition itself. Whether the packaged binary reads an
+actual scan, and whether the Dutch language data is present, is a property of the
+image and is only established by running the command above against a real container.
 ### Environment the worker needs
 
 OCR is off unless it is switched on, and the setting has to reach the **worker**
