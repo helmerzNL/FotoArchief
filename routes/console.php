@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());
@@ -33,3 +35,12 @@ Artisan::command('installation:prepare {--quiet-code : Do not print the private 
 Artisan::command('installation:ready', function (InstallationStore $store): int {
     return $store->completed() ? 0 : 1;
 })->purpose('Exit successfully only after onboarding has completed');
+
+Artisan::command('exchange:prune-exports', function (DataExportService $exports): int {
+    $pruned = $exports->prune();
+    $this->info('Verlopen exportbestanden opgeruimd: '.$pruned);
+
+    return 0;
+})->purpose('Delete expired export artifacts and release their download links');
+
+Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();

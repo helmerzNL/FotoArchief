@@ -1,4 +1,4 @@
-# Uitwisseling: CSV-import van metadata
+# Uitwisseling: CSV-import en export van metadata en beeld
 
 FotoArchief wisselt metadata uit via CSV. Deze module (`app/Modules/DataExchange`)
 staat los van de fotoschermen: een import raakt nooit beeldbestanden aan en maakt
@@ -114,3 +114,108 @@ foutmelding in de applicatielogboeken. In `deploy/php.ini` gelden daarnaast
   kan opnieuw worden bevestigd.
 - Een tweede uitvoering van dezelfde import wijzigt niets extra: rijen die al
   zijn bijgewerkt staan niet meer op `ready`.
+
+---
+
+# Export van metadata en beeld
+
+Een export is een **aangevraagd, goedgekeurd en tijdelijk** bestand. Het wordt
+door de wachtrij samengesteld, staat in private opslag en is alleen te downloaden
+via een persoonlijke, kortlopende link. Er bestaat geen publieke of directe
+opslag-URL naar een export of naar een origineel.
+
+## Wie mag exporteren
+
+- Alleen aangemelde gebruikers met het recht `exports.create`
+  (standaard: archivaris en beheerder). Zonder dat recht: 403.
+- Een export bevat alleen foto’s die de aanvrager op dat moment mag inzien.
+  Vrijwilligers zien alleen eigen foto’s, publicerende rollen alle foto’s.
+- Een export is privé voor de aanvrager. Een andere gebruiker krijgt 404, ook
+  met het exportnummer in de hand.
+
+## De drie formaten
+
+| Formaat | Inhoud |
+| --- | --- |
+| Metadata (JSON) | `assets[]` met archiefnummer, titel, beschrijving, datering, trefwoorden, rechten, bestandsnamen en controlegetallen |
+| Metadata (CSV) | Dezelfde kolommen als de import, dus rechtstreeks opnieuw importeerbaar |
+| Volledig pakket (ZIP) | `metadata.json`, `metadata.csv`, `manifest.json`, `checksums.sha256`, `originals/<archiefnummer>/<bestandsnaam>` en `derivatives/<archiefnummer>/<maat>.jpg` |
+
+De CSV gebruikt dezelfde kolommen als de import, inclusief `lock_version`, zodat
+een export → bewerken → import ronde de optimistische vergrendeling respecteert.
+Waarden die met `=`, `+`, `-`, `@`, tab of carriage return beginnen worden met een
+apostrof geneutraliseerd, zodat een spreadsheet ze nooit als formule uitvoert; de
+import verwijdert die apostrof weer.
+
+`manifest.json` beschrijft elk bestand in het pakket met pad, soort, aantal bytes
+en SHA-256, plus de lijst overgeslagen foto’s met reden. `checksums.sha256` heeft
+het gebruikelijke `<sha256>  <pad>`-formaat en is te controleren met
+`sha256sum -c checksums.sha256`. Een manifest bevat nooit opslagsleutels of
+schijfnamen: een pakket beschrijft bestanden op naam en controlegetal.
+
+Oude registraties zonder opslagschijf (`storage_disk` leeg) worden overgeslagen
+en met reden in het manifest vermeld; het pakket blijft bruikbaar.
+
+## De gang van een export
+
+1. **Aanvragen** op `/exchange`: formaat kiezen, en ofwel een selectie foto’s
+   ofwel "alles wat ik mag inzien". Rechten worden hier voor elke foto gecheckt.
+2. **Samenstellen** door de worker op de `ingest`-verbinding. De rechten worden
+   *opnieuw* gecheckt; foto’s die intussen buiten bereik vielen komen niet in het
+   bestand maar in de lijst overgeslagen foto’s.
+3. **Klaar**: het exportscherm toont grootte, SHA-256, geldigheidsduur en het
+   manifest.
+4. **Downloaden**: de knop vraagt een persoonlijke link aan. De rechten worden
+   voor de derde keer gecheckt, op elke foto in het bestand.
+5. **Opruimen**: na `EXCHANGE_EXPORT_TTL_MINUTES` verloopt de export en wordt het
+   bestand verwijderd.
+
+## Waarom een latere rechtenwijziging niet kan lekken
+
+Een bestand dat gisteren terecht is samengesteld, mag vandaag niet meer bruikbaar
+zijn voor iemand die intussen toegang verloor. Daarom:
+
+- wordt bij het aanvragen van elke downloadlink opnieuw gecontroleerd of de
+  aanvrager `exports.create` heeft én elke foto in het bestand nog mag inzien;
+- wordt bij de download zelf dezelfde controle herhaald;
+- wordt de export bij een mislukte controle **ingetrokken**: het bestand wordt
+  direct verwijderd, de status wordt `revoked` en de gebruiker krijgt 403 met de
+  uitleg dat er een nieuwe export nodig is;
+- is de downloadlink kortlopend (`EXCHANGE_DOWNLOAD_TTL_MINUTES`, standaard 10
+  minuten), eenmalig uit te geven per aanvraag en alleen geldig voor de eigenaar.
+  De token staat gehasht in de database, dus een databasekopie levert geen
+  bruikbare link op.
+
+Elke download wordt per foto vastgelegd als `export.downloaded` in de
+fotogeschiedenis; opname in een pakket als `export.included`.
+
+## Grenzen
+
+| Instelling | Standaard | Betekenis |
+| --- | --- | --- |
+| `EXCHANGE_MAX_EXPORT_ASSETS` | 500 | Maximaal aantal foto’s per export |
+| `EXCHANGE_MAX_EXPORT_BYTES` | 1073741824 (1 GiB) | Grootste bestand dat wordt samengesteld |
+| `EXCHANGE_EXPORT_TTL_MINUTES` | 120 | Bewaartijd van het bestand |
+| `EXCHANGE_DOWNLOAD_TTL_MINUTES` | 10 | Geldigheid van een downloadlink |
+
+Deze grenzen gelden binnen de applicatie. Wat er vóór de applicatie draait —
+reverse proxy, CDN, ingress — heeft eigen grenzen die de applicatie niet kan
+zien. Een download van 1 GiB komt alleen aan als elke laag ervoor minstens
+1073741824 bytes aan antwoord toestaat en de verbinding lang genoeg openhoudt om
+dat te streamen. Wordt zo’n limiet elders bereikt, dan ziet FotoArchief de
+afbreking niet en staat er niets in het applicatielogboek.
+
+## Beheer en opruimen
+
+- De ZIP wordt gemaakt met de PHP-extensie `zip` (`ext-zip`). Die staat in
+  `composer.json` als platformeis en in het Docker-image; zonder die extensie
+  mislukt een pakketexport met een duidelijke foutmelding.
+- Verlopen exports worden elk kwartier opgeruimd door de planner
+  (`php artisan schedule:work` of een cron op `schedule:run`). Handmatig:
+  `php artisan exchange:prune-exports`.
+- Een mislukte export (bijvoorbeeld door een verdwenen origineel) is opnieuw in
+  te plannen met de knop "Opnieuw samenstellen". De aanvraag zelf blijft bewaard.
+- Zonder actieve worker (`php artisan queue:work --queue=ingest`) blijft een
+  export in "In wachtrij" staan.
+- Exportbestanden staan onder `exchange/exports/` op de private schijf. Ze horen
+  **niet** in een backup thuis: het zijn afgeleide, kortlopende kopieën.

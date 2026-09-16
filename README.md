@@ -28,7 +28,9 @@ This repository contains the installable foundation and first private photo work
   optional ClamAV transport, ownership-aware access, metadata/rights editing
   and revision history; see [the photo workflow](docs/PHOTO_WORKFLOW.md);
 - bounded CSV metadata import with a Dutch mapping preview, dry run, explicit
-  confirmation and per-photo audit trail; see
+  confirmation and per-photo audit trail, plus authorised exports (metadata
+  JSON/CSV and a private ZIP with originals, derivatives, manifest and
+  checksums) released through short-lived, re-authorised download links; see
   [data exchange](docs/DATA_EXCHANGE.md);
 - minimal routes, view and tests proving the framework can boot after
   dependencies are installed.
@@ -50,7 +52,7 @@ templates, not a published, runtime-verified release.
 
 Install these locally before running the app:
 
-- PHP 8.5 with GD (JPEG/PNG/WebP), EXIF and Composer-required extensions
+- PHP 8.5 with GD (JPEG/PNG/WebP), EXIF, zip (package exports) and the other Composer-required extensions
   (validated locally with 8.5.10; see [composer.json](composer.json));
 - Composer 2;
 - PostgreSQL for durable metadata;

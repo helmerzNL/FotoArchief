@@ -17,7 +17,8 @@ scanning, derivatives, metadata editing and publication UI are not delivered yet
 ## Hosting prerequisites
 
 - PHP 8.5 and production dependencies, including `pdo_pgsql`, OpenSSL,
-  fileinfo, GD with JPEG/PNG/WebP, EXIF and the extensions required by Composer.
+  fileinfo, GD with JPEG/PNG/WebP, EXIF, zip (package exports) and the other
+  extensions required by Composer.
 - An **empty PostgreSQL database**, already created by the hosting provider
   or the Compose database service. The wizard creates tables, not the server
   or database itself. Its user needs table, index, constraint and function

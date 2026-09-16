@@ -21,6 +21,48 @@
     </form>
 </section>
 @endcan
+@can('exports.create')
+<section class="card">
+    <h2>Exporteren</h2>
+    <p>Metadata als JSON of CSV, of een volledig pakket met de originele bestanden, afgeleiden, een manifest en controlegetallen. Een export bevat alleen foto&rsquo;s die je op dat moment mag inzien, maximaal {{ number_format(config('exchange.max_export_assets')) }} per keer. Downloadlinks zijn persoonlijk en {{ config('exchange.download_ttl_minutes') }} minuten geldig; het bestand zelf wordt na {{ config('exchange.export_ttl_minutes') }} minuten opgeruimd.</p>
+    <form method="post" action="{{ route('exchange.exports.store') }}">
+        @csrf
+        <label for="export_type">Formaat</label>
+        <select id="export_type" name="export_type">
+            <option value="metadata_csv">Metadata (CSV, geschikt om weer te importeren)</option>
+            <option value="metadata_json">Metadata (JSON)</option>
+            <option value="package_zip">Volledig pakket (ZIP met originelen en afgeleiden)</option>
+        </select>
+        <fieldset>
+            <legend>Welke foto&rsquo;s?</legend>
+            <label class="check"><input type="radio" name="scope" value="selection" checked> Alleen de aangevinkte foto&rsquo;s</label>
+            <label class="check"><input type="radio" name="scope" value="all"> Alle foto&rsquo;s binnen mijn toegang</label>
+        </fieldset>
+        <fieldset>
+            <legend>Selectie (laatste {{ $assets->count() }} foto&rsquo;s)</legend>
+            @forelse($assets as $asset)
+                <label class="check"><input type="checkbox" name="asset_ids[]" value="{{ $asset->id }}"> {{ $asset->title ?: $asset->accession_number }} <small>{{ $asset->accession_number }}</small></label>
+            @empty
+                <p>Nog geen foto&rsquo;s binnen jouw toegang.</p>
+            @endforelse
+        </fieldset>
+        <button type="submit">Export aanvragen</button>
+    </form>
+</section>
+<section class="card">
+    <h2>Mijn exports</h2>
+    <ul class="asset-list">
+    @forelse($exports as $export)
+        <li>
+            <a href="{{ route('exchange.exports.show', $export) }}">{{ $export->typeLabel() }}</a>
+            <small>{{ $export->created_at?->format('d-m-Y H:i') }} &middot; Status: {{ $export->statusLabel() }} &middot; {{ $export->asset_count }} foto&rsquo;s</small>
+        </li>
+    @empty
+        <li>Nog geen exports.</li>
+    @endforelse
+    </ul>
+</section>
+@endcan
 <section class="card">
     <h2>Mijn imports</h2>
     <ul class="asset-list">
