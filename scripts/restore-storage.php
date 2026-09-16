@@ -23,13 +23,41 @@ try {
     }
     $tar = new PharData($archive);
     $prefix = 'phar://'.str_replace('\\', '/', $archive).'/';
-    foreach (new RecursiveIteratorIterator($tar) as $name => $file) {
+    $directories = [];
+    $files = [];
+    foreach (new RecursiveIteratorIterator($tar, RecursiveIteratorIterator::SELF_FIRST) as $name => $file) {
         $relative = substr(str_replace('\\', '/', $name), strlen($prefix));
-        if (! str_starts_with($relative, 'app/') || str_contains($relative, '..') || $file->isLink()) {
+        if (($relative !== 'app' && ! str_starts_with($relative, 'app/'))
+            || str_contains($relative, '..') || $file->isLink()) {
             throw new RuntimeException('Unsafe backup entry.');
         }
+        $target = 'storage/'.$relative;
+        if (is_link($target)) {
+            throw new RuntimeException('Restore target contains a symbolic link.');
+        }
+        if ($file->isDir()) {
+            if (file_exists($target) && ! is_dir($target)) {
+                throw new RuntimeException('Restore directory conflicts with an existing file.');
+            }
+            $directories[] = $target;
+
+            continue;
+        }
+        if (file_exists($target)) {
+            if ($relative === 'app/.gitignore' && is_file($target)
+                && hash_file('sha256', $target) === hash_file('sha256', $name)) {
+                continue;
+            }
+            throw new RuntimeException('Restore refuses to overwrite an existing file.');
+        }
+        $files[] = $relative;
     }
-    if (! $tar->extractTo('storage', null, false)) {
+    foreach ($directories as $target) {
+        if (! is_dir($target) && ! mkdir($target, 0700, true)) {
+            throw new RuntimeException('Cannot create restore destination directory.');
+        }
+    }
+    if ($files !== [] && ! $tar->extractTo('storage', $files, false)) {
         throw new RuntimeException('Cannot extract restore archive.');
     }
 } catch (Throwable $error) {

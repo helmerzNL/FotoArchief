@@ -44,6 +44,8 @@ The container's `scripts/restore-storage.php` reads the archive through standard
 input into a private temporary `.tar` file, validates every entry before
 extracting, and removes its temporary copy on success or failure. Keep that
 helper with the matching image; do not substitute an unchecked `tar -xf`.
+Existing empty directories and an identical image-supplied `app/.gitignore`
+are retained; existing data files are refused, never overwritten.
 It does not run `--clean`, erase volumes, regenerate keys or reopen onboarding.
 On failure it leaves application services stopped; investigate before retrying
 in a new empty target. Verify account login, original checksums and previews
