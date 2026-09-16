@@ -37,105 +37,177 @@ class StorageMigrationService
         return $result;
     }
 
-    public function startMigration(string $sourceDisk, string $targetDisk, User $user): StorageMigration
+    /**
+     * Registers the migration without moving a single byte.
+     *
+     * Copying is bounded work for the ingest queue; an HTTP request only records the
+     * intent so the operator immediately has a run to watch.
+     */
+    public function prepareMigration(string $sourceDisk, string $targetDisk, User $user): StorageMigration
     {
         if ($sourceDisk === $targetDisk) {
             throw new RuntimeException('Bron- en doelschijf mogen niet identiek zijn.');
         }
 
-        $files = AssetFile::all();
-
-        $migration = StorageMigration::create([
+        return StorageMigration::create([
             'id' => (string) Str::ulid(),
             'source_disk' => $sourceDisk,
             'target_disk' => $targetDisk,
             'status' => 'verifying',
-            'total_files' => $files->count(),
+            'total_files' => AssetFile::query()->count(),
             'copied_files' => 0,
             'verified_files' => 0,
             'failed_files' => 0,
             'initiated_by_user_id' => $user->id,
         ]);
+    }
 
-        $sourceStorage = Storage::disk($sourceDisk);
-        $targetStorage = Storage::disk($targetDisk);
+    /**
+     * Copies and verifies at most $limit files after $afterFileId.
+     *
+     * @return array{processed: int, failed: int, finished: bool, last_id: string|null}
+     */
+    public function relocateChunk(StorageMigration $migration, ?string $afterFileId, int $limit): array
+    {
+        $files = AssetFile::query()
+            ->when($afterFileId !== null, fn ($query) => $query->where('id', '>', $afterFileId))
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
 
-        $verifiedCount = 0;
-        $failedCount = 0;
+        $processed = 0;
+        $failed = 0;
+        $lastId = $afterFileId;
 
         foreach ($files as $file) {
-            try {
-                if (! $sourceStorage->exists($file->storage_key)) {
-                    throw new RuntimeException("Bronbestand [{$file->storage_key}] ontbreekt op schijf [{$sourceDisk}].");
-                }
-
-                $stream = $sourceStorage->readStream($file->storage_key);
-                if (! is_resource($stream)) {
-                    throw new RuntimeException("Kan bronbestand [{$file->storage_key}] niet lezen.");
-                }
-
-                $written = $targetStorage->put($file->storage_key, $stream, ['visibility' => 'private']);
-                fclose($stream);
-
-                if (! $written) {
-                    throw new RuntimeException("Schrijven naar doelbestand [{$file->storage_key}] mislukt.");
-                }
-
-                // Copy derivatives if exists
-                $derivatives = (array) ($file->derivatives ?? []);
-                foreach ($derivatives as $key) {
-                    if (is_string($key) && $sourceStorage->exists($key)) {
-                        $derivStream = $sourceStorage->readStream($key);
-                        if (is_resource($derivStream)) {
-                            $targetStorage->put($key, $derivStream, ['visibility' => 'private', 'ContentType' => 'image/jpeg']);
-                            fclose($derivStream);
-                        }
-                    }
-                }
-
-                // Verify SHA-256 integrity on target disk
-                $targetSha256 = $this->calculateSha256($targetStorage, $file->storage_key);
-                if ($targetSha256 !== $file->sha256) {
-                    throw new RuntimeException("Checksum mismatch op doel: verwacht {$file->sha256}, kreeg {$targetSha256}");
-                }
-
-                StorageRelocation::create([
-                    'storage_migration_id' => $migration->id,
-                    'asset_file_id' => $file->id,
-                    'source_disk' => $sourceDisk,
-                    'target_disk' => $targetDisk,
-                    'source_key' => $file->storage_key,
-                    'target_key' => $file->storage_key,
-                    'sha256' => $targetSha256,
-                    'is_verified' => true,
-                    'cutover_completed_at' => null,
-                ]);
-
-                $verifiedCount++;
-            } catch (\Throwable) {
-                $failedCount++;
-                StorageRelocation::create([
-                    'storage_migration_id' => $migration->id,
-                    'asset_file_id' => $file->id,
-                    'source_disk' => $sourceDisk,
-                    'target_disk' => $targetDisk,
-                    'source_key' => $file->storage_key,
-                    'target_key' => $file->storage_key,
-                    'sha256' => $file->sha256,
-                    'is_verified' => false,
-                ]);
+            $lastId = $file->id;
+            if ($this->relocateFile($migration, $file)) {
+                $processed++;
+            } else {
+                $failed++;
             }
         }
 
-        $status = ($failedCount === 0 && $verifiedCount === $files->count()) ? 'verified' : 'failed_verification';
+        return [
+            'processed' => $processed,
+            'failed' => $failed,
+            'finished' => $files->count() < $limit,
+            'last_id' => $lastId,
+        ];
+    }
+
+    /**
+     * Copies one original plus its derivatives and verifies the target checksum.
+     * Returns false when the file could not be relocated; the reason is persisted
+     * on the relocation row so the operator sees a per-file error, not a dead run.
+     */
+    public function relocateFile(StorageMigration $migration, AssetFile $file): bool
+    {
+        $sourceStorage = Storage::disk($migration->source_disk);
+        $targetStorage = Storage::disk($migration->target_disk);
+
+        try {
+            if (! $sourceStorage->exists($file->storage_key)) {
+                throw new RuntimeException("Bronbestand [{$file->storage_key}] ontbreekt op schijf [{$migration->source_disk}].");
+            }
+
+            $stream = $sourceStorage->readStream($file->storage_key);
+            if (! is_resource($stream)) {
+                throw new RuntimeException("Kan bronbestand [{$file->storage_key}] niet lezen.");
+            }
+
+            $written = $targetStorage->put($file->storage_key, $stream, ['visibility' => 'private']);
+            fclose($stream);
+
+            if (! $written) {
+                throw new RuntimeException("Schrijven naar doelbestand [{$file->storage_key}] mislukt.");
+            }
+
+            $derivatives = (array) ($file->derivatives ?? []);
+            foreach ($derivatives as $key) {
+                if (is_string($key) && $sourceStorage->exists($key)) {
+                    $derivStream = $sourceStorage->readStream($key);
+                    if (is_resource($derivStream)) {
+                        $targetStorage->put($key, $derivStream, ['visibility' => 'private', 'ContentType' => 'image/jpeg']);
+                        fclose($derivStream);
+                    }
+                }
+            }
+
+            $targetSha256 = $this->calculateSha256($targetStorage, $file->storage_key);
+            if ($targetSha256 !== $file->sha256) {
+                throw new RuntimeException("Checksum mismatch op doel: verwacht {$file->sha256}, kreeg {$targetSha256}");
+            }
+
+            StorageRelocation::updateOrCreate([
+                'storage_migration_id' => $migration->id,
+                'asset_file_id' => $file->id,
+            ], [
+                'source_disk' => $migration->source_disk,
+                'target_disk' => $migration->target_disk,
+                'source_key' => $file->storage_key,
+                'target_key' => $file->storage_key,
+                'sha256' => $targetSha256,
+                'is_verified' => true,
+                'cutover_completed_at' => null,
+            ]);
+
+            $migration->increment('copied_files');
+            $migration->increment('verified_files');
+
+            return true;
+        } catch (\Throwable $exception) {
+            StorageRelocation::updateOrCreate([
+                'storage_migration_id' => $migration->id,
+                'asset_file_id' => $file->id,
+            ], [
+                'source_disk' => $migration->source_disk,
+                'target_disk' => $migration->target_disk,
+                'source_key' => $file->storage_key,
+                'target_key' => $file->storage_key,
+                'sha256' => $file->sha256,
+                'is_verified' => false,
+                'error_message' => Str::limit($exception->getMessage(), 950),
+            ]);
+
+            $migration->increment('failed_files');
+
+            return false;
+        }
+    }
+
+    /**
+     * Seals the migration once every file has been attempted. Only a migration with
+     * zero failures becomes 'verified' and therefore eligible for cutover.
+     */
+    public function finalizeMigration(StorageMigration $migration): StorageMigration
+    {
+        $migration->refresh();
+
         $migration->update([
-            'status' => $status,
-            'copied_files' => $verifiedCount,
-            'verified_files' => $verifiedCount,
-            'failed_files' => $failedCount,
+            'status' => ($migration->failed_files === 0 && $migration->verified_files === $migration->total_files)
+                ? 'verified'
+                : 'failed_verification',
         ]);
 
-        return $migration;
+        return $migration->refresh();
+    }
+
+    /**
+     * Synchronous whole-archive relocation, retained for direct service-level use and
+     * for small archives; the HTTP path always goes through the queued run instead.
+     */
+    public function startMigration(string $sourceDisk, string $targetDisk, User $user): StorageMigration
+    {
+        $migration = $this->prepareMigration($sourceDisk, $targetDisk, $user);
+
+        $cursor = null;
+        do {
+            $chunk = $this->relocateChunk($migration, $cursor, 100);
+            $cursor = $chunk['last_id'];
+        } while (! $chunk['finished']);
+
+        return $this->finalizeMigration($migration);
     }
 
     public function cutover(StorageMigration $migration, User $user): void

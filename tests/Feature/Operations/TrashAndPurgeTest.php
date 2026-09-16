@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\ArchiveOperations\Jobs\CleanupOrphanUploadsJob;
+use App\Modules\ArchiveOperations\Jobs\PurgeAssetsJob;
+use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\TrashPurgeLog;
 use App\Modules\ArchiveOperations\Services\TrashService;
 use App\Modules\Catalogue\Models\Asset;
@@ -12,6 +15,7 @@ use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\OperationRunDriver;
 
 beforeEach(function (): void {
     $this->artisan('migrate');
@@ -152,6 +156,13 @@ test('permanent purge deletes physical files and logs audit trail', function ():
     ]);
     $response->assertRedirect('/admin/operations/trash');
 
+    // The request destroyed nothing; the queued job owns the irreversible work.
+    expect(Storage::disk('local')->exists($storageKey))->toBeTrue();
+    expect(Asset::withTrashed()->find($asset->id))->not->toBeNull();
+
+    $run = OperationRunDriver::driveLatest(PurgeAssetsJob::TYPE);
+    expect($run->status)->toBe(OperationRun::STATUS_COMPLETED);
+
     // Physical files are deleted
     expect(Storage::disk('local')->exists($storageKey))->toBeFalse();
     expect(Storage::disk('local')->exists($previewKey))->toBeFalse();
@@ -204,12 +215,18 @@ test('batch purging expired trash and cleaning orphan quarantine uploads', funct
     ]);
     $response->assertRedirect('/admin/operations/trash');
 
+    $run = OperationRunDriver::driveLatest(PurgeAssetsJob::TYPE);
+    expect($run->status)->toBe(OperationRun::STATUS_COMPLETED);
+
     expect(Asset::withTrashed()->find($expiredAsset->id))->toBeNull();
     expect(Asset::withTrashed()->find($freshAsset->id))->not->toBeNull();
 
     // Cleanup orphan uploads
     $response = $this->actingAs($this->admin)->post('/admin/operations/trash/cleanup-orphans');
     $response->assertRedirect('/admin/operations/trash');
+
+    $orphanRun = OperationRunDriver::driveLatest(CleanupOrphanUploadsJob::TYPE);
+    expect($orphanRun->status)->toBe(OperationRun::STATUS_COMPLETED);
 
     expect(Storage::disk('local')->exists('quarantine/orphan.jpg'))->toBeFalse();
     expect(QuarantineUpload::where('storage_key', 'quarantine/orphan.jpg')->first())->toBeNull();

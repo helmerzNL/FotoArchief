@@ -54,6 +54,32 @@ CDN if present, PHP/web server, Laravel validation, temporary storage and worker
 runtime. Do not describe the requirement as one proxy-specific directive; state
 the numeric limit the deployment must accept.
 
+## Background archive operations
+
+Every expensive archive operation runs on the dedicated database `ingest` queue,
+never inside an HTTP request. Re-hashing originals, rebuilding derivatives,
+copying between storage disks, purging trashed assets and cleaning orphan
+quarantine uploads are started from `/admin/operations/...`, which only records
+an `operation_runs` row and pushes a job; the worker performs the work.
+
+- Status, progress, error message and retry are visible at
+  `/admin/operations/runs` and in the panel on each operations page.
+- A run is processed in bounded chunks of 25 items. Each chunk is a separate
+  job that re-dispatches the remainder, so no single job approaches the worker
+  timeout regardless of archive size.
+- Job timeout is 120 seconds, equal to the worker timeout and strictly below the
+  `ingest` queue visibility of 180 seconds. A per-job timeout overrides the
+  worker `--timeout`, so it must never be raised above 120 without raising the
+  worker timeout and the visibility window together.
+- A failed run keeps its cursor. Retrying from the UI resumes where it stopped
+  instead of restarting; retry requires `users.manage`.
+- A crashed worker does not strand a run: a `running` row older than the job
+  timeout plus 60 seconds is reclaimed by the next delivery.
+- Storage cutover is the one operation that stays in the request: it only flips
+  already-verified database references and moves no bytes.
+
+Without a running worker these operations stay queued and nothing happens. Check
+`docker compose logs --tail=100 worker` and `/admin/operations/runs` together.
 ## Security and storage posture
 
 - Keep originals, quarantine and private derivatives out of public buckets.

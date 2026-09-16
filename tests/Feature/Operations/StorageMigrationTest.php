@@ -5,11 +5,16 @@ declare(strict_types=1);
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\ArchiveOperations\Jobs\StorageCleanupJob;
+use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
+use App\Modules\ArchiveOperations\Models\OperationRun;
+use App\Modules\ArchiveOperations\Models\StorageMigration;
 use App\Modules\ArchiveOperations\Services\StorageMigrationService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\OperationRunDriver;
 
 beforeEach(function (): void {
     $this->artisan('migrate');
@@ -105,9 +110,14 @@ test('storage migration copies files, derivatives and verifies checksums without
     expect($migration->status)->toBe('cutover_completed');
     expect($relocation->cutover_completed_at)->not->toBeNull();
 
-    // Perform cleanup post-cutover
+    // Cleanup is queued, never executed in the request; the job removes the bytes.
     $response = $this->actingAs($this->admin)->post("/admin/operations/storage-migration/{$migration->id}/cleanup");
     $response->assertRedirect('/admin/operations/storage-migration');
+
+    expect(Storage::disk('local')->exists($storageKey))->toBeTrue();
+
+    $cleanupRun = OperationRunDriver::driveLatest(StorageCleanupJob::TYPE);
+    expect($cleanupRun->status)->toBe(OperationRun::STATUS_COMPLETED);
 
     // Now local files should be removed
     expect(Storage::disk('local')->exists($storageKey))->toBeFalse();
@@ -116,4 +126,51 @@ test('storage migration copies files, derivatives and verifies checksums without
     // S3 files remain untouched and intact
     expect(Storage::disk('s3')->exists($storageKey))->toBeTrue();
     expect(Storage::disk('s3')->get($storageKey))->toBe($content);
+});
+
+test('starting a migration only queues work and the job copies and verifies every byte', function (): void {
+    $asset = Asset::create([
+        'title' => 'Queued Migration Asset',
+        'accession_number' => 'FA-MIG-002',
+        'created_by_user_id' => $this->admin->id,
+    ]);
+
+    $content = str_repeat('archival-scan-bytes', 512);
+    $storageKey = 'originals/queued.jpg';
+    Storage::disk('local')->put($storageKey, $content);
+
+    AssetFile::create([
+        'asset_id' => $asset->id,
+        'storage_key' => $storageKey,
+        'sha256' => hash('sha256', $content),
+        'media_type' => 'image/jpeg',
+        'byte_size' => strlen($content),
+        'original_filename' => 'queued.jpg',
+        'derivatives' => [],
+        'is_primary' => true,
+    ]);
+
+    $response = $this->actingAs($this->admin)->post('/admin/operations/storage-migration/start', [
+        'source_disk' => 'local',
+        'target_disk' => 's3',
+    ]);
+    $response->assertRedirect('/admin/operations/storage-migration');
+
+    // The request copied nothing: the bytes only move once the worker runs.
+    expect(Storage::disk('s3')->exists($storageKey))->toBeFalse();
+
+    $run = OperationRun::query()->where('operation_type', StorageCopyJob::TYPE)->latest('created_at')->firstOrFail();
+    expect($run->status)->toBe(OperationRun::STATUS_QUEUED);
+    expect($run->total_items)->toBe(1);
+
+    $run = OperationRunDriver::drive($run);
+
+    expect($run->status)->toBe(OperationRun::STATUS_COMPLETED);
+    expect($run->failed_items)->toBe(0);
+    expect(Storage::disk('s3')->get($storageKey))->toBe($content);
+    expect(Storage::disk('local')->exists($storageKey))->toBeTrue();
+
+    $migration = StorageMigration::query()->latest('id')->firstOrFail();
+    expect($migration->status)->toBe('verified');
+    expect($migration->verified_files)->toBe(1);
 });

@@ -7,6 +7,7 @@ use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\OcrController;
+use App\Modules\ArchiveOperations\Controllers\OperationRunController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
@@ -14,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+
+    Route::prefix('runs')->name('runs.')->group(function (): void {
+        Route::get('/', [OperationRunController::class, 'index'])->name('index');
+        Route::post('/{run}/retry', [OperationRunController::class, 'retry'])->name('retry');
+    });
 
     Route::prefix('duplicates')->name('duplicates.')->group(function (): void {
         Route::get('/', [DuplicateDossierController::class, 'index'])->name('index');

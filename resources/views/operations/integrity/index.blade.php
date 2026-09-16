@@ -110,4 +110,5 @@
             </div>
         @endif
     </section>
+    @include('operations.runs._panel', ['runs' => $runs])
 @endsection

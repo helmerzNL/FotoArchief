@@ -7,7 +7,12 @@ namespace Tests\Feature\Operations;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Jobs\ProcessAssetOcrJob;
+use App\Modules\ArchiveOperations\Jobs\PurgeAssetsJob;
+use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
+use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
+use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\StorageMigration;
 use App\Modules\ArchiveOperations\Models\TrashPurgeLog;
 use App\Modules\ArchiveOperations\Services\FileVersionService;
@@ -23,6 +28,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Tests\Support\OperationRunDriver;
 
 /**
  * Real-PostgreSQL acceptance for the ArchiveOperations module.
@@ -381,4 +387,108 @@ it('keeps the OCR job inside the ingest worker timeout and reserves it on the in
     $payload = json_decode($queued->first()->payload, true);
     expect($payload['displayName'])->toBe(ProcessAssetOcrJob::class)
         ->and($payload['timeout'])->toBe(ProcessAssetOcrJob::MAX_JOB_TIMEOUT_SECONDS);
+})->group('postgres')->skip($requiresPostgres, 'Requires FOTOARCHIEF_TEST_PG_OPERATIONS_DATABASE ending in _final_test.');
+
+it('never performs checksum, copy or purge work inside the request and finishes it on the ingest queue', function (): void {
+    $database = (string) getenv('FOTOARCHIEF_TEST_PG_OPERATIONS_DATABASE');
+    OperationsPostgresAcceptance::bootDatabase($database);
+    OperationsPostgresAcceptance::bootPrivateStorage();
+
+    $actor = OperationsPostgresAcceptance::administrator('queued-ops@example.test');
+    $asset = Asset::query()->create([
+        'accession_number' => 'PG-QUEUE-001',
+        'title' => 'Grote scan',
+        'created_by_user_id' => $actor->id,
+    ]);
+
+    // A genuinely large original: the kind of file that cannot be hashed, copied or
+    // deleted inside an HTTP request without risking a timeout.
+    $largeBytes = OperationsPostgresAcceptance::jpegBytes(600, 400).random_bytes(32 * 1024 * 1024);
+    $largeSha = hash('sha256', $largeBytes);
+    $originalKey = 'originals/'.$asset->id.'/large.jpg';
+    Storage::disk('local')->put($originalKey, $largeBytes);
+
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id,
+        'storage_disk' => 'local',
+        'storage_key' => $originalKey,
+        'sha256' => $largeSha,
+        'media_type' => 'image/jpeg',
+        'byte_size' => strlen($largeBytes),
+        'original_filename' => 'large.jpg',
+        'is_primary' => true,
+    ]);
+
+    // 1. Integrity verification is queued, not executed.
+    DB::table('jobs')->delete();
+    $started = microtime(true);
+    $this->actingAs($actor)->post('/admin/operations/integrity/run')
+        ->assertRedirect('/admin/operations/integrity');
+    $requestSeconds = microtime(true) - $started;
+
+    $queued = DB::table('jobs')->get();
+    expect($queued)->toHaveCount(1)
+        ->and($queued->first()->queue)->toBe('ingest');
+    $payload = json_decode((string) $queued->first()->payload, true);
+    expect($payload['displayName'])->toBe(VerifyIntegrityJob::class)
+        ->and($payload['timeout'])->toBe(OperationJob::MAX_JOB_TIMEOUT_SECONDS)
+        ->and(OperationJob::MAX_JOB_TIMEOUT_SECONDS)->toBeLessThan((int) config('queue.connections.ingest.retry_after'));
+
+    $run = OperationRun::query()->where('operation_type', VerifyIntegrityJob::TYPE)->latest('created_at')->firstOrFail();
+    expect($run->status)->toBe(OperationRun::STATUS_QUEUED)
+        ->and($run->processed_items)->toBe(0)
+        // The request returned long before 32 MB could have been re-hashed.
+        ->and($requestSeconds)->toBeLessThan(5.0);
+
+    $run = OperationRunDriver::drive($run);
+    expect($run->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($run->processed_items)->toBe(1);
+
+    // The original hashes clean; only its derivatives are still absent, and the job
+    // reports that as an open issue rather than as a run failure.
+    $check = DB::table('integrity_checks')->where('asset_file_id', $file->id)->latest('id')->first();
+    expect($check)->not->toBeNull()
+        ->and($check->status)->toBe('missing_derivative')
+        ->and($check->actual_sha256 ?? $largeSha)->toBe($largeSha);
+
+    // 2. Storage migration copies the real bytes on the queue and leaves the source.
+    DB::table('jobs')->delete();
+    $this->actingAs($actor)->post('/admin/operations/storage-migration/start', [
+        'source_disk' => 'local',
+        'target_disk' => 'archive',
+    ])->assertRedirect('/admin/operations/storage-migration');
+
+    expect(Storage::disk('archive')->exists($originalKey))->toBeFalse();
+    $copyRun = OperationRunDriver::driveLatest(StorageCopyJob::TYPE);
+    expect($copyRun->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and(hash('sha256', (string) Storage::disk('archive')->get($originalKey)))->toBe($largeSha)
+        ->and(Storage::disk('local')->exists($originalKey))->toBeTrue();
+
+    $migration = StorageMigration::query()->latest('id')->firstOrFail();
+    expect($migration->status)->toBe('verified')
+        ->and($migration->verified_files)->toBe(1)
+        ->and($migration->failed_files)->toBe(0);
+
+    // The immutability trigger still guards the row the queue just verified.
+    expect(fn () => DB::transaction(fn () => DB::table('asset_files')
+        ->where('id', $file->id)
+        ->update(['storage_key' => 'originals/tampered.jpg'])))->toThrow(QueryException::class);
+
+    // 3. Purge destroys bytes only from the queued job, never from the request.
+    app(TrashService::class)->moveToTrash(Asset::query()->findOrFail($asset->id), 'Te vernietigen', $actor);
+    $this->actingAs($actor)->delete('/admin/operations/trash/assets/'.$asset->id.'/purge', [
+        'reason' => 'Onherroepelijke vernietiging na controle',
+        'confirm_purge' => '1',
+    ])->assertRedirect('/admin/operations/trash');
+
+    expect(Storage::disk('local')->exists($originalKey))->toBeTrue()
+        ->and(Asset::withTrashed()->find($asset->id))->not->toBeNull();
+
+    $purgeRun = OperationRunDriver::driveLatest(PurgeAssetsJob::TYPE);
+    expect($purgeRun->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and(Storage::disk('local')->exists($originalKey))->toBeFalse()
+        ->and(Asset::withTrashed()->find($asset->id))->toBeNull();
+
+    $log = TrashPurgeLog::query()->where('accession_number', 'PG-QUEUE-001')->firstOrFail();
+    expect($log->purged_by_user_id)->toBe($actor->id);
 })->group('postgres')->skip($requiresPostgres, 'Requires FOTOARCHIEF_TEST_PG_OPERATIONS_DATABASE ending in _final_test.');
