@@ -314,6 +314,22 @@ proof images, explicit local and optional external providers, recorded model
 space/dimensions, resource/privacy/cost notes and a verified vector backend
 before adapters are marked production-ready.
 
+The repository smoke `tests/Smoke/ai-search-contract.php` checks the AI search
+implementation shape: text queries must use the same model-space contract as
+image embeddings, candidate ranking stays bounded, staff results pass
+`AssetPolicy`, public results are rebuilt through
+`Publication::publiclyVisible()`, and public/admin forms expose labels/error
+roles. This is a code contract and accessibility markup check, not live provider
+proof or a substitute for browser/assistive-technology review.
+
+For step 49, the isolated PostgreSQL public benchmark was rerun against a fresh
+50,000-record fixture with exactly 45,000 eligible publications. Anonymous
+public text-plus-collection search measured **418.46 ms p95 < 700 ms**, and
+public detail measured **274.60 ms p95 < 400 ms**, each over 40 measured
+samples after five warmups. The benchmark used synthetic metadata and still
+does not prove live AI provider latency, S3 latency or assistive-technology
+coverage.
+
 ## Running the isolated benchmark
 
 Use an empty PostgreSQL database whose name ends in `_benchmark_test`. Set
