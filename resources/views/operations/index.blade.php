@@ -29,6 +29,8 @@
             <dd>Optionele beeldanalyse en semantisch zoeken expliciet aanzetten, begrenzen of met de noodstop blokkeren.</dd>
             <dt>AI-suggesties</dt>
             <dd>Conceptbeschrijvingen en tags controleren voordat metadata verandert.</dd>
+            <dt>Semantisch zoeken</dt>
+            <dd>Beheer zoekt optioneel op beeldinhoud via dezelfde multimodale embeddingruimte.</dd>
             <dt>Achtergrondtaken</dt>
             <dd>De voortgang, fouten en herstart van zware bewerkingen.</dd>
         </dl>

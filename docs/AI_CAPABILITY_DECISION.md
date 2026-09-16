@@ -128,6 +128,10 @@ These are implementation defaults until a later measured proof tightens them:
   asset lock version and primary-file checksum. Text search must embed the
   query through the same provider/model space; caption-only retrieval is still
   not accepted as visual semantic search.
+- Step 47 adds staff/admin semantic search over the bounded image-embedding
+  candidate set. Every result is filtered through the existing AssetPolicy, so
+  embeddings rank candidates but SQL ownership/publication rules decide what a
+  user may see.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after

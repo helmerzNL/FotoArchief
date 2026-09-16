@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Controllers\AiSemanticSearchController;
 use App\Modules\Ai\Controllers\AiSettingsController;
 use App\Modules\Ai\Controllers\AiSuggestionReviewController;
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
@@ -23,6 +24,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
     Route::post('/ai/index', [AiSettingsController::class, 'dispatchIndex'])->name('ai.index');
+    Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
     Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
     Route::post('/ai/suggestions/{suggestion}/reject', [AiSuggestionReviewController::class, 'reject'])->name('ai.suggestions.reject');
