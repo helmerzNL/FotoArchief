@@ -3,6 +3,25 @@
 A feature commit is not by itself a production-readiness claim. The same final
 revision must pass the checks below before its packages are offered for testing.
 
+## Verified test-release baseline
+
+Linux run [35052140685](https://github.com/helmerzNL/FotoArchief/actions/runs/35052140685)
+at `77911ae` passes all four Quality jobs: PHP quality, real PostgreSQL and 50k
+HTTP gates, production PHP archive, and the complete production-container test.
+The latter includes actual English/Dutch Tesseract recognition, queued OCR with
+stored extracted text, CSV/JSON/ZIP exchange, consistent backup, restored
+account/photo/installer lock and a second installation imported by Dockhand.
+OCR acceptance runs as `www-data`, matching the web/worker runtime rather than
+creating root-only private fixtures through `docker exec`.
+
+The integrated suite passes **332 tests / 2303 assertions** locally, with eight
+explicit environment skips; PostgreSQL-specific gates run separately in CI.
+The earlier failures recorded below are historical, resolved by this baseline.
+Tagged releases repeat the gates for their exact revision before publication.
+This is a test release, not a production-readiness certification: real S3/Hetzner,
+enabled ClamAV service, Komodo UI, production HTTPS/hardware passkeys, a complete
+WCAG audit and concurrent 50k-binary load remain environment-specific acceptance.
+
 ## Automated gates
 
 The Quality workflow provides independent jobs for:
@@ -123,13 +142,15 @@ run without skips. Whole Pint and Larastan checks pass.
 
 The primary-file forward migration also ran against the existing 50,000-record
 benchmark: 50,000 assets/files/version rows and 45,000 eligible publications are
-preserved. Final public HTTP timing is still being measured after the indexed
-EXISTS correction; the earlier COUNT regression is not accepted as passing.
+preserved. At that revision final public HTTP timing was still being measured.
+The indexed EXISTS correction subsequently passed the Linux thresholds above;
+the earlier COUNT regression was never accepted as passing.
 
 Draft PR `helmerzNL/FotoArchief#1` starts final Linux acceptance. Its opening
 produced no Actions run or registered workflow, so the initial integration branch
-also has a push trigger to bootstrap actual CI execution before merge. This does
-not replace any test or permit merging without green checks.
+temporarily had a push trigger to bootstrap actual CI execution before merge.
+That bootstrap trigger was removed after registration; normal PR and main
+triggers remain. No test was replaced or waived.
 
 ### Operations correction acceptance
 
