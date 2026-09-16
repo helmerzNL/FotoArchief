@@ -148,7 +148,7 @@ webhoster de standaard niet aankan; grote archieven vereisen passende workers.
 2. Stop/drain workers. Deploy code en `composer install --no-dev` vanuit de
    lockfile. PHP 8.5 vereist nu ook GD met JPEG/PNG/WebP en EXIF. De Dockerfile
    installeert die; bouw een nieuwe image in plaats van een oude image te hergebruiken.
-3. Bij een reeds voltooide installatie: `php artisan migrate --force`.
+3. Bij een reeds voltooide installatie: `php artisan installation:migrate-ready`.
    De vijfde migratie voegt workflowkolommen, uploads en auditgebeurtenissen toe.
    Bij een nieuwe installatie voert de wizard alle vijf migraties uit.
 4. Start workers met **`queue:work ingest --sleep=3 --tries=3 --timeout=120`**,

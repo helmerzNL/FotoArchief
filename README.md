@@ -43,6 +43,8 @@ This repository contains the installable application and the archive expansion:
   [the public portal operator handbook](docs/PUBLIC_PORTAL.md);
 - diagnostics, duplicate dossiers, scan versions, processing operations,
   integrity checks, storage relocation, recoverable deletion and optional OCR;
+- a technical language-preference foundation with Dutch (`nl`) as the only
+  active locale; see [language preference](docs/LANGUAGE_PREFERENCE.md);
 - reproducible production PHP/deployment archives, container acceptance and a
   consistent local-volume backup/restore procedure.
 
@@ -144,6 +146,8 @@ Keep implementation aligned with the approved architecture:
   defaults.
 - [tests/](tests/) contains onboarding, photo processing, authorization,
   scanner-protocol and opt-in PostgreSQL regression tests.
+- [lang/](lang/) holds the locale catalogues; the Dutch catalogue leads and
+  is guarded by [the translation check](docs/TRANSLATIONS.md).
 - [docs/](docs/) contains the approved architecture and research notes.
 
 ## Validation
@@ -155,6 +159,10 @@ composer test
 composer lint
 composer analyse
 ```
+
+`composer lint` also runs `php artisan translations:check`, which fails on
+missing, unused or runtime-built translation keys and on locale catalogue gaps;
+see [translation keys and locale parity](docs/TRANSLATIONS.md).
 
 Verified on PHP 8.5.10: Pest, Pint, Larastan, Composer metadata/platform checks
 and the locked-dependency audit. Tests use isolated settings with SQLite and

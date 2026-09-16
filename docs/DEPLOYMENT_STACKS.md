@@ -182,10 +182,11 @@ APP_IMAGE=ghcr.io/helmerznl/fotoarchief:vX.Y.Z \
 The helper refuses to run without a backup directory containing valid
 `SHA256SUMS`, validates the resolved Compose file, stops only worker and
 scheduler services, starts the new web image, checks that installation is still
-complete, runs `php artisan migrate --force`, then restarts workers/scheduler.
-It does not delete volumes, regenerate keys, reopen setup or run
-`docker compose down --volumes`. If any command fails, stopped background
-services are started again so the operator can restore from the verified backup.
+complete, runs the coordinated `php artisan installation:migrate-ready` gate,
+then restarts workers/scheduler. It does not delete volumes, regenerate keys,
+reopen setup or run `docker compose down --volumes`. If any command fails,
+stopped background services are started again so the operator can restore from
+the verified backup.
 
 ### OCR and exchange settings
 

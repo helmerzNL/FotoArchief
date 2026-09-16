@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\ApplyLanguagePreference;
 use App\Http\Middleware\EnsureActiveUserSession;
 use App\Modules\Installation\InstallationBootstrap;
 use App\Modules\Installation\InstallationGate;
@@ -20,7 +21,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(InstallationGate::class);
-        $middleware->web(append: [EnsureActiveUserSession::class]);
+        $middleware->web(append: [ApplyLanguagePreference::class, EnsureActiveUserSession::class]);
         $middleware->redirectGuestsTo('/login');
         $trustedProxies = array_values(array_filter(array_map(
             static fn (string $proxy): string => trim($proxy),

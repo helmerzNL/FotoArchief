@@ -15,18 +15,18 @@ namespace App\Modules\Installation;
 class InstallationPlatform
 {
     /**
-     * @var array<string, string> extension name => what breaks without it, in Dutch
+     * @var array<string, string> extension name => translation key for what breaks without it
      */
     public const REQUIRED = [
-        'pdo' => 'databaseverbindingen',
-        'pdo_pgsql' => 'PostgreSQL als bron van waarheid',
-        'gd' => 'verkleinde weergaven van foto\'s',
-        'exif' => 'opnamedatum en camera-informatie uit foto\'s',
-        'fileinfo' => 'controle van het bestandstype bij uploads',
-        'intl' => 'Nederlandse datum- en tekstopmaak',
-        'mbstring' => 'veilige UTF-8 tekstverwerking',
-        'openssl' => 'versleuteling, HTTPS-integraties en sleutels',
-        'zip' => 'exportpakketten met originelen en afgeleiden',
+        'pdo' => 'onboarding.setup.platform.purposes.pdo',
+        'pdo_pgsql' => 'onboarding.setup.platform.purposes.pdo_pgsql',
+        'gd' => 'onboarding.setup.platform.purposes.gd',
+        'exif' => 'onboarding.setup.platform.purposes.exif',
+        'fileinfo' => 'onboarding.setup.platform.purposes.fileinfo',
+        'intl' => 'onboarding.setup.platform.purposes.intl',
+        'mbstring' => 'onboarding.setup.platform.purposes.mbstring',
+        'openssl' => 'onboarding.setup.platform.purposes.openssl',
+        'zip' => 'onboarding.setup.platform.purposes.zip',
     ];
 
     public function check(): void
@@ -34,11 +34,19 @@ class InstallationPlatform
         $missing = [];
         foreach (self::REQUIRED as $extension => $purpose) {
             if (! extension_loaded($extension)) {
-                $missing[] = $extension.' (nodig voor '.$purpose.')';
+                $missing[] = InstallationText::get('onboarding.setup.platform.purpose_format', ['extension' => $extension, 'purpose' => InstallationText::get($purpose)]);
             }
         }
         if ($missing !== []) {
-            throw new InstallationFailure('De PHP-installatie mist verplichte extensies: '.implode(', ', $missing).'. Zet ze aan in php.ini en start PHP opnieuw.');
+            throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.missing_extensions', ['extensions' => implode(', ', $missing)]));
         }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function requiredPurposes(): array
+    {
+        return array_map(static fn (string $key): string => InstallationText::get($key), self::REQUIRED);
     }
 }

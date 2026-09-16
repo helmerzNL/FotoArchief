@@ -110,6 +110,12 @@ and preserve private configuration across web/worker/scheduler redeployments.
 The wizard, connection probes, initial local administrator login/logout and
 setup lock are implemented. The PostgreSQL database itself must already exist
 and be empty; the wizard creates its schema, not the database server.
+After onboarding, every app, worker and scheduler container coordinates automatic
+deployment migrations through a PostgreSQL advisory lock before starting its
+runtime process. Only the container that wins the lock runs migrations; the
+others wait for that coordinator, verify that no migrations remain pending and
+fail closed if coordination or migration fails. Before onboarding is complete,
+the web container skips this gate so database-free setup remains available.
 Uploadable ZIP packaging and image deployment acceptance remain delivery gates.
 See [ONBOARDING.md](ONBOARDING.md) for the implemented scope and recovery design.
 

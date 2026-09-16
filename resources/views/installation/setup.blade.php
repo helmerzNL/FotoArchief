@@ -1,97 +1,95 @@
 @extends('layouts.app')
-@section('title', 'FotoArchief installeren')
+@section('title', __('onboarding.setup.title'))
 @section('content')
-    <p class="eyebrow">Eerste installatie</p>
-    <h1>Een thuis voor je fotoarchief</h1>
-    <p class="intro">Verbind een lege PostgreSQL-database, kies private opslag en maak je beheerdersaccount. De wizard wordt na installatie afgesloten.</p>
+    <p class="eyebrow">{{ __('onboarding.setup.eyebrow') }}</p>
+    <h1>{{ __('onboarding.setup.heading') }}</h1>
+    <p class="intro">{{ __('onboarding.setup.intro') }}</p>
     <div class="notice">
-        De installatiecontrole weigert ontbrekende PHP-vereisten zoals <code>pdo_pgsql</code>, <code>gd</code>, <code>exif</code>, <code>fileinfo</code>, <code>intl</code>, <code>mbstring</code>, <code>openssl</code> en <code>zip</code> voordat er gegevens worden geschreven.
-        AI-beeldherkenning en semantisch zoeken staan standaard uit; deze wizard vereist daarom geen AI-service of externe provider.
-        Na installatie toont de systeemdiagnose echte scheduler- en worker-heartbeats.
+        {!! __('onboarding.setup.requirements_notice') !!}
     </div>
-    <ol class="steps" aria-label="Installatiestappen">
-        <li @if(!$authorized) aria-current="step" @endif>1. Toegang bevestigen</li>
-        <li @if($authorized) aria-current="step" @endif>2. Verbinden en instellen</li>
-        <li>3. Inloggen</li>
+    <ol class="steps" aria-label="{{ __('onboarding.setup.steps_label') }}">
+        <li @if(!$authorized) aria-current="step" @endif>{{ __('onboarding.setup.steps.access') }}</li>
+        <li @if($authorized) aria-current="step" @endif>{{ __('onboarding.setup.steps.configure') }}</li>
+        <li>{{ __('onboarding.setup.steps.login') }}</li>
     </ol>
     @unless($authorized)
         <section class="card narrow">
-            <h2>Alleen de eigenaar kan installeren</h2>
-            <p>Haal je eenmalige code op met <code>php artisan installation:prepare</code>. In Docker: <code>docker compose exec --user www-data app php artisan installation:prepare</code>.</p>
-            <p>Bij webhosting zonder terminal vind je de code via het private bestandsbeheer in <code>storage/app/installation/setup-code.txt</code>. Deel deze code niet en plaats nooit de volledige applicatie in de publieke webmap.</p>
+            <h2>{{ __('onboarding.setup.owner_only.heading') }}</h2>
+            <p>{!! __('onboarding.setup.owner_only.prepare') !!}</p>
+            <p>{!! __('onboarding.setup.owner_only.hosting') !!}</p>
             <form method="post" action="/setup/unlock">
                 @csrf
-                <label for="code">Installatiecode</label>
+                <label for="code">{{ __('onboarding.setup.owner_only.code') }}</label>
                 <input id="code" name="code" type="password" autocomplete="off" required maxlength="100">
-                <button type="submit">Installatie ontgrendelen</button>
+                <button type="submit">{{ __('onboarding.setup.owner_only.submit') }}</button>
             </form>
         </section>
     @else
         @if($resuming)
-            <div class="notice">Een eerdere installatie is onderbroken. Gebruik exact dezelfde database, opslaggegevens en het oorspronkelijke e-mailadres om veilig te hervatten. Een bestaande beheerder wordt niet overschreven.</div>
+            <div class="notice">{{ __('onboarding.setup.resume_notice') }}</div>
         @endif
-        <p>Je toegang is 20 minuten geldig. Gebruik HTTPS buiten een lokale testomgeving. Geheimen worden nooit opnieuw in het formulier getoond.</p>
+        <p>{{ __('onboarding.setup.authorized_notice') }}</p>
         <form method="post" action="/setup/complete">
             @csrf
             <div class="grid">
                 <fieldset class="card">
-                    <legend>Database</legend>
-                    <p>PostgreSQL is vereist. In de meegeleverde Docker-stack is de host <code>postgres</code>. Gebruik de gebruikersnaam en het wachtwoord van die databasecontainer.</p>
-                    <label for="db_host">Databasehost</label>
+                    <legend>{{ __('onboarding.setup.database.legend') }}</legend>
+                    <p>{!! __('onboarding.setup.database.help') !!}</p>
+                    <label for="db_host">{{ __('onboarding.setup.database.host') }}</label>
                     <input id="db_host" name="db_host" value="{{ old('db_host', 'postgres') }}" required maxlength="253" autocomplete="off">
-                    <label for="db_port">Poort</label>
+                    <label for="db_port">{{ __('onboarding.setup.database.port') }}</label>
                     <input id="db_port" name="db_port" type="number" value="{{ old('db_port', '5432') }}" required min="1" max="65535">
-                    <label for="db_database">Databasenaam (bestaande database zonder tabellen)</label>
+                    <label for="db_database">{{ __('onboarding.setup.database.name') }}</label>
                     <input id="db_database" name="db_database" value="{{ old('db_database', 'fotoarchief') }}" required maxlength="63">
-                    <label for="db_username">Databasegebruiker</label>
+                    <label for="db_username">{{ __('onboarding.setup.database.user') }}</label>
                     <input id="db_username" name="db_username" value="{{ old('db_username', 'fotoarchief') }}" required maxlength="63" autocomplete="off">
-                    <label for="db_password">Databasewachtwoord</label>
+                    <label for="db_password">{{ __('onboarding.setup.database.password') }}</label>
                     <input id="db_password" name="db_password" type="password" required maxlength="1024" autocomplete="off">
-                    <label for="db_sslmode">Databaseverbinding</label>
+                    <label for="db_sslmode">{{ __('onboarding.setup.database.connection') }}</label>
                     <select id="db_sslmode" name="db_sslmode">
-                        @foreach(['prefer' => 'TLS indien beschikbaar (intern Docker-netwerk)', 'require' => 'TLS verplicht', 'verify-full' => 'TLS met certificaat- en hostcontrole', 'disable' => 'Zonder TLS (alleen vertrouwd lokaal netwerk)'] as $value => $label)
+                        @foreach(['prefer' => __('onboarding.setup.database.ssl_modes.prefer'), 'require' => __('onboarding.setup.database.ssl_modes.require'), 'verify-full' => __('onboarding.setup.database.ssl_modes.verify-full'), 'disable' => __('onboarding.setup.database.ssl_modes.disable')] as $value => $label)
                             <option value="{{ $value }}" @selected(old('db_sslmode', 'prefer') === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
                 </fieldset>
                 <fieldset class="card">
-                    <legend>Private opslag</legend>
-                    <label for="disk">Opslagtype</label>
+                    <legend>{{ __('onboarding.setup.storage.legend') }}</legend>
+                    <label for="disk">{{ __('onboarding.setup.storage.type') }}</label>
                     <select id="disk" name="disk">
-                        <option value="local" @selected(old('disk', 'local') === 'local')>Lokale private opslag</option>
-                        <option value="s3" @selected(old('disk') === 's3')>S3-compatible objectopslag</option>
+                        <option value="local" @selected(old('disk', 'local') === 'local')>{{ __('onboarding.setup.storage.local') }}</option>
+                        <option value="s3" @selected(old('disk') === 's3')>{{ __('onboarding.setup.storage.s3') }}</option>
                     </select>
-                    <p>Lokaal gebruikt <code>storage/app/private</code>, buiten de webroot. In Docker staat dit op het persistente opslagvolume. Voor een groot archief adviseren we S3 met een private bucket.</p>
-                    <h3>Alleen invullen voor S3</h3>
-                    <label for="endpoint">S3-endpoint</label>
-                    <input id="endpoint" name="endpoint" type="url" value="{{ old('endpoint') }}" placeholder="https://s3.example.org" maxlength="500">
-                    <label for="region">Regio</label>
+                    <p>{!! __('onboarding.setup.storage.help') !!}</p>
+                    <h3>{{ __('onboarding.setup.storage.s3_heading') }}</h3>
+                    <label for="endpoint">{{ __('onboarding.setup.storage.endpoint') }}</label>
+                    <input id="endpoint" name="endpoint" type="url" value="{{ old('endpoint') }}" placeholder="{{ __('onboarding.setup.storage.endpoint_placeholder') }}" maxlength="500">
+                    <label for="region">{{ __('onboarding.setup.storage.region') }}</label>
                     <input id="region" name="region" value="{{ old('region') }}" maxlength="100">
-                    <label for="bucket">Private bucket</label>
+                    <label for="bucket">{{ __('onboarding.setup.storage.bucket') }}</label>
                     <input id="bucket" name="bucket" value="{{ old('bucket') }}" maxlength="100">
-                    <label for="access_key">Access key</label>
+                    <label for="access_key">{{ __('onboarding.setup.storage.access_key') }}</label>
                     <input id="access_key" name="access_key" type="password" autocomplete="off" maxlength="1024">
-                    <label for="secret_key">Secret key</label>
+                    <label for="secret_key">{{ __('onboarding.setup.storage.secret_key') }}</label>
                     <input id="secret_key" name="secret_key" type="password" autocomplete="off" maxlength="1024">
-                    <label class="check"><input name="path_style" type="checkbox" value="1" @checked(old('path_style', '1'))> Path-style URLs (onder andere MinIO)</label>
-                    <p>De controle schrijft, leest en verwijdert een klein testobject. Controleer daarnaast bij je provider dat anonieme toegang tot de bucket is geblokkeerd.</p>
+                    <label class="check"><input name="path_style" type="checkbox" value="1" @checked(old('path_style', '1'))> {{ __('onboarding.setup.storage.path_style') }}</label>
+                    <p>{{ __('onboarding.setup.storage.probe') }}</p>
                 </fieldset>
             </div>
             <fieldset class="card">
-                <legend>Eerste beheerder</legend>
-                <p>Deze versie gebruikt een lokaal account met gehasht wachtwoord. Passkeys en herstel per e-mail zijn nog niet beschikbaar. Bewaar je inloggegevens in een wachtwoordmanager.</p>
+                <legend>{{ __('onboarding.setup.admin.legend') }}</legend>
+                <p>{{ __('onboarding.setup.admin.help') }}</p>
                 <div class="grid">
-                    <div><label for="name">Naam</label><input id="name" name="name" value="{{ old('name') }}" maxlength="120" autocomplete="name"></div>
-                    <div><label for="email">E-mailadres</label><input id="email" name="email" type="email" value="{{ old('email') }}" maxlength="254" autocomplete="username"></div>
-                    <div><label for="password">Wachtwoord (minimaal 14 tekens)</label><input id="password" name="password" type="password" minlength="14" maxlength="128" autocomplete="new-password"></div>
-                    <div><label for="password_confirmation">Herhaal wachtwoord</label><input id="password_confirmation" name="password_confirmation" type="password" minlength="14" maxlength="128" autocomplete="new-password"></div>
+                    <div><label for="name">{{ __('onboarding.setup.admin.name') }}</label><input id="name" name="name" value="{{ old('name') }}" maxlength="120" autocomplete="name"></div>
+                    <div><label for="email">{{ __('onboarding.setup.admin.email') }}</label><input id="email" name="email" type="email" value="{{ old('email') }}" maxlength="254" autocomplete="username"></div>
+                    <div><label for="password">{{ __('onboarding.setup.admin.password') }}</label><input id="password" name="password" type="password" minlength="14" maxlength="128" autocomplete="new-password"></div>
+                    <div><label for="password_confirmation">{{ __('onboarding.setup.admin.password_confirmation') }}</label><input id="password_confirmation" name="password_confirmation" type="password" minlength="14" maxlength="128" autocomplete="new-password"></div>
                 </div>
             </fieldset>
             <div class="actions">
-                <button class="secondary" type="submit" formaction="/setup/check">Alleen verbindingen testen</button>
-                <button type="submit">Controleren en installeren</button>
+                <button class="secondary" type="submit" formaction="/setup/check">{{ __('onboarding.setup.actions.check') }}</button>
+                <button type="submit">{{ __('onboarding.setup.actions.complete') }}</button>
             </div>
-            <p>Installeren controleert beide verbindingen opnieuw, maakt tabellen en rollen aan en vergrendelt de wizard. Instellingen worden privaat op deze server opgeslagen.</p>
+            <p>{{ __('onboarding.setup.complete_help') }}</p>
         </form>
     @endunless
 @endsection

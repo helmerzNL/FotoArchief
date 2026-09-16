@@ -20,11 +20,11 @@ class InstallationStorage
         try {
             $written = $disk->put($key, $content, ['visibility' => 'private']);
             if (! $written || $disk->get($key) !== $content) {
-                throw new RuntimeException('Opslagcontrole kon het testbestand niet teruglezen.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.storage_read_failed'));
             }
         } finally {
             if ($written && ! $disk->delete($key)) {
-                throw new RuntimeException('Opslagcontrole kon het tijdelijke testbestand niet verwijderen.');
+                throw new RuntimeException(InstallationText::get('onboarding.setup.errors.storage_delete_failed'));
             }
         }
     }

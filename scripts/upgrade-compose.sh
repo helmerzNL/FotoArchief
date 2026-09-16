@@ -49,7 +49,7 @@ fi
 docker compose -f "$compose_file" pull app worker scheduler
 docker compose -f "$compose_file" up -d --no-deps app
 docker compose -f "$compose_file" exec -T app php artisan installation:ready
-docker compose -f "$compose_file" exec -T app php artisan migrate --force
+docker compose -f "$compose_file" exec -T app php artisan installation:migrate-ready
 docker compose -f "$compose_file" exec -T app php artisan about --only=environment
 docker compose -f "$compose_file" up -d worker scheduler
 docker compose -f "$compose_file" exec -T app php artisan installation:ready

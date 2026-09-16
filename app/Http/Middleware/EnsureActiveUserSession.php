@@ -33,7 +33,7 @@ class EnsureActiveUserSession
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
-                return redirect('/login')->withErrors(['email' => 'Je sessie is ingetrokken. Log opnieuw in of neem contact op met een beheerder.']);
+                return redirect('/login')->withErrors(['email' => __('auth.login.errors.session_revoked')]);
             }
         }
 

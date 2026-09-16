@@ -1,5 +1,8 @@
 {
   "preset": "laravel",
+  "exclude": [
+    "tests/Fixtures/translations"
+  ],
   "rules": {
     "declare_strict_types": true
   }

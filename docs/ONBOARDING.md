@@ -143,8 +143,9 @@ it is not an operator shortcut around production setup.
 During upgrades, never delete the installation directory, regenerate the app key
 or rerun the wizard. For Docker deployments, create a verified backup first and
 use `scripts/upgrade-compose.sh` or the equivalent manager procedure: drain
-workers, deploy the exact tested image/archive, run migrations once, then resume
-workers and scheduler with the same persistent storage volume.
+workers, deploy the exact tested image/archive, run the coordinated
+`php artisan installation:migrate-ready` migration gate, then resume workers and
+scheduler with the same persistent storage volume.
 
 ## Failure, retry and recovery
 

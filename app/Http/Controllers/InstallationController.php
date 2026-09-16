@@ -34,13 +34,13 @@ class InstallationController extends Controller
         $data = $request->validate(['code' => ['required', 'string', 'max:100']]);
         $key = 'installation-unlock:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts('installation-unlock', 30)) {
-            abort(429, 'Te veel pogingen. Wacht een minuut.');
+            abort(429, __('onboarding.setup.errors.too_many_attempts'));
         }
         RateLimiter::hit($key, 60);
         RateLimiter::hit('installation-unlock', 60);
         $state = $this->store->read();
         if ($state === null || ! hash_equals($state->codeHash, hash('sha256', trim($data['code'])))) {
-            throw ValidationException::withMessages(['code' => 'De installatiecode is niet geldig.']);
+            throw ValidationException::withMessages(['code' => __('onboarding.setup.errors.invalid_code')]);
         }
         $request->session()->regenerate();
         $request->session()->put('installation_authorized_until', now()->addMinutes(20)->timestamp);
@@ -59,7 +59,7 @@ class InstallationController extends Controller
         }
 
         return redirect('/setup')->withInput($request->except(['db_password', 'secret_key', 'access_key', 'password', 'password_confirmation', '_token']))
-            ->with('status', 'Database en opslag zijn bereikbaar. Het testbestand is geschreven, teruggelezen en verwijderd. Vul de geheimen opnieuw in om te installeren.');
+            ->with('status', __('onboarding.setup.status.connections_ok'));
     }
 
     public function complete(Request $request, InstallationRunner $runner): RedirectResponse
@@ -79,7 +79,7 @@ class InstallationController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login')->with('status', 'Installatie voltooid. Log in met je beheerdersaccount.');
+        return redirect('/login')->with('status', __('onboarding.setup.status.complete'));
     }
 
     private function authorized(Request $request): bool
@@ -91,7 +91,7 @@ class InstallationController extends Controller
 
     private function requireAuthorization(Request $request): void
     {
-        abort_unless($this->authorized($request), 403, 'Voer eerst de installatiecode in; toestemming verloopt na 20 minuten.');
+        abort_unless($this->authorized($request), 403, __('onboarding.setup.errors.authorization_required'));
     }
 
     private function settings(Request $request): InstallationSettings
@@ -127,9 +127,9 @@ class InstallationController extends Controller
         Log::error('Installation operation failed', ['reference' => $reference, 'exception_type' => $exception::class, 'cause_type' => $exception->getPrevious() ? $exception->getPrevious()::class : null]);
         $message = $exception instanceof InstallationFailure
             ? $exception->getMessage()
-            : 'Controleer database- en bestandsrechten. Hervat een onderbroken installatie met exact dezelfde instellingen.';
+            : __('onboarding.setup.errors.connection_help');
         throw ValidationException::withMessages([
-            'installation' => 'Installatiecontrole mislukt (referentie '.$reference.'). '.$message.' Er is niets als voltooid gemarkeerd.',
+            'installation' => __('onboarding.setup.errors.connection_failed', ['reference' => $reference, 'message' => $message]),
         ]);
     }
 }

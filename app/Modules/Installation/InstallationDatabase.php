@@ -19,7 +19,7 @@ class InstallationDatabase
     public function requireEmptyDatabase(): void
     {
         if (Schema::getTables() !== []) {
-            throw new InstallationFailure('Deze database bevat al tabellen. Gebruik een lege PostgreSQL-database voor een nieuwe installatie.');
+            throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.database_not_empty'));
         }
     }
 }
