@@ -11,6 +11,7 @@ use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
 use App\Modules\ArchiveOperations\Models\OperationRun;
+use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Database\Seeders\DatabaseSeeder;
@@ -111,7 +112,8 @@ it('stores source-bound image embeddings in a shared multimodal model space', fu
         ->and($generation->capability_receipt['text_embeddings_required_for_queries'])->toBeTrue()
         ->and($embedding->source_file_sha256)->toBe($this->file->sha256)
         ->and($embedding->embedding)->toBe([0.25, 0.5, 0.75])
-        ->and(AiRun::query()->where('run_type', AiRun::TYPE_EMBEDDING)->count())->toBe(1);
+        ->and(AiRun::query()->where('run_type', AiRun::TYPE_EMBEDDING)->count())->toBe(1)
+        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.index.item_succeeded')->count())->toBe(1);
 });
 
 it('refuses embedding index batches when embeddings are disabled', function (): void {

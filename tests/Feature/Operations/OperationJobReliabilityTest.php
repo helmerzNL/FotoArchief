@@ -153,6 +153,26 @@ it('stops a run that stops making progress rather than chaining forever', functi
         ->and($run->error_message)->toContain('geen voortgang');
 });
 
+it('never reports a fully failed finished chunk as completed', function (): void {
+    $run = reliabilityRun(['total_items' => 1]);
+    ReliabilityProbeJob::$handler = fn (): array => [
+        'processed' => 0,
+        'failed' => 1,
+        'finished' => true,
+        'result' => ['provider' => 'test'],
+    ];
+
+    (new ReliabilityProbeJob($run->id))->handle();
+
+    $run->refresh();
+
+    expect($run->status)->toBe(OperationRun::STATUS_FAILED)
+        ->and($run->processed_items)->toBe(0)
+        ->and($run->failed_items)->toBe(1)
+        ->and($run->result['provider'])->toBe('test')
+        ->and($run->error_message)->toContain('Geen enkel item');
+});
+
 it('never copies or counts the same file twice when a copy chunk is retried', function (): void {
     Storage::fake('local');
     Storage::fake('archive');

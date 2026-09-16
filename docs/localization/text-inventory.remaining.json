@@ -2,30 +2,6 @@
     "schema": 1,
     "locale": "nl",
     "scope": "remaining_surfaces",
-    "extracted_first_batch": [
-        "app/Http/Controllers/InstallationController.php",
-        "app/Http/Controllers/SessionController.php",
-        "app/Http/Middleware/EnsureActiveUserSession.php",
-        "app/Modules/Installation/InstallationBootstrap.php",
-        "app/Modules/Installation/InstallationDatabase.php",
-        "app/Modules/Installation/InstallationFailure.php",
-        "app/Modules/Installation/InstallationGate.php",
-        "app/Modules/Installation/InstallationPlatform.php",
-        "app/Modules/Installation/InstallationRunner.php",
-        "app/Modules/Installation/InstallationSettings.php",
-        "app/Modules/Installation/InstallationState.php",
-        "app/Modules/Installation/InstallationStorage.php",
-        "app/Modules/Installation/InstallationStore.php",
-        "app/Modules/Installation/InstallationText.php",
-        "resources/views/admin/dashboard.blade.php",
-        "resources/views/auth/login.blade.php",
-        "resources/views/identity/invitations/accept.blade.php",
-        "resources/views/identity/invitations/create.blade.php",
-        "resources/views/identity/security/show.blade.php",
-        "resources/views/identity/users/index.blade.php",
-        "resources/views/installation/setup.blade.php",
-        "resources/views/layouts/app.blade.php"
-    ],
     "entries": [
         {
             "file": "app/Console/Commands/CheckTranslationsCommand.php",
@@ -833,6 +809,27 @@
             "batch": "ai"
         },
         {
+            "file": "app/Modules/Ai/Services/AiOperationAuditService.php",
+            "line": 31,
+            "kind": "php_string",
+            "text": "AI-item succesvol verwerkt.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiOperationAuditService.php",
+            "line": 35,
+            "kind": "php_string",
+            "text": "AI operation item succeeded.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiOperationAuditService.php",
+            "line": 62,
+            "kind": "php_string",
+            "text": "AI operation item failed.",
+            "batch": "ai"
+        },
+        {
             "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
             "line": 66,
             "kind": "php_string",
@@ -1359,28 +1356,35 @@
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 162,
+            "line": 140,
+            "kind": "php_string",
+            "text": "Geen enkel item kon worden verwerkt. Bekijk het auditlog voor de concrete oorzaak.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
+            "line": 178,
             "kind": "php_string",
             "text": "De bewerking maakte geen voortgang meer en is gestopt. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 163,
+            "line": 179,
             "kind": "php_string",
             "text": "De bewerking bereikte de maximale omvang van",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 163,
+            "line": 179,
             "kind": "php_string",
             "text": "items en is niet afgerond. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 200,
+            "line": 216,
             "kind": "php_string",
             "text": "De bewerking is mislukt. Controleer worker, opslag en rechten en probeer opnieuw.",
             "batch": "shared_remaining"
@@ -10193,7 +10197,21 @@
         },
         {
             "file": "resources/views/operations/runs/_panel.blade.php",
-            "line": 54,
+            "line": 51,
+            "kind": "blade_text",
+            "text": "Auditlog ( )",
+            "batch": "operations"
+        },
+        {
+            "file": "resources/views/operations/runs/_panel.blade.php",
+            "line": 58,
+            "kind": "blade_text",
+            "text": "Technische context",
+            "batch": "operations"
+        },
+        {
+            "file": "resources/views/operations/runs/_panel.blade.php",
+            "line": 70,
             "kind": "blade_text",
             "text": "Opnieuw proberen",
             "batch": "operations"

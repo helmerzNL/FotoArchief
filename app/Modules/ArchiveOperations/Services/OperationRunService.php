@@ -55,12 +55,21 @@ class OperationRunService
      */
     public function retryRun(OperationRun $run, string $jobClass): OperationRun
     {
-        $run->forceFill([
+        $changes = [
             'status' => OperationRun::STATUS_QUEUED,
             'error_message' => null,
             'claim_token' => null,
             'finished_at' => null,
-        ])->save();
+        ];
+        if (in_array($run->operation_type, [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE], true)) {
+            $changes = array_merge($changes, [
+                'payload' => array_merge($run->payload ?? [], ['cursor' => 0]),
+                'processed_items' => 0,
+                'failed_items' => 0,
+                'result' => null,
+            ]);
+        }
+        $run->forceFill($changes)->save();
 
         Queue::connection('ingest')->push(new $jobClass($run->id));
 
@@ -91,7 +100,10 @@ class OperationRunService
     {
         /** @var LengthAwarePaginator<int, OperationRun> $runs */
         $runs = OperationRun::query()
-            ->with('requestedBy')
+            ->with([
+                'requestedBy',
+                'auditEvents' => fn ($query) => $query->latest('created_at')->limit(10),
+            ])
             ->latest('created_at')
             ->paginate($perPage);
 
