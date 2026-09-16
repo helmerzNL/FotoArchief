@@ -134,7 +134,7 @@
             'image_analysis_enabled' => 'Beeldanalyse toestaan',
             'embeddings_enabled' => 'Multimodale embeddings toestaan',
             'local_provider_enabled' => 'Lokale/eigen provider toestaan',
-            'external_processing_allowed' => 'Externe doorgifte expliciet toegestaan',
+            'external_processing_allowed' => 'Doorgifte naar custom externe provider toestaan',
         ] as $field => $label)
             <label style="display:block;margin:0.5rem 0;">
                 <input type="checkbox" name="{{ $field }}" value="1" @checked(old($field, $settings[$field]) === true || old($field, $settings[$field]) === '1')>

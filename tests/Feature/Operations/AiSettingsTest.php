@@ -48,7 +48,7 @@ it('keeps AI disabled by default and hides settings from non-admin users', funct
         ->and($settings['external_ready'])->toBeFalse();
 });
 
-it('rejects unsafe external endpoints and missing external privacy consent', function (): void {
+it('rejects unsafe external endpoints and incomplete selected external providers', function (): void {
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai/providers/external', [
         'enabled' => '1',
         'endpoint' => 'http://127.0.0.1:8000',
@@ -61,13 +61,13 @@ it('rejects unsafe external endpoints and missing external privacy consent', fun
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
         'global_enabled' => '1',
         'embeddings_enabled' => '1',
-        'external_processing_allowed' => '1',
         'max_assets_per_batch' => 25,
         'derivative_max_pixels' => 1024,
         'request_timeout_seconds' => 60,
+        'embeddings_provider' => 'external',
     ]);
 
-    $response->assertSessionHasErrors(['external_processing_allowed']);
+    $response->assertSessionHasErrors(['external_processing_allowed', 'external_provider_enabled']);
 });
 
 it('stores explicit local and external opt-ins without storing credentials', function (): void {
@@ -137,6 +137,7 @@ it('accepts an enabled native provider from its database record', function (): v
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
         'global_enabled' => '1',
         'image_analysis_enabled' => '1',
+        'external_processing_allowed' => '1',
         'max_assets_per_batch' => 25,
         'derivative_max_pixels' => 1024,
         'request_timeout_seconds' => 60,
