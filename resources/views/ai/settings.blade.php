@@ -200,9 +200,10 @@
         @csrf
         <h2>Beeldanalyse starten</h2>
         <p>Analyseert de geselecteerde, gescande primaire bestanden. Elke run levert menselijk te beoordelen suggesties op (accepteren/afwijzen) en wijzigt nooit rechtstreeks een asset. Volg de voortgang, en stop of herstart indien nodig, op de <a href="{{ route('admin.operations.runs.index') }}">runs-pagina</a>.</p>
-        <label>Asset-id's
-            <textarea name="asset_ids" rows="3" placeholder="ULID's gescheiden door komma's of regels"></textarea>
+        <label>Fotonummers of interne IDs
+            <textarea name="asset_ids" rows="3" placeholder="FA-… of interne ULID; gescheiden door komma's of regels">{{ old('asset_ids') }}</textarea>
         </label>
+        <p>Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.</p>
         <label>Provider
             <select name="provider">
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS as $provider)
@@ -220,9 +221,10 @@
         @csrf
         <h2>Embeddingindex bouwen</h2>
         <p>Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.</p>
-        <label>Asset-id's
-            <textarea name="asset_ids" rows="3" placeholder="ULID's gescheiden door komma's of regels"></textarea>
+        <label>Fotonummers of interne IDs
+            <textarea name="asset_ids" rows="3" placeholder="FA-… of interne ULID; gescheiden door komma's of regels">{{ old('asset_ids') }}</textarea>
         </label>
+        <p>Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.</p>
         <label>Provider
             <select name="provider">
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::EMBEDDINGS_PROVIDERS as $provider)

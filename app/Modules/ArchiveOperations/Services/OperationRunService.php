@@ -7,6 +7,7 @@ namespace App\Modules\ArchiveOperations\Services;
 use App\Models\User;
 use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
 use App\Modules\Ai\Jobs\ProcessAiIndexJob;
+use App\Modules\Ai\Services\AiAssetBatchService;
 use App\Modules\ArchiveOperations\Jobs\CleanupOrphanUploadsJob;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Jobs\PurgeAssetsJob;
@@ -16,8 +17,10 @@ use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
 use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Single entry point for starting heavy archive operations.
@@ -48,12 +51,12 @@ class OperationRunService
     }
 
     /**
-     * Re-queues a failed run, keeping its history and cursor so a partially completed
-     * operation resumes instead of restarting.
+     * Re-queues a failed run, preserving history. AI runs validate their references
+     * and restart; other operations retain their resume cursor.
      *
      * @param  class-string<OperationJob>  $jobClass
      */
-    public function retryRun(OperationRun $run, string $jobClass): OperationRun
+    public function retryRun(OperationRun $run, string $jobClass, ?User $user = null): OperationRun
     {
         $changes = [
             'status' => OperationRun::STATUS_QUEUED,
@@ -61,15 +64,45 @@ class OperationRunService
             'claim_token' => null,
             'finished_at' => null,
         ];
+        $normalization = null;
         if (in_array($run->operation_type, [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE], true)) {
+            $user ??= $run->requestedBy;
+            if (! $user instanceof User) {
+                throw ValidationException::withMessages(['asset_ids' => 'De aanvrager van deze AI-taak bestaat niet meer. Start een nieuwe taak.']);
+            }
+            $payload = $run->payload ?? [];
+            $references = $payload['asset_ids'] ?? null;
+            $format = $payload['asset_id_format'] ?? 'legacy';
+            if (! is_array($references) || ! is_string($format)) {
+                throw ValidationException::withMessages(['asset_ids' => 'Deze AI-taak bevat ongeldige fotoreferenties. Start een nieuwe taak.']);
+            }
+            $batch = app(AiAssetBatchService::class)->normalize($references, $user, $format);
+            if ($format !== AiAssetBatchService::INTERNAL_FORMAT) {
+                $normalization = $batch['references'];
+            }
             $changes = array_merge($changes, [
-                'payload' => array_merge($run->payload ?? [], ['cursor' => 0]),
+                'payload' => array_merge($payload, [
+                    'asset_ids' => $batch['asset_ids'],
+                    'asset_id_format' => AiAssetBatchService::INTERNAL_FORMAT,
+                    'cursor' => 0,
+                ]),
+                'total_items' => count($batch['asset_ids']),
                 'processed_items' => 0,
                 'failed_items' => 0,
                 'result' => null,
             ]);
         }
-        $run->forceFill($changes)->save();
+        DB::transaction(function () use ($run, $changes, $normalization, $user): void {
+            $run->forceFill($changes)->save();
+            if ($normalization !== null) {
+                $run->auditEvents()->create([
+                    'event_type' => $run->operation_type.'.references_normalized',
+                    'severity' => 'info',
+                    'message' => 'Fotoreferenties gecontroleerd en omgezet naar interne IDs voor een herpoging.',
+                    'context' => ['references' => $normalization, 'retried_by_user_id' => $user?->id],
+                ]);
+            }
+        });
 
         Queue::connection('ingest')->push(new $jobClass($run->id));
 

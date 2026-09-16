@@ -16,6 +16,7 @@ class AiDispatchService
     public function __construct(
         private readonly AiConfigurationService $configuration,
         private readonly OperationRunService $runs,
+        private readonly AiAssetBatchService $batches,
     ) {}
 
     /**
@@ -44,8 +45,11 @@ class AiDispatchService
             throw ValidationException::withMessages($errors);
         }
 
+        $assetIds = $this->batches->normalize($assetIds, $user)['asset_ids'];
+
         return $this->runs->dispatchRun(ProcessAiAnalysisJob::class, ProcessAiAnalysisJob::TYPE, $user, [
             'asset_ids' => $assetIds,
+            'asset_id_format' => AiAssetBatchService::INTERNAL_FORMAT,
             'provider' => $provider,
             'model' => (string) ($settings['image_analysis_model'] ?? ''),
             'cursor' => 0,
@@ -78,8 +82,11 @@ class AiDispatchService
             throw ValidationException::withMessages($errors);
         }
 
+        $assetIds = $this->batches->normalize($assetIds, $user)['asset_ids'];
+
         return $this->runs->dispatchRun(ProcessAiIndexJob::class, ProcessAiIndexJob::TYPE, $user, [
             'asset_ids' => $assetIds,
+            'asset_id_format' => AiAssetBatchService::INTERNAL_FORMAT,
             'provider' => $provider,
             'model' => (string) ($settings['embeddings_model'] ?? ''),
             'cursor' => 0,
