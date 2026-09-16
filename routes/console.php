@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
@@ -71,6 +72,15 @@ Artisan::command('operations:heartbeat {role : worker or scheduler} {--state=ok 
     return 0;
 })->purpose('Record an operational heartbeat for diagnostics');
 
+Artisan::command('operations:check-alerts {--dry-run : Evaluate alert payload without sending}', function (OperationalAlertService $alerts): int {
+    $result = $alerts->evaluate((bool) $this->option('dry-run'));
+    $incidentCount = count($result['payload']['incidents'] ?? []);
+    $this->info("Operationele meldingen gecontroleerd: {$incidentCount} incident(en), reden: {$result['reason']}.");
+
+    return 0;
+})->purpose('Evaluate diagnostics and send configured operational alerts');
+
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();
+Schedule::command('operations:check-alerts')->hourly()->withoutOverlapping();

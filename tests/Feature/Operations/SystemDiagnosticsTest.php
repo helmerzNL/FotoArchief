@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\ArchiveOperations\Services\SystemDiagnosticsService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 beforeEach(function (): void {
     $this->artisan('migrate');
@@ -105,4 +106,46 @@ it('records scheduler and worker heartbeats for diagnostics', function (): void 
         ->and($diagnostics['activity']['roles']['scheduler']['seen'])->toBeTrue()
         ->and($diagnostics['activity']['roles']['scheduler']['stale'])->toBeFalse()
         ->and($diagnostics['activity']['roles']['worker']['state'])->toBe('starting');
+});
+
+it('sends configured operational alert webhooks without leaking secrets', function (): void {
+    Http::fake([
+        'https://ops.example.test/fotoarchief' => Http::response(['ok' => true], 202),
+    ]);
+    config([
+        'operations.alerts.enabled' => true,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'operations.alerts.minimum_severity' => 'critical',
+        'ingest.scanner' => 'clamav',
+        'ingest.clamav_host' => '127.0.0.1',
+        'ingest.clamav_port' => 9,
+        'ingest.clamav_timeout' => 1,
+    ]);
+
+    $this->artisan('operations:check-alerts')->assertExitCode(0);
+
+    Http::assertSent(function ($request): bool {
+        $payload = $request->data();
+
+        return $request->url() === 'https://ops.example.test/fotoarchief'
+            && ($payload['application'] ?? null) === config('app.name')
+            && collect($payload['incidents'] ?? [])->contains(
+                fn (array $incident): bool => $incident['key'] === 'scanner'
+                    && $incident['severity'] === 'critical'
+            )
+            && ! str_contains(json_encode($payload, JSON_THROW_ON_ERROR), 'secret12345');
+    });
+});
+
+it('dry-runs operational alerts without calling the webhook', function (): void {
+    Http::fake();
+    config([
+        'operations.alerts.enabled' => true,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'ingest.scanner' => 'none',
+    ]);
+
+    $this->artisan('operations:check-alerts', ['--dry-run' => true])->assertExitCode(0);
+
+    Http::assertNothingSent();
 });

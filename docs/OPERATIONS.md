@@ -48,8 +48,33 @@ docker compose exec app php artisan about --only=environment
 docker compose exec app php artisan queue:failed
 docker compose exec scheduler php artisan schedule:list
 docker compose exec scheduler php artisan operations:heartbeat scheduler
+docker compose exec scheduler php artisan operations:check-alerts --dry-run
 sh scripts/backup-copy-encrypted.sh /private/backups/latest /offsite/fotoarchief-latest.tar.gz.enc /private/fotoarchief-backup.key
 ```
+
+## Operational alerts
+
+FotoArchief evaluates the same diagnostics used by the operations page through
+`php artisan operations:check-alerts`. The scheduler runs this hourly. Alerts
+are disabled by default; when incidents are found while disabled, the command
+writes a structured warning to the application log instead of calling any
+external service.
+
+Configure a webhook only with an operator-owned endpoint:
+
+```text
+OPERATIONS_ALERTS_ENABLED=true
+OPERATIONS_ALERT_WEBHOOK_URL=https://ops.example.invalid/fotoarchief
+OPERATIONS_ALERT_MINIMUM_SEVERITY=warning
+OPERATIONS_ALERT_FAILED_INGEST_THRESHOLD=5
+OPERATIONS_ALERT_PENDING_INGEST_THRESHOLD=100
+```
+
+The payload contains the application name, environment, timestamp,
+overall status and incident summaries. It does not include credentials, `.env`
+contents, installation state or image metadata. Use `--dry-run` after changing
+thresholds or routing so the payload can be inspected without sending a
+notification.
 
 ## Upload limits
 
