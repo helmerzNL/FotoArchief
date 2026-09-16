@@ -237,12 +237,26 @@ class MetadataImportService
         return $recovered;
     }
 
+    /**
+     * A photo in the trash is recoverable, so saying it no longer exists sends
+     * the archivist looking for a problem that is not there. The distinction is
+     * for the message only: a trashed photo is never written to either way.
+     */
+    private function missingAssetMessage(bool $trashed): string
+    {
+        return $trashed
+            ? 'Deze foto staat in de prullenbak en is niet bijgewerkt. Zet de foto terug en bevestig de import opnieuw.'
+            : 'De foto bestaat niet meer.';
+    }
+
     private function applyRow(MetadataImport $import, MetadataImportRow $row, User $user): void
     {
         DB::transaction(function () use ($import, $row, $user): void {
             $asset = Asset::query()->whereKey($row->asset_id)->lockForUpdate()->first();
             if (! $asset instanceof Asset) {
-                $row->update(['status' => 'failed', 'messages' => ['De foto bestaat niet meer.']]);
+                $row->update(['status' => 'failed', 'messages' => [$this->missingAssetMessage(
+                    Asset::onlyTrashed()->whereKey($row->asset_id)->exists()
+                )]]);
 
                 return;
             }
@@ -331,7 +345,9 @@ class MetadataImportService
             } elseif (isset($seenAccessions[$accession])) {
                 $messages[] = 'Archiefnummer '.$accession.' komt meerdere keren voor in dit bestand.';
             } elseif ($asset === null) {
-                $messages[] = 'Geen foto gevonden met archiefnummer '.$accession.'. Importeren maakt nooit nieuwe foto’s aan.';
+                $messages[] = Asset::onlyTrashed()->where('accession_number', $accession)->exists()
+                    ? 'Foto '.$accession.' staat in de prullenbak en wordt niet bijgewerkt. Zet de foto terug en controleer daarna opnieuw.'
+                    : 'Geen foto gevonden met archiefnummer '.$accession.'. Importeren maakt nooit nieuwe foto’s aan.';
             } elseif (! Gate::forUser($user)->allows('update', $asset)) {
                 $messages[] = 'Je mag deze foto niet bijwerken.';
                 $asset = null;

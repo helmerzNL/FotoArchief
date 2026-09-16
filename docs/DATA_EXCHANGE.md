@@ -92,6 +92,13 @@ weigert die laag het verzoek voordat FotoArchief het ziet en verschijnt er geen
 foutmelding in de applicatielogboeken. In `deploy/php.ini` gelden daarnaast
 `upload_max_filesize` en `post_max_size`.
 
+## Foto’s in de prullenbak
+
+Een foto die in de prullenbak staat, wordt door een import **nooit** bijgewerkt.
+De rij krijgt in het voorbeeld en in de uitvoering een duidelijke melding dat de
+foto in de prullenbak staat, zodat je hem eerst kunt terugzetten. Zet je de foto
+terug, dan kun je de import gewoon opnieuw bevestigen.
+
 ## Beveiliging en rechten
 
 - Een import is privé voor de indiener; andere gebruikers krijgen 404.
@@ -205,6 +212,26 @@ en met reden in het manifest vermeld; het pakket blijft bruikbaar.
    voor de derde keer gecheckt, op elke foto in het bestand.
 5. **Opruimen**: na `EXCHANGE_EXPORT_TTL_MINUTES` verloopt de export en wordt het
    bestand verwijderd.
+
+## Een foto die na de export in de prullenbak belandt
+
+Een exportbestand bevat echte originelen en afgeleiden. Wordt een foto daarna in
+de prullenbak gegooid, dan mag dat bestand niet alsnog naar buiten gaan. Daarom
+geldt:
+
+- Een foto die al in de prullenbak staat, komt niet in een nieuwe export.
+- Belandt een foto in de prullenbak terwijl de export nog in de wachtrij staat,
+  dan wordt hij overgeslagen; het manifest vermeldt hem bij `skipped` met reden.
+  Staan álle foto’s van de export in de prullenbak, dan mislukt de export.
+- Is het bestand al klaar, dan wordt het bij de eerstvolgende downloadpoging
+  **ingetrokken en van schijf verwijderd**. Dat geldt ook voor een downloadlink
+  die al vóór het weggooien was aangevraagd: de controle gebeurt op het moment
+  van afgifte, niet bij het samenstellen.
+- Wordt de foto binnen de bewaartermijn teruggezet, dan kun je gewoon een nieuwe
+  export maken.
+
+Wie wat heeft geëxporteerd en gedownload blijft in het auditspoor bewaard, ook
+nadat de foto is weggegooid.
 
 ## Waarom een latere rechtenwijziging niet kan lekken
 

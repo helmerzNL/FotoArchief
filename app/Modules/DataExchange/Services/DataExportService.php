@@ -97,7 +97,13 @@ class DataExportService
             foreach ($export->assetIds() as $assetId) {
                 $asset = $assets->get($assetId);
                 if (! $asset instanceof Asset) {
-                    $skipped[] = ['accession_number' => $assetId, 'reason' => 'Foto bestaat niet meer.'];
+                    // Trashed photos are hidden by the global scope, so the
+                    // accession number is read past it purely to keep the
+                    // manifest readable; the photo is skipped either way.
+                    $trashed = Asset::onlyTrashed()->whereKey($assetId)->first();
+                    $skipped[] = $trashed instanceof Asset
+                        ? ['accession_number' => (string) $trashed->accession_number, 'reason' => 'Foto staat in de prullenbak en is niet meegenomen.']
+                        : ['accession_number' => $assetId, 'reason' => 'Foto bestaat niet meer.'];
 
                     continue;
                 }
