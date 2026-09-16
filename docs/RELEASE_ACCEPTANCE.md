@@ -92,9 +92,21 @@ The browser exposed a photo-reference lookup defect: the visible
 After integration revision `c52ace5`, submitting the exact same ID succeeds,
 displays "Foto toegevoegd aan collectie", increments the collection count to
 one and links the expected photo. Catalogue regression tests pass **62 / 605**;
-formatting and level-8 analysis pass. The populated collection table still
-overflows the 390-pixel viewport and requires correction before accessibility
-acceptance. These checks are not a WCAG 2.2 AA certification.
+formatting and level-8 analysis pass. Revision `4225d4a` fixes the populated
+collection table: a real full-page browser at viewport 390 measures document
+width 375 and an internal scroll region of 309 pixels around 657 pixels of
+table content. The region is keyboard-focusable; ArrowRight advances its scroll
+position by 40 pixels. These checks are not a WCAG 2.2 AA certification.
+
+The same revision integrates all five public-portal milestones and their
+soft-delete interoperability checks. The complete suite passes **245 tests /
+1846 assertions**, with Pint and level-8 analysis green. Fresh installation and
+legacy upgrade against isolated PostgreSQL databases separately pass **2 tests /
+39 assertions**. The public-portal security review and public 50,000-record
+performance gate are still pending. A security review of the preceding private
+application identified two high-severity missing object-policy checks in OCR
+and file-version operations; their corrective tests and integration are required
+before release.
 
 The real v0.8.6 production PHP archive from revision `3909bb1` passes the
 archive/provenance contract with **79 production packages**. Its SHA-256 is
