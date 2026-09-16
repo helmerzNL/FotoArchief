@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - chore/foundation-operations
 
 permissions:
   contents: read
@@ -194,7 +193,7 @@ jobs:
           docker compose -f deploy/compose.yaml exec -T app apache2ctl -t
           docker compose -f deploy/compose.yaml exec -T app php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 5 ? 0 : 1);'
           curl --fail http://localhost:8080/up
-          curl --fail http://localhost:8080/api/status
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/api/status)" = 503
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/.env)" = 403
       - name: Verify real bundled OCR engine and language models
         run: |
@@ -247,6 +246,7 @@ jobs:
           docker compose -f deploy/compose.yaml restart app worker scheduler
           docker compose -f deploy/compose.yaml up -d --wait app
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 404
+          curl --fail http://localhost:8080/api/status
       - name: Accept real CSV import and authorized JSON CSV ZIP exports
         run: php tests/Smoke/http-exchange.php
       - name: Save tested Docker image
@@ -321,8 +321,12 @@ jobs:
           docker compose -f deploy/compose.yaml down --volumes
           docker compose -p fotoarchief-restore -f deploy/compose.yaml down --volumes
           docker compose -p fotoarchief-managed -f deploy/compose.yaml down --volumes
-          docker rm -f fotoarchief-dockhand
-          docker volume rm fotoarchief-dockhand-data
+          if docker container inspect fotoarchief-dockhand > /dev/null 2>&1; then
+            docker rm -f fotoarchief-dockhand
+          fi
+          if docker volume inspect fotoarchief-dockhand-data > /dev/null 2>&1; then
+            docker volume rm fotoarchief-dockhand-data
+          fi
 
   webhosting:
     name: Production PHP archive
