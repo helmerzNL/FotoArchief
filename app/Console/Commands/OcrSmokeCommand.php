@@ -118,6 +118,13 @@ class OcrSmokeCommand extends Command
         $storageKey = 'ocr-smoke/'.$accession.'.png';
         $asset = null;
 
+        $wrongAccount = $this->refuseWrongRuntimeAccount();
+        if ($wrongAccount !== null) {
+            $this->error($wrongAccount);
+
+            return self::FAILURE;
+        }
+
         try {
             $probe = $this->renderProbeImage();
             if ($probe === null) {
@@ -129,13 +136,6 @@ class OcrSmokeCommand extends Command
             $bytes = (string) file_get_contents($probe);
             @unlink($probe);
             Storage::disk('local')->put($storageKey, $bytes);
-
-            $unreadable = $this->alignFixtureWithRuntimeUser($storageKey);
-            if ($unreadable !== null) {
-                $this->error($unreadable);
-
-                return self::FAILURE;
-            }
 
             $asset = Asset::query()->create([
                 'accession_number' => $accession,
@@ -204,79 +204,59 @@ class OcrSmokeCommand extends Command
     }
 
     /**
-     * Makes the synthetic fixture readable by the account the worker runs as.
+     * Refuses to run as an account whose fixture the worker could not read.
      *
      * The local disk stores privately, so Laravel creates directories 0700 and files
-     * 0600 owned by whoever wrote them. `docker compose exec` defaults to root while
-     * the worker runs as the web account, so a fixture written by root lands in a
-     * directory the worker cannot traverse: the job then reports the file as missing
-     * although it is plainly there, and the failure reads like a broken engine.
+     * 0600 owned by whoever wrote them. `docker compose exec` bypasses the entrypoint
+     * and uses the image default, root, while deploy/entrypoint.sh runs the worker and
+     * artisan under gosu www-data. A fixture written by root therefore lands in a
+     * directory the worker cannot traverse: the job reports the file as missing though
+     * it is plainly there, and the failure reads like a broken engine.
      *
-     * Ownership is aligned with the disk root rather than permissions widened, so the
-     * fixture stays as private as every other stored file. When alignment is not
-     * possible the command says which account to use instead of dispatching a job
-     * that is certain to fail.
+     * The command refuses rather than repairing it. Taking ownership afterwards would
+     * let the acceptance run under an account no real request ever uses, so it would
+     * pass while telling an operator nothing about the runtime that actually serves
+     * files. Matching the runtime is the property under test.
      *
-     * @return string|null an actionable problem, or null when the fixture is readable
+     * @return string|null an actionable refusal, or null when this account is right
      */
-    private function alignFixtureWithRuntimeUser(string $storageKey): ?string
+    private function refuseWrongRuntimeAccount(): ?string
     {
-        // Windows and any system without POSIX ownership: nothing to align.
+        // Windows and any system without POSIX ownership: nothing to compare.
         if (! function_exists('posix_geteuid') || ! function_exists('fileowner')) {
             return null;
         }
 
-        $disk = Storage::disk('local');
-        $filePath = $disk->path($storageKey);
-        $directoryPath = dirname($filePath);
-        $rootPath = $disk->path('');
-
         clearstatcache();
-        $owner = @fileowner($rootPath);
+        $owner = @fileowner(Storage::disk('local')->path(''));
         if ($owner === false) {
             return null;
         }
 
-        $group = @filegroup($rootPath);
-        $isRoot = posix_geteuid() === 0;
-
-        foreach ([$directoryPath, $filePath] as $path) {
-            if (@fileowner($path) === $owner) {
-                continue;
-            }
-
-            if (! $isRoot) {
-                return $this->wrongOwnerMessage($owner);
-            }
-
-            @chown($path, $owner);
-            if ($group !== false) {
-                @chgrp($path, $group);
-            }
+        $current = posix_geteuid();
+        if ($current === $owner) {
+            return null;
         }
 
-        clearstatcache();
-        if (@fileowner($filePath) !== $owner || @fileowner($directoryPath) !== $owner) {
-            return $this->wrongOwnerMessage($owner);
-        }
+        $expected = $this->accountName($owner);
 
-        return null;
+        return 'Dit commando draait als "'.$this->accountName($current).'" maar de opslag hoort bij "'
+            .$expected.'". Een testafbeelding van dit account is onleesbaar voor de worker, '
+            .'dus de proef zou een fout melden die er niet is. Draai hem als het runtime-account, '
+            .'bijvoorbeeld met "docker compose exec --user '.$expected.' app php artisan operations:ocr-smoke --queued".';
     }
 
-    /** Names the account the fixture must belong to, so the operator can act on it. */
-    private function wrongOwnerMessage(int $owner): string
+    /** Resolves a uid to its account name, falling back to the number. */
+    private function accountName(int $uid): string
     {
-        $name = (string) $owner;
         if (function_exists('posix_getpwuid')) {
-            $entry = posix_getpwuid($owner);
+            $entry = posix_getpwuid($uid);
             if (is_array($entry) && $entry['name'] !== '') {
-                $name = $entry['name'];
+                return $entry['name'];
             }
         }
 
-        return 'De testafbeelding is niet leesbaar voor de worker: opslag hoort bij "'.$name
-            .'" maar het bestand niet. Draai dit commando als dat account, bijvoorbeeld met '
-            .'"docker compose exec --user '.$name.' app php artisan operations:ocr-smoke --queued".';
+        return (string) $uid;
     }
 
     /** Writes a high-contrast probe image and returns its path, or null without GD. */

@@ -181,7 +181,7 @@ it('writes a fixture the worker can actually read, and leaves none behind', func
     $output = Artisan::output();
 
     expect($output)->not->toContain('Bestand niet gevonden in opslag')
-        ->and($output)->not->toContain('niet leesbaar voor de worker');
+        ->and($output)->not->toContain('maar de opslag hoort bij');
 
     expect(Storage::disk('local')->directories())->toEqual($before)
         ->and(Asset::query()->where('accession_number', 'like', 'OCR-SMOKE-%')->count())->toBe(0);

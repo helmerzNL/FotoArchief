@@ -155,7 +155,7 @@ copies; only `tests/` is excluded), so nothing has to be copied into a running
 container:
 
 ```
-docker compose exec worker php artisan operations:ocr-smoke --language=nld
+docker compose exec --user www-data worker php artisan operations:ocr-smoke --language=nld
 ```
 
 Run it against the **worker** container, because that is where the binary is
@@ -165,7 +165,7 @@ container that will actually do the work.
 ### Proving the whole path, not just the binary
 
 ```
-docker compose exec app php artisan operations:ocr-smoke --queued --wait=90
+docker compose exec --user www-data app php artisan operations:ocr-smoke --queued --wait=90
 ```
 
 `--queued` skips the local binary probe entirely and instead creates a synthetic
@@ -200,17 +200,24 @@ actual scan, and whether the Dutch language data is present, is a property of th
 image and is only established by running the command above against a real container.
 ### Which account runs it
 
-Stored files are private: Laravel creates directories `0700` and files `0600`, owned
-by whoever wrote them. `docker compose exec` defaults to **root**, while the worker
-runs as the web account — so a fixture written by root would sit in a directory the
-worker cannot enter, and the job would report the file as missing even though it is
-there. That failure reads like a broken engine and is not one.
+The queued smoke test must run as the **runtime account**, not as root:
 
-The command therefore gives its fixture the same owner as the storage root before
-dispatching anything, which keeps the file exactly as private as every other stored
-file. Running as root is fine and needs no extra flags. If it is run as some third
-account that can neither write as the owner nor change ownership, it stops and names
-the account to use rather than queueing a job that is certain to fail.
+```
+docker compose exec --user www-data app php artisan operations:ocr-smoke --queued --wait=90
+docker compose exec --user www-data worker php artisan operations:ocr-smoke --language=nld
+```
+
+Stored files are private: Laravel creates directories `0700` and files `0600`, owned
+by whoever wrote them. `deploy/entrypoint.sh` runs the worker and artisan under
+`gosu www-data`, but `docker compose exec` bypasses the entrypoint and uses the image
+default, **root**. A fixture written by root lands in a directory the worker cannot
+enter, so the job reports the file as missing although it is plainly there — a
+failure that reads like a broken engine and is not one.
+
+The command refuses to run as the wrong account and names the right one. It does not
+take ownership of the fixture to make itself work: that would let the acceptance pass
+under an account no real request ever uses, proving nothing about the runtime that
+actually serves files. Matching the runtime is the property being tested.
 ### Environment the worker needs
 
 OCR is off unless it is switched on, and the setting has to reach the **worker**
