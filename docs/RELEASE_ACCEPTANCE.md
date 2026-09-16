@@ -55,6 +55,27 @@ opt-in PostgreSQL tests / 39 assertions. On this Windows host the private-metada
 179.30 ms (detail). These are not measurements of the subsequent integrated
 features, production Apache, concurrent load or the public portal.
 
+## Identity integration acceptance
+
+After integrating invitations, user access management, passkeys and recovery,
+the complete suite passed **79 tests / 602 assertions**, with formatting and
+level-8 analysis passing. Real PostgreSQL fresh installation and forward upgrade
+also passed separately.
+
+A clean Chromium/Edge browser profile on `http://localhost:8791` exercised the
+actual browser WebAuthn APIs against an isolated application and disposable
+SQLite database. A CDP CTAP2 internal authenticator with resident credentials,
+user verification and automatic presence completed enrollment and discoverable
+passkey login. The stored credential counter advanced to 2, both ceremony
+challenges were consumed and the credential's last-used timestamp was set.
+Recovery login succeeded with one of ten generated codes; reuse of that same
+code was denied. The test server, database, profile and temporary harness were
+removed afterward.
+
+This verifies browser encoding, local RP/origin alignment and a virtual
+authenticator. It does not certify hardware keys, mobile platform authenticators,
+cross-device flows or a production HTTPS origin.
+
 ## Limits of the evidence
 
 The benchmark has synthetic metadata and no 50,000-image binary corpus. It does
