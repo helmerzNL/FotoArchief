@@ -1,10 +1,18 @@
 # Cross-module contract: recoverable deletion (`assets.deleted_at`)
 
-Status: **agreed by Portal, awaiting Operations' implementation.** This file
-is Portal's (`feature/expansion-portal`) half of the contract requested by the
-coordinator. Operations, Exchange and Parent each own the pieces below that
-are *not* implemented in this worktree; this document exists so those
-implementations do not diverge from what Portal already relies on.
+Status: **integrated and verified.** Operations shipped this exact contract:
+`deleted_at`, `deleted_by_user_id` and `deletion_reason` on `assets`, using
+the standard `SoftDeletes` trait on `Asset` (migration
+`2026_09_17_270000_add_trash_and_purge_to_assets.php`, model change from
+operations commit `a17969f`, integrated on parent as `dbb27a2`). Portal
+verified that column/migration/model change directly against
+[`tests/Feature/SoftDeleteGuardTest.php`](../tests/Feature/SoftDeleteGuardTest.php)
+and confirmed every public predicate denies a trashed asset with **no
+further Portal-side code change**, exactly as designed below. Only the
+`Asset` model change and its migration were brought into this worktree for
+that verification (Operations' own `TrashController`/`TrashService`/routes/
+views/tests are not duplicated here and are not re-submitted — parent
+already has them via `dbb27a2`/`d8d959c`).
 
 ## Ownership split (unchanged from `docs/REPOSITORY.md`)
 
@@ -30,18 +38,19 @@ implementations do not diverge from what Portal already relies on.
    applied automatically inside those closures. Once the trait lands, nearly
    all of Portal's existing predicate code excludes deleted assets with
    **zero further Portal-side changes**.
-2. Portal has already added an explicit, defense-in-depth guard in
+2. Portal added an explicit, defense-in-depth guard in
    [`Publication::scopePubliclyVisible()`](../app/Modules/Publication/Models/Publication.php)
    that checks `Schema::hasColumn('assets', 'deleted_at')` at query time and,
-   if present, adds `whereNull('assets.deleted_at')`. This is a genuine no-op
-   against the current schema (the column does not exist yet), so it cannot
-   break anything today, and it self-activates the moment the column is
-   migrated in — no second coordinated deploy is required from Portal.
-   Covered by
-   [`tests/Feature/SoftDeleteGuardTest.php`](../tests/Feature/SoftDeleteGuardTest.php),
-   which adds the column at runtime to prove both states (absent today,
-   enforced once present) without depending on Operations' migration existing
-   in this worktree.
+   if present, adds `whereNull('assets.deleted_at')`. Now that the column is
+   real, this guard is active in every environment, and is redundant with
+   (not a replacement for) the `SoftDeletes` global scope — both independently
+   deny the same trashed asset, which is intentional defense-in-depth.
+   `tests/Feature/SoftDeleteGuardTest.php` verifies, against the real column
+   and trait: discovery/permalink/media/IIIF-manifest denial for a trashed
+   asset, and that `Asset::findOrFail()`/`Asset::find()` also fail closed
+   (no accidental republish path through a stale reference), while
+   `Asset::restore()` correctly reverses it (leaving re-review to staff, not
+   auto-republishing).
 3. Every public route (`/foto/{slug}`, its `/media/{derivative}` route,
    `/iiif/{slug}/manifest.json`, `/ontdek`, search/collections, sitemaps) is
    already required to resolve visibility only through
@@ -83,9 +92,12 @@ the contract only.
 
 ## Non-goals for this document
 
-- No PostgreSQL migration counts or migration file itself is added here —
-  the coordinator confirmed Operations owns that.
-- No schema is broken today: `Schema::hasColumn` returns `false` until the
-  column is added, so the guard is inert until Operations ships it.
-- No trash/restore UI, bundle-delivery code, or backup script changes are
-  made in this worktree.
+- No PostgreSQL migration count is added or altered here — the coordinator
+  confirmed Parent owns adjusting `PostgresInstallationTest`/`PhotoUpgradeTest`
+  totals for the now-integrated Operations migration.
+- No trash/restore UI, `TrashController`/`TrashService`, routes, views, or
+  backup script changes are made or duplicated in this worktree — those stay
+  owned by Operations (already on parent as `dbb27a2`) and Parent.
+- The migration file and `Asset` model change were brought into this
+  worktree only to verify the contract end-to-end; that commit is not a
+  resubmission of Operations' work, since parent already has it.
