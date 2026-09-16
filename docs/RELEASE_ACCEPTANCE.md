@@ -84,6 +84,20 @@ cross-device flows or a production HTTPS origin.
 
 ### Integrated release candidate
 
+Linux run `35049901516` proves the actual production Docker image builds.
+The 50k HTTP gates pass: public filtered search **101 ms** (limit 700),
+public detail **39.15 ms** (limit 400), admin list **37.88 ms**, admin search
+**39.08 ms** (limit 800) and admin detail **61.09 ms** (limit 400).
+PHP quality, native PostgreSQL acceptance and production-ZIP construction pass.
+
+Run `35050121262` additionally passes Apache, real bundled Tesseract,
+onboarding/login/upload/JPEG delivery, worker restart, CSV dry-run/confirm and
+JSON/CSV/ZIP download checksums, image saving and consistent backup.
+The real restore exposed a temporary archive lacking the `.tar` suffix required
+by `PharData`; this is corrected in a reusable helper with real-stream regression
+tests (normal bytes preserved and unsafe entries rejected before extraction).
+Restore and Dockhand remain gated by the next Linux run.
+
 Revision `335af19`: **312 tests / 2243 assertions pass**, eight explicit
 environment-gated skips. The real PostgreSQL active-file test separately passes
 **1 test / 11 assertions**; the four real Operations/Portal integration tests

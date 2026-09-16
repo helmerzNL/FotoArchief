@@ -40,6 +40,10 @@ sh scripts/restore-compose.sh /private/backups/fotoarchief-2026-09-16 --confirm-
 
 The restore verifies checksums, refuses a non-empty database or private storage,
 rejects unsafe archive entries and uses a single-transaction `pg_restore`.
+The container's `scripts/restore-storage.php` reads the archive through standard
+input into a private temporary `.tar` file, validates every entry before
+extracting, and removes its temporary copy on success or failure. Keep that
+helper with the matching image; do not substitute an unchecked `tar -xf`.
 It does not run `--clean`, erase volumes, regenerate keys or reopen onboarding.
 On failure it leaves application services stopped; investigate before retrying
 in a new empty target. Verify account login, original checksums and previews

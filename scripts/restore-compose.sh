@@ -29,24 +29,8 @@ if [ "$version" != "$(cat "$backup/VERSION")" ]; then
     echo "Restore refused: use the same application version as the backup, then upgrade." >&2
     exit 1
 fi
-docker compose -f "$compose_file" run --rm --no-deps -T --entrypoint php app -r '
-$archive = tempnam(sys_get_temp_dir(), "restore-");
-try {
-    $out = fopen($archive, "wb");
-    stream_copy_to_stream(STDIN, $out);
-    fclose($out);
-    $tar = new PharData($archive, 0, null, Phar::TAR);
-    foreach (new RecursiveIteratorIterator($tar) as $name => $file) {
-        $relative = substr($name, strlen("phar://".$archive."/"));
-        if (! str_starts_with($relative, "app/") || str_contains($relative, "..") || $file->isLink()) {
-            throw new RuntimeException("Unsafe backup entry.");
-        }
-    }
-    $tar->extractTo("storage", null, false);
-} finally {
-    unlink($archive);
-}
-' < "$backup/storage-app.tar"
+docker compose -f "$compose_file" run --rm --no-deps -T --entrypoint php app \
+    scripts/restore-storage.php < "$backup/storage-app.tar"
 docker compose -f "$compose_file" exec -T postgres sh -ec \
     'pg_restore --single-transaction --exit-on-error --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < "$backup/database.dump"
 docker compose -f "$compose_file" up -d --wait app worker scheduler
