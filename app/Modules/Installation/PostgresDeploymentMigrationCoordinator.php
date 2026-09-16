@@ -6,6 +6,7 @@ namespace App\Modules\Installation;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Migrations\Migrator;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -20,10 +21,7 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
 
     public function migrate(): void
     {
-        $connection = DB::connection();
-        if ($connection->getDriverName() !== 'pgsql') {
-            throw new RuntimeException('Automatic deployment migrations require the configured PostgreSQL connection.');
-        }
+        $connection = $this->postgresConnection();
 
         if (! $this->tryAcquireLock($connection)) {
             $this->waitForCoordinator($connection);
@@ -44,6 +42,30 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
         }
     }
 
+    public function status(): DeploymentMigrationStatus
+    {
+        $connection = $this->postgresConnection();
+        if (! $this->tryAcquireLock($connection)) {
+            return new DeploymentMigrationStatus(true, null);
+        }
+
+        try {
+            return new DeploymentMigrationStatus(false, $this->pendingMigrations());
+        } finally {
+            $this->releaseLock($connection);
+        }
+    }
+
+    private function postgresConnection(): Connection
+    {
+        $connection = DB::connection();
+        if ($connection->getDriverName() !== 'pgsql') {
+            throw new RuntimeException('Automatic deployment migrations require the configured PostgreSQL connection.');
+        }
+
+        return $connection;
+    }
+
     private function tryAcquireLock(Connection $connection): bool
     {
         $rows = $connection->select('SELECT pg_try_advisory_lock(?, ?) AS acquired', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
@@ -55,8 +77,33 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
 
     private function waitForCoordinator(Connection $connection): void
     {
-        $connection->select('SELECT pg_advisory_lock(?, ?)', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
-        $this->releaseLock($connection);
+        $timeout = (int) config('installation.deployment_migration_lock_timeout_seconds', 300);
+        if ($timeout < 1) {
+            throw new RuntimeException('Deployment migration lock timeout must be at least one second.');
+        }
+
+        $connection->select("SELECT set_config('lock_timeout', ?, false)", [$timeout.'s']);
+        $acquired = false;
+
+        try {
+            $connection->select('SELECT pg_advisory_lock(?, ?)', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
+            $acquired = true;
+        } catch (QueryException $exception) {
+            $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
+            if ($sqlState !== '55P03') {
+                throw $exception;
+            }
+
+            throw new RuntimeException("Timed out after {$timeout} seconds while waiting for deployment migrations.", 0, $exception);
+        } finally {
+            try {
+                if ($acquired) {
+                    $this->releaseLock($connection);
+                }
+            } finally {
+                $connection->select("SELECT set_config('lock_timeout', '0', false)");
+            }
+        }
     }
 
     private function releaseLock(Connection $connection): void

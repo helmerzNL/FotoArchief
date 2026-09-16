@@ -19,6 +19,10 @@
         "app/Modules/Installation/InstallationText.php",
         "resources/views/admin/dashboard.blade.php",
         "resources/views/auth/login.blade.php",
+        "resources/views/identity/invitations/accept.blade.php",
+        "resources/views/identity/invitations/create.blade.php",
+        "resources/views/identity/security/show.blade.php",
+        "resources/views/identity/users/index.blade.php",
         "resources/views/installation/setup.blade.php",
         "resources/views/layouts/app.blade.php"
     ],
@@ -3665,42 +3669,63 @@
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 25,
+            "line": 63,
             "kind": "php_string",
             "text": "Automatic deployment migrations require the configured PostgreSQL connection.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 49,
+            "line": 71,
             "kind": "php_string",
             "text": "SELECT pg_try_advisory_lock(?, ?) AS acquired",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 58,
+            "line": 82,
+            "kind": "php_string",
+            "text": "Deployment migration lock timeout must be at least one second.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
+            "line": 85,
+            "kind": "php_string",
+            "text": "SELECT set_config('lock_timeout', ?, false)",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
+            "line": 89,
             "kind": "php_string",
             "text": "SELECT pg_advisory_lock(?, ?)",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 64,
+            "line": 104,
+            "kind": "php_string",
+            "text": "SELECT set_config('lock_timeout', '0', false)",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
+            "line": 111,
             "kind": "php_string",
             "text": "SELECT pg_advisory_unlock(?, ?)",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 71,
+            "line": 118,
             "kind": "php_string",
             "text": "Database migrations are still pending after the coordinated migration run:",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/Installation/PostgresDeploymentMigrationCoordinator.php",
-            "line": 81,
+            "line": 128,
             "kind": "php_string",
             "text": "Migration repository was not created.",
             "batch": "shared_remaining"
@@ -8828,181 +8853,6 @@
             "kind": "blade_text",
             "text": "Nog geen imports.",
             "batch": "exchange"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 6,
-            "kind": "blade_text",
-            "text": "Account activeren",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 7,
-            "kind": "blade_text",
-            "text": "Je activeert een account voor",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 7,
-            "kind": "blade_text",
-            "text": ". Deze link kan één keer worden gebruikt en verloopt op .",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 10,
-            "kind": "blade_text",
-            "text": "Tijdelijk wachtwoord",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 12,
-            "kind": "blade_text",
-            "text": "Herhaal wachtwoord",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/accept.blade.php",
-            "line": 14,
-            "kind": "blade_text",
-            "text": "Account activeren",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/create.blade.php",
-            "line": 5,
-            "kind": "blade_text",
-            "text": "Geen mailprovider",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/create.blade.php",
-            "line": 6,
-            "kind": "blade_text",
-            "text": "Gebruiker uitnodigen",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/create.blade.php",
-            "line": 7,
-            "kind": "blade_text",
-            "text": "Maak een eenmalige link. De link wordt alleen direct na aanmaken aan jou getoond.",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/create.blade.php",
-            "line": 19,
-            "kind": "blade_text",
-            "text": "( )",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/invitations/create.blade.php",
-            "line": 23,
-            "kind": "blade_text",
-            "text": "Uitnodigingslink maken",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 6,
-            "kind": "blade_text",
-            "text": "Passkeys en herstelcodes",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 7,
-            "kind": "blade_text",
-            "text": "Registreer een passkey voor veilig inloggen zonder wachtwoord. Bewaar herstelcodes offline; elke code werkt één keer.",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 8,
-            "kind": "blade_text",
-            "text": "Naam voor deze passkey",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 10,
-            "kind": "blade_text",
-            "text": "Passkey registreren",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 15,
-            "kind": "blade_text",
-            "text": "Geregistreerde passkeys",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 19,
-            "kind": "blade_text",
-            "text": "Laatst gebruikt:",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 27,
-            "kind": "blade_text",
-            "text": "Er zijn nog geen passkeys geregistreerd.",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 33,
-            "kind": "blade_text",
-            "text": "Beschikbare ongebruikte codes: . Nieuwe codes vervangen alle bestaande codes.",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/security/show.blade.php",
-            "line": 36,
-            "kind": "blade_text",
-            "text": "Nieuwe herstelcodes maken",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/users/index.blade.php",
-            "line": 5,
-            "kind": "blade_text",
-            "text": "Identiteit en toegang",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/users/index.blade.php",
-            "line": 7,
-            "kind": "blade_text",
-            "text": "Beheer rollen, trek sessies direct in of deactiveer accounts. Minstens één actieve beheerder blijft verplicht.",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/users/index.blade.php",
-            "line": 8,
-            "kind": "blade_text",
-            "text": "Nieuwe uitnodiging",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/users/index.blade.php",
-            "line": 25,
-            "kind": "blade_text",
-            "text": "( )",
-            "batch": "identity"
-        },
-        {
-            "file": "resources/views/identity/users/index.blade.php",
-            "line": 29,
-            "kind": "blade_text",
-            "text": "Opslaan en sessies intrekken",
-            "batch": "identity"
         },
         {
             "file": "resources/views/operations/_nav.blade.php",

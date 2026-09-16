@@ -17,9 +17,10 @@ per request de taal toe op basis van:
 Niet-ondersteunde sessiewaarden worden veilig genegeerd en verwijderd. Nieuwe
 persistente voorkeuren worden gevalideerd tegen de actieve registry en waarden
 zoals `en`, `fr` en `de` worden geweigerd totdat die talen bewust worden
-vrijgegeven. Er is nog geen taalkeuzer en er verandert niets aan de onboarding:
-de installatiewizard blijft Nederlands en nieuwe gebruikers krijgen automatisch
-`nl`.
+vrijgegeven. De identiteits- en beveiligingsschermen gebruiken nu eveneens de
+Nederlandse catalogus. Er is nog geen taalkeuzer en er verandert niets aan de
+onboarding: de installatiewizard blijft Nederlands en nieuwe gebruikers krijgen
+automatisch `nl`.
 
 De naam **Vistora** is alleen als toekomstige documentatienaam gereserveerd. De
 technische identifiers, configuratiebestanden, databasekolommen en routes blijven
@@ -50,9 +51,10 @@ applies the request locale from:
 
 Unsupported session values are safely ignored and removed. New persisted
 preferences are validated against the active registry, and values such as `en`,
-`fr` and `de` are rejected until those languages are deliberately released. There
-is no language selector yet and onboarding is unchanged: the setup wizard remains
-Dutch and new users automatically receive `nl`.
+`fr` and `de` are rejected until those languages are deliberately released. The
+identity and security screens now use the Dutch catalogue as well. There is no
+language selector yet and onboarding is unchanged: the setup wizard remains Dutch
+and new users automatically receive `nl`.
 
 The name **Vistora** is reserved only as a future documentation name. Technical
 identifiers, configuration files, database columns and routes remain

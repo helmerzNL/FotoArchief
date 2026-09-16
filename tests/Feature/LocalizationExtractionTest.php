@@ -45,17 +45,24 @@ it('renders representative installed onboarding shell text from translations', f
         ->assertSee('Wizard vergrendeld')
         ->assertSee('Naar foto\'s')
         ->assertSee('Uitloggen');
+
+    $this->actingAs($admin)->get(route('identity.security.show'))->assertOk()
+        ->assertSee('Passkeys en herstelcodes')
+        ->assertSee('Nieuwe herstelcodes maken');
+
+    $this->actingAs($admin)->get(route('identity.users.index'))->assertOk()
+        ->assertSee('Identiteit en toegang')
+        ->assertSee('Nieuwe uitnodiging');
 });
 
 it('keeps extracted shared shell, auth and onboarding blades free of raw rendered text', function (): void {
     $scanner = new UserVisibleTextScanner;
+    $bladeFiles = array_values(array_filter(
+        UserVisibleTextScanner::EXTRACTED_FILES,
+        static fn (string $file): bool => str_ends_with($file, '.blade.php'),
+    ));
 
-    expect($scanner->scanExtractedBladeFiles([
-        'resources/views/admin/dashboard.blade.php',
-        'resources/views/auth/login.blade.php',
-        'resources/views/installation/setup.blade.php',
-        'resources/views/layouts/app.blade.php',
-    ]))->toBe([]);
+    expect($scanner->scanExtractedBladeFiles($bladeFiles))->toBe([]);
 });
 
 it('only adds the Dutch locale for this extraction batch', function (): void {

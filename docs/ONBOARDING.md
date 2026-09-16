@@ -145,7 +145,9 @@ or rerun the wizard. For Docker deployments, create a verified backup first and
 use `scripts/upgrade-compose.sh` or the equivalent manager procedure: drain
 workers, deploy the exact tested image/archive, run the coordinated
 `php artisan installation:migrate-ready` migration gate, then resume workers and
-scheduler with the same persistent storage volume.
+scheduler with the same persistent storage volume. The lock wait is bounded and
+the status/recovery commands are documented in
+[DEPLOYMENT_MIGRATIONS.md](DEPLOYMENT_MIGRATIONS.md).
 
 ## Failure, retry and recovery
 

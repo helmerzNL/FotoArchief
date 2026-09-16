@@ -28,6 +28,10 @@ final class UserVisibleTextScanner
         'app/Modules/Installation/InstallationText.php',
         'resources/views/admin/dashboard.blade.php',
         'resources/views/auth/login.blade.php',
+        'resources/views/identity/invitations/accept.blade.php',
+        'resources/views/identity/invitations/create.blade.php',
+        'resources/views/identity/security/show.blade.php',
+        'resources/views/identity/users/index.blade.php',
         'resources/views/installation/setup.blade.php',
         'resources/views/layouts/app.blade.php',
     ];
