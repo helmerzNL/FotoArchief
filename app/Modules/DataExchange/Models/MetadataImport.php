@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\DataExchange\Models;
+
+use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class MetadataImport extends Model
+{
+    use HasUlids;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    protected $guarded = [];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'byte_size' => 'integer',
+            'row_count' => 'integer',
+            'attempts' => 'integer',
+            'column_mapping' => 'array',
+            'summary' => 'array',
+            'started_at' => 'immutable_datetime',
+            'analysed_at' => 'immutable_datetime',
+            'confirmed_at' => 'immutable_datetime',
+            'completed_at' => 'immutable_datetime',
+        ];
+    }
+
+    /** @return HasMany<MetadataImportRow, $this> */
+    public function rows(): HasMany
+    {
+        return $this->hasMany(MetadataImportRow::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function statusLabel(): string
+    {
+        return match ($this->status) {
+            'received' => 'Ontvangen',
+            'analysing' => 'Controle bezig',
+            'analysed' => 'Gecontroleerd, wacht op bevestiging',
+            'queued' => 'Bevestigd, in wachtrij',
+            'running' => 'Bezig met bijwerken',
+            'completed' => 'Afgerond',
+            'failed' => 'Mislukt',
+            default => $this->status,
+        };
+    }
+
+    public function isBusy(): bool
+    {
+        return in_array($this->status, ['analysing', 'queued', 'running'], true);
+    }
+}

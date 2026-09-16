@@ -27,13 +27,16 @@ This repository contains the installable foundation and first private photo work
 - multi-file upload, transactional database workers, private JPEG previews,
   optional ClamAV transport, ownership-aware access, metadata/rights editing
   and revision history; see [the photo workflow](docs/PHOTO_WORKFLOW.md);
+- bounded CSV metadata import with a Dutch mapping preview, dry run, explicit
+  confirmation and per-photo audit trail; see
+  [data exchange](docs/DATA_EXCHANGE.md);
 - minimal routes, view and tests proving the framework can boot after
   dependencies are installed.
 
 No Composer dependencies are vendored. Install the resolved dependency set with
 `composer install`; do not run `composer update` as an installation step.
-The first private ingest pipeline is implemented. Public publication, OCR,
-bulk import/export and release archives are not implemented yet.
+The first private ingest pipeline and bulk metadata import are implemented.
+Public publication, OCR and release archives are not implemented yet.
 Local administrator authentication is implemented; passkeys, recovery email
 and the full user-management workflow remain pending.
 
