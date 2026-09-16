@@ -151,11 +151,15 @@ jobs:
             sleep 1
           done
           php tests/Performance/measure.php | tee performance.json
+          php tests/Performance/seed-public.php
+          php tests/Performance/measure-public.php | tee performance-public.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: fotoarchief-performance-${{ github.sha }}
-          path: performance.json
+          path: |
+            performance.json
+            performance-public.json
           if-no-files-found: ignore
 
   container:

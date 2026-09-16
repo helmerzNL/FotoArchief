@@ -13,6 +13,10 @@ The Quality workflow provides independent jobs for:
 - Exactly 50,000 synthetic private metadata records and real HTTP measurements:
   40 measured requests after five warmups for listing, filtered listing and
   details. p95 limits are **800 ms**, **800 ms** and **400 ms** respectively.
+- The same corpus then receives 45,000 eligible public publications and 5,000
+  deliberately denied rows (draft, revoked, privacy, embargo, scan state, stale
+  metadata, trash or unverified rights). Anonymous search combining text and
+  collection filters must meet **700 ms p95**; public detail must meet **400 ms**.
 - Production Apache Docker build, database-free first start, key persistence,
   complete HTTP onboarding/login/upload/worker/private JPEG and anonymous denial.
 - A digest-pinned Dockhand v1.0.48 on a disposable runner imports the actual
@@ -103,7 +107,7 @@ soft-delete interoperability checks. The complete suite passes **245 tests /
 1846 assertions**, with Pint and level-8 analysis green. Fresh installation and
 legacy upgrade against isolated PostgreSQL databases separately pass **2 tests /
 39 assertions**. The public-portal security review and public 50,000-record
-performance gate are still pending. A security review of the preceding private
+performance gate were pending at that revision. A security review of the preceding private
 application identified two high-severity missing object-policy checks in OCR
 and file-version operations; their corrective tests and integration are required
 before release.
@@ -140,10 +144,17 @@ private HTTP benchmark after applying the additional migrations gives p95
 for details, all below their respective limits. The publication and archive
 operations modules are not included in this result.
 
+After portal integration the private HTTP p95 results are **313.62 / 262.67 /
+280.07 ms**, below their limits. The real PostgreSQL public fixture verifies
+exactly **45,000 eligible publications out of 50,000 assets**. Anonymous
+text-plus-collection search measures **437.79 ms p95 < 700 ms**, and public
+detail **320.82 ms p95 < 400 ms**, each over 40 samples after five warmups.
+The public fixture is transactional and refuses populated publication/file/right
+tables. CI runs both harnesses in order against its disposable database.
+
 The benchmark has synthetic metadata and no 50,000-image binary corpus. It does
-not establish ingest throughput, multi-user concurrency, S3 latency or public
-search performance. Public filtered search still needs its own representative
-published corpus and **700 ms p95** control.
+not establish ingest throughput, multi-user concurrency, S3 latency, image
+delivery performance or production Apache latency.
 
 Accessibility review, real passkey authenticator coverage, manager UI imports,
 S3-provider operations, antivirus detection and OCR accuracy need explicit
