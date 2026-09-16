@@ -203,10 +203,6 @@ class AiConfigurationService
         if ((bool) $values['local_provider_enabled'] && ! $this->isTrustedLocalEndpoint($values['local_endpoint'])) {
             $errors['local_endpoint'] = 'Lokale AI moet een HTTPS-endpoint of localhost/private netwerkendpoint zijn.';
         }
-        if ((bool) $values['external_processing_allowed'] && ! $this->providerConfigs->status('external')['enabled']) {
-            $errors['external_processing_allowed'] = 'Schakel eerst de externe provider in de providersectie in.';
-        }
-
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
@@ -236,6 +232,16 @@ class AiConfigurationService
         }
         if (! in_array($provider, $allowedProviders, true)) {
             $errors[$providerKey] = "Ongeldige provider voor {$providerKey}: {$provider}.";
+
+            return;
+        }
+        if ($provider === 'external') {
+            if (! (bool) ($values['external_processing_allowed'] ?? false)) {
+                $errors['external_processing_allowed'] = 'Geef expliciet toestemming voor doorgifte naar de custom externe provider.';
+            }
+            if (! (bool) $this->providerConfigs->status('external')['enabled']) {
+                $errors['external_provider_enabled'] = 'Schakel eerst de custom externe provider in de providersectie in.';
+            }
 
             return;
         }

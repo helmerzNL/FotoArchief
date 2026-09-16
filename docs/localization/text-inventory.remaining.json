@@ -743,28 +743,35 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 207,
+            "line": 240,
             "kind": "php_string",
-            "text": "Schakel eerst de externe provider in de providersectie in.",
+            "text": "Geef expliciet toestemming voor doorgifte naar de custom externe provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 244,
+            "line": 243,
+            "kind": "php_string",
+            "text": "Schakel eerst de custom externe provider in de providersectie in.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
+            "line": 250,
             "kind": "php_string",
             "text": "Kies een model voor de gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 247,
+            "line": 253,
             "kind": "php_string",
             "text": "Native provider gebruik vereist expliciete toestemming per functie.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 250,
+            "line": 256,
             "kind": "php_string",
             "text": "Schakel de provider eerst in voordat je hem selecteert.",
             "batch": "ai"
@@ -4812,7 +4819,7 @@
             "file": "resources/views/ai/settings.blade.php",
             "line": 137,
             "kind": "blade_text",
-            "text": "'external_processing_allowed' => 'Externe doorgifte expliciet toegestaan',",
+            "text": "'external_processing_allowed' => 'Doorgifte naar custom externe provider toestaan',",
             "batch": "ai"
         },
         {
