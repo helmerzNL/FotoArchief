@@ -44,12 +44,15 @@ ordering luck.
    `is_primary = true`. It returns `null` (fail closed) unless exactly one
    such row exists.
 2. [`Publication::scopePubliclyVisible()`](../app/Modules/Publication/Models/Publication.php),
-   the one predicate every public route shares, requires its
-   `whereHas('asset.files', ..., '=', 1)` file-eligibility check to match
-   **exactly one** row (`ready_private`, `clean`, and `is_primary = true`),
-   not merely "at least one". This mirrors `Asset::currentPublicFile()`'s
-   condition exactly, so the predicate and the controllers can never
-   disagree about which file is currently, unambiguously publishable.
+   the one predicate every public route shares, requires its file-eligibility
+   check to match **exactly one** row (`ready_private`, `clean`, and
+   `is_primary = true`), not merely "at least one". This mirrors
+   `Asset::currentPublicFile()`'s condition exactly, so the predicate and the
+   controllers can never disagree about which file is currently,
+   unambiguously publishable. As of this contract's integration, the check is
+   a plain `whereHas('asset.files', ...)` (default `EXISTS` semantics), not
+   `whereHas(..., '=', 1)` — see "Performance: EXISTS, not COUNT" below for
+   why that is still exactly as fail-closed.
 3. Because Operations' partial unique index already guarantees *at most one*
    `is_primary = true` row per asset at the database level, the predicate and
    resolver above can only ever disagree with "the obvious answer" by finding
@@ -75,6 +78,37 @@ ordering luck.
    ordinary photo resolves unambiguously and remains publishable completely
    unchanged.
 
+## Performance: EXISTS, not COUNT
+
+The exact-count form above (`whereHas('asset.files', ..., '=', 1)`) is
+logically correct but was never safe to run at scale: Laravel's
+`Illuminate\Database\Eloquent\Concerns\QueriesRelationships::has()` compiles
+any non-default operator/count (including `'='`, `1`) as a correlated
+`(SELECT COUNT(*) FROM asset_files WHERE ...) = 1` subquery
+(`getRelationExistenceCountQuery()`), not the semi-join-friendly
+`WHERE EXISTS (...)` form used only for the default `'>='`/`1`
+(`getRelationExistenceQuery()`). On the real 50k-row/45k-eligible benchmark
+this compiled to a nested-loop plan re-scanning `asset_files` once per
+outer row (`EXPLAIN ANALYZE` showed 46,500 loops and ~558,000 buffer hits)
+and regressed public search p95 from ~438ms to ~1,913ms against a 700ms
+budget.
+
+Because Operations' partial unique index
+`asset_files_single_primary_per_asset` (`WHERE is_primary = true`) already
+guarantees **at most one** `is_primary = true` row per asset at the database
+level, "at least one eligible primary file exists" (a plain `whereHas()`,
+`EXISTS`) is provably identical to "exactly one eligible primary file
+exists" (the `COUNT(*) = 1` form) — the database has already ruled out the
+"two or more" case everywhere else, so `EXISTS` only ever has to distinguish
+"zero" from "one", exactly as `COUNT(*) = 1` did, but as a semi-join the
+planner can index and short-circuit. `scopePubliclyVisible()` therefore uses
+the plain `whereHas()` form whenever `asset_files.is_primary` exists (the
+real, integrated case), which restored a `Hash Semi Join` plan (~9,956
+buffer hits total, no per-row loop) on the same benchmark. A defensive
+`whereHas(..., '=', 1)` fallback is kept for the (currently dead) case where
+`is_primary` is absent, so the predicate never silently regresses to "at
+least one" if that assumption is ever violated. See
+`app/Modules/Publication/Models/Publication.php` for the exact branch.
 ## Verification
 
 - [`tests/Feature/PublicationActiveFileConsistencyTest.php`](../tests/Feature/PublicationActiveFileConsistencyTest.php) —

@@ -90,11 +90,16 @@ There is no separate "public copy" of a photo and no cache to invalidate:
   reason staff need to pull a photo immediately.
 - **Which file is "current"**: the predicate, the viewer, its media stream
   and the IIIF manifest all resolve the same single canonical file for an
-  asset (`Asset::currentPublicFile()`, mirrored by the predicate's exact-count
-  `whereHas('asset.files', ..., '=', 1)`), requiring exactly one file that is
-  both scan-clean/ready and flagged `is_primary` by Operations' file-versioning
-  schema. The database itself refuses a second primary file per asset
-  (partial unique index `asset_files_single_primary_per_asset`), and
+  asset (`Asset::currentPublicFile()`, mirrored by the predicate's
+  `whereHas('asset.files', ...)` file-eligibility check), requiring exactly
+  one file that is both scan-clean/ready and flagged `is_primary` by
+  Operations' file-versioning schema. The database itself refuses a second
+  primary file per asset (partial unique index
+  `asset_files_single_primary_per_asset`), which is also what lets the
+  predicate use a plain, indexable `EXISTS` check instead of a slower
+  `COUNT(*) = 1` subquery while staying exactly as fail-closed — see
+  "Performance: EXISTS, not COUNT" in
+  [`docs/CONTRACT_ACTIVE_FILE.md`](CONTRACT_ACTIVE_FILE.md) for why. Also,
   replacing a photo's primary scan already bumps `assets.lock_version`, so a
   primary-file switch forces the same re-review as any other edit before the
   replacement can go public. If a file is ever demoted without a replacement

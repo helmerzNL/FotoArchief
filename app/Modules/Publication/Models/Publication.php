@@ -80,20 +80,43 @@ class Publication extends CatalogueModel
             ->whereHas('asset.rights', function (Builder $q): void {
                 $q->where('verification_status', 'verified');
             })
-            // Count must be exactly 1, not merely "at least one". Operations'
-            // partial unique index asset_files_single_primary_per_asset
-            // already guarantees at most one is_primary=true row per asset,
-            // so this can only ever disagree with Asset::currentPublicFile()
-            // (which mirrors this exact condition) by finding zero eligible
-            // rows - e.g. a primary file that is not (yet) ready_private/
-            // clean - never by having to arbitrate between two. See
+            // A plain whereHas() (EXISTS) is enough to prove "exactly one
+            // current file", not merely "at least one", once
+            // asset_files.is_primary exists: Operations' partial unique index
+            // asset_files_single_primary_per_asset already guarantees at most
+            // one is_primary = true row per asset at the database level, so
+            // finding one that is also ready_private/clean already proves
+            // uniqueness - a second COUNT(*) = 1 subquery would only be
+            // re-deriving what the index already enforces. This matters at
+            // scale: Laravel compiles whereHas(..., '=', 1) as a correlated
+            // (SELECT COUNT(*) ...) = 1 subquery per row, which cannot use a
+            // semi-join/EXISTS plan and regressed 50k-row search p95 from
+            // ~438ms to ~1913ms; the plain EXISTS form restores the
+            // index-friendly plan while staying exactly as fail-closed,
+            // because "at least one primary, ready, clean file" and "exactly
+            // one" are now provably the same statement. See
             // docs/CONTRACT_ACTIVE_FILE.md.
-            ->whereHas('asset.files', function (Builder $q): void {
-                $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean');
-                if (Schema::hasColumn('asset_files', 'is_primary')) {
-                    $q->where('is_primary', true);
+            ->when(
+                Schema::hasColumn('asset_files', 'is_primary'),
+                function (Builder $query): void {
+                    $query->whereHas('asset.files', function (Builder $q): void {
+                        $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->where('is_primary', true);
+                    });
+                },
+                // Defensive fallback only: without the database's own
+                // uniqueness guarantee (is_primary not yet integrated), the
+                // exact-count form is the sole safe way to fail closed
+                // against more than one eligible file. This worktree always
+                // ships the is_primary migration, so this branch is dead in
+                // practice today; it exists only so scopePubliclyVisible()
+                // never silently regresses to "at least one" if the column
+                // were ever absent.
+                function (Builder $query): void {
+                    $query->whereHas('asset.files', function (Builder $q): void {
+                        $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean');
+                    }, '=', 1);
                 }
-            }, '=', 1);
+            );
 
         // Forward-compatible cross-module guard (see
         // docs/CONTRACT_SOFT_DELETE.md): Operations owns adding a recoverable
