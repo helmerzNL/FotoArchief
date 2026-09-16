@@ -9,12 +9,13 @@ use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
+use App\Modules\Ai\Services\AiSourceImageService;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class ProcessAiAnalysisJob extends OperationJob
 {
@@ -36,27 +37,19 @@ class ProcessAiAnalysisJob extends OperationJob
         $resolver = app(AiProviderResolver::class);
         $ledgerService = app(AiBudgetLedgerService::class);
         $providerConfigs = app(AiProviderConfigService::class);
+        $sourceImages = app(AiSourceImageService::class);
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'image_analysis') : 0;
 
         foreach ($slice as $assetId) {
             $asset = Asset::query()->with('files')->find($assetId);
-            $file = $asset instanceof Asset ? $this->primaryFile($asset) : null;
-            if (! $asset instanceof Asset || ! $file instanceof AssetFile) {
-                $failed++;
-
-                continue;
+            if (! $asset instanceof Asset) {
+                throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
             }
+            ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
 
             $sourceLock = (int) $asset->lock_version;
             $sourceSha = (string) $file->sha256;
-            $disk = Storage::disk((string) ($file->storage_disk ?: config('filesystems.default')));
-            $bytes = $disk->get($file->storage_key);
-            if (! is_string($bytes)) {
-                $failed++;
-
-                continue;
-            }
 
             $ledger = $isNative && $costCents > 0 ? $ledgerService->reserve($provider, 'image_analysis', $costCents) : null;
             try {
@@ -79,9 +72,7 @@ class ProcessAiAnalysisJob extends OperationJob
             $asset->refresh();
             $file->refresh()->load('asset');
             if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                $failed++;
-
-                continue;
+                throw new RuntimeException("Foto {$assetId} is tijdens de AI-analyse gewijzigd. Probeer de taak opnieuw.");
             }
 
             $aiRun = AiRun::query()->firstOrCreate(
@@ -123,15 +114,6 @@ class ProcessAiAnalysisJob extends OperationJob
             'finished' => $nextCursor >= count($assetIds),
             'result' => ['provider' => $provider],
         ];
-    }
-
-    private function primaryFile(Asset $asset): ?AssetFile
-    {
-        return $asset->files
-            ->where('is_primary', true)
-            ->where('ingest_status', 'ready_private')
-            ->where('scanner_status', 'clean')
-            ->first();
     }
 
     private function idempotencyKey(string $provider, AssetFile $file): string
