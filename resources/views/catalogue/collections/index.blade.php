@@ -15,6 +15,7 @@
     @if($collections->isEmpty())
         <p>Er zijn nog geen collecties of albums aangemaakt.</p>
     @else
+        <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -55,6 +56,7 @@
                 @endforeach
             </tbody>
         </table>
+        </x-catalogue-table>
     @endif
 </div>
 @endsection

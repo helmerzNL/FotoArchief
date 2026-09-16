@@ -52,6 +52,7 @@
 @if($location->children->isNotEmpty())
 <div class="card">
     <h2>Onderliggende locaties ({{ $location->children->count() }})</h2>
+    <x-catalogue-table>
     <table style="width: 100%; border-collapse: collapse; margin-top: .5rem;">
         <thead>
             <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -76,6 +77,7 @@
             @endforeach
         </tbody>
     </table>
+    </x-catalogue-table>
 </div>
 @endif
 
@@ -85,6 +87,7 @@
     @if($assets->isEmpty())
         <p style="color: var(--muted);">Er zijn nog geen foto’s aan deze locatie gekoppeld.</p>
     @else
+        <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -138,6 +141,7 @@
                 @endforeach
             </tbody>
         </table>
+        </x-catalogue-table>
     @endif
 
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">

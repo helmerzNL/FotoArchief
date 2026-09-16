@@ -30,6 +30,7 @@
 @if($collection->children->isNotEmpty())
 <div class="card">
     <h2>Subcollecties &amp; Albums ({{ $collection->children->count() }})</h2>
+    <x-catalogue-table>
     <table style="width: 100%; border-collapse: collapse; margin-top: .5rem;">
         <thead>
             <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -54,6 +55,7 @@
             @endforeach
         </tbody>
     </table>
+    </x-catalogue-table>
 </div>
 @endif
 
@@ -67,6 +69,7 @@
     @else
         <form method="post" action="{{ route('catalogue.collections.reorder', $collection) }}" style="margin-top: 1rem;">
             @csrf
+            <x-catalogue-table>
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                     <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -115,6 +118,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </x-catalogue-table>
         </form>
     @endif
 

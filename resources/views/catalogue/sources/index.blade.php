@@ -37,6 +37,7 @@
     @if($sources->isEmpty())
         <p>Geen herkomstbronnen gevonden.</p>
     @else
+        <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
@@ -68,6 +69,7 @@
                 @endforeach
             </tbody>
         </table>
+        </x-catalogue-table>
 
         <div style="margin-top: 1rem;">
             {{ $sources->links() }}
