@@ -28,3 +28,4 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/assets')->name('ad
 });
 
 require __DIR__.'/catalogue.php';
+require __DIR__.'/operations.php';
