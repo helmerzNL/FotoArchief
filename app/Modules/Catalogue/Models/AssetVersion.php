@@ -10,7 +10,10 @@ class AssetVersion extends CatalogueModel
 {
     protected function casts(): array
     {
-        return ['version_number' => 'integer'];
+        return [
+            'version_number' => 'integer',
+            'is_current' => 'boolean',
+        ];
     }
 
     /**

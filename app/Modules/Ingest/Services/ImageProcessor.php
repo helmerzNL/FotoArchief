@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ingest\Services;
 
 use App\Modules\Catalogue\Models\AssetFile;
+use App\Modules\Catalogue\Models\AssetVersion;
 use App\Modules\Ingest\IngestStatus;
 use App\Modules\Ingest\Models\ProcessingJob;
 use App\Modules\Ingest\Models\QuarantineUpload;
@@ -148,6 +149,12 @@ class ImageProcessor
             unset($source);
             try {
                 DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus): void {
+                    $maxVersion = (int) (AssetVersion::query()->where('asset_id', $upload->asset_id)->max('version_number') ?? 0);
+                    $nextVersion = $maxVersion + 1;
+                    if ($nextVersion > 1) {
+                        AssetFile::query()->where('asset_id', $upload->asset_id)->update(['is_primary' => false]);
+                        AssetVersion::query()->where('asset_id', $upload->asset_id)->update(['is_current' => false]);
+                    }
                     $file = AssetFile::query()->create([
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,
                         'storage_key' => $upload->storage_key, 'sha256' => $sha,
@@ -157,8 +164,17 @@ class ImageProcessor
                         'derivatives' => $derivatives, 'validated_at' => now(), 'processed_at' => now(),
                         'scanned_at' => $scannerStatus === 'clean' ? now() : null,
                         'ingest_status' => IngestStatus::ReadyPrivate->value, 'scanner_status' => $scannerStatus,
+                        'is_primary' => true,
                     ]);
-                    ProcessingJob::query()->create(['asset_file_id' => $file->id, 'job_type' => 'process_upload', 'status' => 'completed', 'attempts' => $upload->attempts]);
+                    AssetVersion::query()->create([
+                        'asset_id' => $upload->asset_id,
+                        'asset_file_id' => $file->id,
+                        'version_number' => $nextVersion,
+                        'change_type' => $nextVersion === 1 ? 'initial_scan' : 'rescan',
+                        'change_note' => $nextVersion === 1 ? 'Eerste scanopname geregistreerd.' : 'Verbeterde scanversie geüpload.',
+                        'is_current' => true,
+                    ]);
+                    ProcessingJob::query()->create(['asset_file_id' => $file->id, 'job_type' => 'process_upload', 'status' => 'completed', 'attempts' => (int) ($upload->attempts ?? 1)]);
                 });
                 $committed = true;
             } catch (UniqueConstraintViolationException) {

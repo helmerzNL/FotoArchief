@@ -21,6 +21,7 @@ class AssetFile extends CatalogueModel
             'publishable_at' => 'immutable_datetime',
             'technical_metadata' => 'array',
             'derivatives' => 'array',
+            'is_primary' => 'boolean',
         ];
     }
 
