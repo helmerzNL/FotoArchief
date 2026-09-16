@@ -62,10 +62,13 @@ expires; use tagged releases for long-term retention.
 Pushing a `v` tag matching `VERSION` on a commit already merged into `main`
 starts Verified test release. It repeats Quality, then publishes those exact
 tested archives and that saved image, without rebuilding them, to a persistent
-GitHub prerelease and GHCR version tag. `IMAGE-DIGEST.txt` identifies the registry
-digest. `IMAGE-LOCAL.txt` selects the versioned tag included in the offline image
-archive. Publishing a test release does not declare the unresolved gates below
-complete.
+GitHub prerelease and both a GHCR version tag and the rolling `latest` tag. Only
+the highest SemVer tag merged into `main` may publish, so a later push of an older
+tag cannot roll `latest` back. `IMAGE-DIGEST.txt` identifies the registry digest,
+`IMAGE-LATEST.txt` selects the rolling tag and `IMAGE-LOCAL.txt` selects the
+versioned tag included in the offline image archive. Prefer the version tag or
+digest for reproducible deployments. Publishing a test release does not declare
+the unresolved gates below complete.
 
 The manager acceptance container receives Docker socket access only on the
 ephemeral CI runner, with its HTTP port bound to loopback. It is never bundled
