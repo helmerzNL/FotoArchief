@@ -1,0 +1,382 @@
+name: Quality
+
+on:
+  workflow_call:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - "8.5"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_sqlite, pdo_pgsql, mbstring, intl, zip, gd, exif
+
+      - name: Detect Composer project
+        id: project
+        shell: bash
+        run: |
+          if [[ -f composer.json ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::composer.json is not present yet; Composer quality checks are pending the Laravel scaffold."
+          fi
+
+      - name: Require deterministic dependency lock
+        if: steps.project.outputs.exists == 'true'
+        shell: bash
+        run: |
+          if [[ ! -f composer.lock ]]; then
+            echo "::error::composer.lock must be committed for deterministic dependency installation."
+            exit 1
+          fi
+
+      - name: Validate Composer metadata
+        if: steps.project.outputs.exists == 'true'
+        run: composer validate --strict --no-check-publish
+
+      - name: Install Composer dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: composer install --no-interaction --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Audit locked dependencies
+        if: steps.project.outputs.exists == 'true'
+        run: composer audit --locked --no-interaction
+
+      - name: Detect quality scripts
+        if: steps.project.outputs.exists == 'true'
+        id: scripts
+        shell: bash
+        run: |
+          php -r '
+          $composer = json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR);
+          $scripts = $composer["scripts"] ?? [];
+          foreach (["lint", "analyse", "test"] as $script) {
+              printf("%s=%s\n", $script, array_key_exists($script, $scripts) ? "true" : "false");
+          }
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Check formatting and lint
+        if: steps.scripts.outputs.lint == 'true'
+        run: composer lint
+
+      - name: Static analysis
+        if: steps.scripts.outputs.analyse == 'true'
+        run: composer analyse
+
+      - name: Test
+        if: steps.scripts.outputs.test == 'true'
+        run: composer test
+
+  postgres:
+    name: PostgreSQL fresh installation and forward upgrade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fotoarchief
+          POSTGRES_PASSWORD: ci-disposable-database
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fotoarchief"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      FOTOARCHIEF_TEST_PG_DATABASE: release_onboarding_test
+      FOTOARCHIEF_TEST_PG_UPGRADE_DATABASE: release_workflow_test
+      FOTOARCHIEF_TEST_PG_PORTAL_DATABASE: release_portal_test
+      FOTOARCHIEF_TEST_PG_OPERATIONS_DATABASE: release_operations_final_test
+      FOTOARCHIEF_TEST_PG_HOST: 127.0.0.1
+      FOTOARCHIEF_TEST_PG_PORT: "5432"
+      FOTOARCHIEF_TEST_PG_USER: fotoarchief
+      FOTOARCHIEF_TEST_PG_PASSWORD: ci-disposable-database
+      PGPASSWORD: ci-disposable-database
+      FOTOARCHIEF_BENCH_DATABASE: release_benchmark_test
+      FOTOARCHIEF_BENCH_USER: fotoarchief
+      FOTOARCHIEF_BENCH_PASSWORD: ci-disposable-database
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, pdo_sqlite, gd, exif, fileinfo, zip
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - name: Create disposable empty databases
+        run: |
+          createdb -h 127.0.0.1 -U fotoarchief release_onboarding_test
+          createdb -h 127.0.0.1 -U fotoarchief release_workflow_test
+          createdb -h 127.0.0.1 -U fotoarchief release_portal_test
+          createdb -h 127.0.0.1 -U fotoarchief release_operations_final_test
+          createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
+      - name: Test real PostgreSQL constraints and upgrade preservation
+        run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php tests/Feature/Operations/OperationsPostgresAcceptanceTest.php --compact
+      - name: Measure real HTTP on 50000 synthetic records
+        shell: bash
+        run: |
+          php tests/Performance/seed.php
+          php -S 127.0.0.1:8767 -t public tests/Performance/router.php > "$RUNNER_TEMP/performance-server.log" 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8767/login > /dev/null; then break; fi
+            sleep 1
+          done
+          php tests/Performance/measure.php | tee performance.json
+          php tests/Performance/seed-public.php
+          php tests/Performance/measure-public.php | tee performance-public.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fotoarchief-performance-${{ github.sha }}
+          path: |
+            performance.json
+            performance-public.json
+          if-no-files-found: ignore
+
+  container:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_IMAGE: fotoarchief-ci:${{ github.sha }}
+      APP_URL: http://localhost:8080
+      DB_PASSWORD: ci-disposable-database
+      OCR_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up smoke-test PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          extensions: curl, gd, zip
+      - name: Validate stack configuration
+        run: docker compose -f deploy/compose.yaml config --quiet
+      - name: Build production image
+        run: docker build --tag "$APP_IMAGE" .
+      - name: Start HTTP service without configured database or object storage
+        run: docker compose -f deploy/compose.yaml up -d --wait app
+      - name: Validate Apache and PHP
+        run: |
+          docker compose -f deploy/compose.yaml exec -T app apache2ctl -t
+          docker compose -f deploy/compose.yaml exec -T app php -r 'exit(PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 5 ? 0 : 1);'
+          curl --fail http://localhost:8080/up
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/api/status)" = 503
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/.env)" = 403
+      - name: Verify real bundled OCR engine and language models
+        run: |
+          docker compose -f deploy/compose.yaml exec -T app tesseract --version
+          languages="$(docker compose -f deploy/compose.yaml exec -T app tesseract --list-langs)"
+          printf '%s\n' "$languages" | grep -x eng
+          printf '%s\n' "$languages" | grep -x nld
+          docker compose -f deploy/compose.yaml exec -T app php -r '
+            $small = imagecreatetruecolor(240, 30);
+            imagefill($small, 0, 0, imagecolorallocate($small, 255, 255, 255));
+            imagestring($small, 5, 10, 8, "FOTOARCHIEF 2026", imagecolorallocate($small, 0, 0, 0));
+            $large = imagescale($small, 1440, 180);
+            if ($large === false || ! imagepng($large, "/tmp/fotoarchief-ocr.png")) {
+              throw new RuntimeException("Cannot create the OCR fixture.");
+            }
+          '
+          docker compose -f deploy/compose.yaml exec -T app \
+            tesseract /tmp/fotoarchief-ocr.png stdout -l nld+eng --psm 7 | grep -F FOTOARCHIEF
+          docker compose -f deploy/compose.yaml exec -T app rm /tmp/fotoarchief-ocr.png
+      - name: Verify pending onboarding state and immutable generated key
+        run: |
+          ! docker compose -f deploy/compose.yaml logs app | grep -F 'Private installatiecode:'
+          if docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready; then
+            echo "::error::Fresh container must remain pending until the wizard completes."
+            exit 1
+          fi
+          before="$(docker compose -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          docker compose -f deploy/compose.yaml restart app
+          docker compose -f deploy/compose.yaml up -d --wait app
+          after="$(docker compose -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          test "$before" = "$after"
+          if docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready; then
+            echo "::error::Restart must not mark onboarding complete."
+            exit 1
+          fi
+      - name: Verify restart persistence
+        run: |
+          curl --fail http://localhost:8080/up
+      - name: Start database and workers
+        run: docker compose -f deploy/compose.yaml up -d --wait postgres worker scheduler
+      - name: Accept complete HTTP photo workflow
+        env:
+          SMOKE_SETUP_CODE_FILE: ${{ runner.temp }}/fotoarchief-setup-code
+        run: |
+          umask 077
+          docker compose -f deploy/compose.yaml exec -T app cat storage/app/installation/setup-code.txt > "$SMOKE_SETUP_CODE_FILE"
+          php tests/Smoke/http-onboarding.php
+          rm "$SMOKE_SETUP_CODE_FILE"
+          docker compose -f deploy/compose.yaml exec -T app php artisan installation:ready
+          docker compose -f deploy/compose.yaml restart app worker scheduler
+          docker compose -f deploy/compose.yaml up -d --wait app
+          test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 404
+          curl --fail http://localhost:8080/api/status
+      - name: Accept real CSV import and authorized JSON CSV ZIP exports
+        run: php tests/Smoke/http-exchange.php
+      - name: Accept real queued OCR through the production worker
+        run: |
+          docker compose -f deploy/compose.yaml exec -T --user www-data worker php artisan operations:ocr-smoke --language=eng
+          docker compose -f deploy/compose.yaml exec -T --user www-data worker php artisan operations:ocr-smoke --language=nld
+          docker compose -f deploy/compose.yaml exec -T --user www-data app php artisan operations:ocr-smoke --queued --wait=90
+      - name: Save tested Docker image
+        run: |
+          mkdir -p dist
+          local_image="fotoarchief:$(cat VERSION)"
+          docker tag "$APP_IMAGE" "$local_image"
+          docker save "$APP_IMAGE" "$local_image" | gzip > dist/fotoarchief-docker.tar.gz
+          printf 'APP_IMAGE=%s\n' "$local_image" > dist/IMAGE-LOCAL.txt
+          (cd dist && sha256sum fotoarchief-docker.tar.gz IMAGE-LOCAL.txt > DOCKER-SHA256SUMS)
+      - name: Back up the accepted archive consistently
+        run: sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-backup"
+      - name: Restore into separate empty volumes and database
+        env:
+          COMPOSE_PROJECT_NAME: fotoarchief-restore
+          APP_HTTP_PORT: "8081"
+          SMOKE_URL: http://127.0.0.1:8081
+          SMOKE_RESTORE: "1"
+        run: |
+          sh scripts/restore-compose.sh "$RUNNER_TEMP/fotoarchief-backup" --confirm-empty-target
+          php tests/Smoke/http-onboarding.php
+      - name: Upload tested image for offline installation
+        uses: actions/upload-artifact@v4
+        with:
+          name: fotoarchief-docker-${{ github.sha }}
+          path: |
+            dist/fotoarchief-docker.tar.gz
+            dist/DOCKER-SHA256SUMS
+            dist/IMAGE-LOCAL.txt
+          retention-days: 14
+      - name: Start isolated Dockhand manager
+        shell: bash
+        run: |
+          docker run -d --name fotoarchief-dockhand \
+            --publish 127.0.0.1:13000:3000 \
+            --group-add "$(stat -c '%g' /var/run/docker.sock)" \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume fotoarchief-dockhand-data:/app/data \
+            fnsys/dockhand:v1.0.48@sha256:63ffc7dd086f5d10506ccf488bcb30ce40401975212fcc1bed9ec891243c9fb4
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:13000/api/environments > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "::error::Disposable Dockhand did not become responsive."
+          exit 1
+      - name: Import templates through the real manager API and accept the new stack
+        env:
+          FOTOARCHIEF_DISPOSABLE_MANAGER: "1"
+          COMPOSE_PROJECT_NAME: fotoarchief-managed
+          APP_HTTP_PORT: "8082"
+          SMOKE_URL: http://127.0.0.1:8082
+          SMOKE_SETUP_CODE_FILE: ${{ runner.temp }}/fotoarchief-manager-setup-code
+        run: |
+          php tests/Smoke/dockhand-import.php
+          ready=false
+          for attempt in $(seq 1 90); do
+            ready=true
+            for service in app postgres worker scheduler; do
+              if test -z "$(docker compose -p fotoarchief-managed -f deploy/compose.yaml ps --status running -q "$service")"; then
+                ready=false
+              fi
+            done
+            if "$ready" && curl --fail --silent "$SMOKE_URL/up" > /dev/null; then break; fi
+            ready=false
+            sleep 2
+          done
+          if ! "$ready"; then
+            echo "::error::Dockhand accepted the import but the managed stack did not become ready within 180 seconds."
+            docker compose -p fotoarchief-managed -f deploy/compose.yaml ps --all
+            docker compose -p fotoarchief-managed -f deploy/compose.yaml logs --no-color
+            docker logs fotoarchief-dockhand
+            exit 1
+          fi
+          umask 077
+          docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat storage/app/installation/setup-code.txt > "$SMOKE_SETUP_CODE_FILE"
+          php tests/Smoke/http-onboarding.php
+          rm "$SMOKE_SETUP_CODE_FILE"
+      - name: Collect failure logs
+        if: failure()
+        run: |
+          docker compose -f deploy/compose.yaml logs --no-color
+          docker compose -p fotoarchief-restore -f deploy/compose.yaml logs --no-color
+          docker compose -p fotoarchief-managed -f deploy/compose.yaml logs --no-color
+      - name: Stop disposable test stack
+        if: always()
+        run: |
+          docker compose -f deploy/compose.yaml down --volumes
+          docker compose -p fotoarchief-restore -f deploy/compose.yaml down --volumes
+          docker compose -p fotoarchief-managed -f deploy/compose.yaml down --volumes
+          if docker container inspect fotoarchief-dockhand > /dev/null 2>&1; then
+            docker rm -f fotoarchief-dockhand
+          fi
+          if docker volume inspect fotoarchief-dockhand-data > /dev/null 2>&1; then
+            docker volume rm fotoarchief-dockhand-data
+          fi
+
+  webhosting:
+    name: Production PHP archive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, gd, exif, fileinfo, zip
+      - name: Build locked production packages
+        run: php scripts/build-release.php
+      - name: Verify uploadable package without development dependencies
+        run: |
+          php tests/Smoke/release-archive.php dist/*-webhosting.zip
+          mkdir "$RUNNER_TEMP/webhosting"
+          unzip -q dist/*-webhosting.zip -d "$RUNNER_TEMP/webhosting"
+          cd "$RUNNER_TEMP/webhosting"
+          test ! -d vendor/pestphp
+          test ! -f .env
+          test ! -f storage/app/installation/state.json
+          php artisan --version
+          php artisan installation:prepare --quiet-code
+          php artisan route:list --except-vendor > /dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fotoarchief-php-${{ github.sha }}
+          path: dist/
+          retention-days: 14
