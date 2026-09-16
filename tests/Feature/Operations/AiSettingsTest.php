@@ -101,6 +101,77 @@ it('stores explicit local and external opt-ins without storing credentials', fun
         ->and(json_encode($settings, JSON_THROW_ON_ERROR))->not->toContain('external-secret');
 });
 
+it('allows global AI activation while configured capabilities remain disabled', function (): void {
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => false,
+        'vision_model' => null,
+        'monthly_budget_cents' => 1000,
+    ], $this->admin);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test', $this->admin);
+
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
+        'global_enabled' => '1',
+        'max_assets_per_batch' => 25,
+        'derivative_max_pixels' => 1024,
+        'request_timeout_seconds' => 60,
+        'image_analysis_provider' => 'openai',
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect('/admin/operations/ai');
+
+    $settings = app(AiConfigurationService::class)->effective();
+    expect($settings['active'])->toBeTrue()
+        ->and($settings['image_analysis_enabled'])->toBeFalse()
+        ->and($settings['image_analysis_ready'])->toBeFalse();
+});
+
+it('accepts an enabled native provider from its database record', function (): void {
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true,
+        'vision_model' => 'gpt-4.1-mini',
+        'cost_cents_per_image' => 1,
+        'monthly_budget_cents' => 1000,
+    ], $this->admin);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test', $this->admin);
+
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
+        'global_enabled' => '1',
+        'image_analysis_enabled' => '1',
+        'max_assets_per_batch' => 25,
+        'derivative_max_pixels' => 1024,
+        'request_timeout_seconds' => 60,
+        'image_analysis_provider' => 'openai',
+        'image_analysis_model' => 'gpt-4.1-mini',
+        'image_analysis_native_consent' => '1',
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect('/admin/operations/ai');
+
+    $settings = app(AiConfigurationService::class)->effective();
+    expect($settings['openai_ready'])->toBeTrue()
+        ->and($settings['image_analysis_ready'])->toBeTrue();
+});
+
+it('keeps native provider requirements fail closed for enabled capabilities', function (string $capability, string $provider): void {
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
+        'global_enabled' => '1',
+        "{$capability}_enabled" => '1',
+        'max_assets_per_batch' => 25,
+        'derivative_max_pixels' => 1024,
+        'request_timeout_seconds' => 60,
+        "{$capability}_provider" => $provider,
+    ]);
+
+    $response->assertSessionHasErrors([
+        "{$capability}_model",
+        "{$capability}_native_consent",
+        "{$provider}_provider_enabled",
+    ]);
+})->with([
+    'OpenAI image analysis' => ['image_analysis', 'openai'],
+    'Gemini embeddings' => ['embeddings', 'gemini'],
+]);
+
 it('requires explicit confirmation before deleting a provider API key', function (): void {
     app(AiProviderConfigService::class)->setApiKey('openai', 'keep-until-confirmed', $this->admin);
 
