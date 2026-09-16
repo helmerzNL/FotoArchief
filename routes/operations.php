@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
+use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
@@ -21,5 +22,13 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
         Route::post('/', [FileVersionController::class, 'store'])->name('store');
         Route::post('/{file}/reprocess', [FileVersionController::class, 'reprocess'])->name('reprocess');
         Route::post('/{file}/set-active', [FileVersionController::class, 'setActive'])->name('setActive');
+    });
+
+    Route::prefix('processing')->name('processing.')->group(function (): void {
+        Route::get('/', [ProcessingCentreController::class, 'index'])->name('index');
+        Route::post('/retry-all', [ProcessingCentreController::class, 'retryAll'])->name('retryAll');
+        Route::get('/{upload}', [ProcessingCentreController::class, 'show'])->name('show');
+        Route::post('/{upload}/retry', [ProcessingCentreController::class, 'retry'])->name('retry');
+        Route::post('/{upload}/cancel', [ProcessingCentreController::class, 'cancel'])->name('cancel');
     });
 });
