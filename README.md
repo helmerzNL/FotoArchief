@@ -58,11 +58,12 @@ gates before exposing the archive publicly.
 
 ## Prerequisites
 
-For the planned image-only Komodo/Dockhand deployment, see
+For image-only Komodo/Dockhand deployment, see
 [the stack deployment guide](docs/DEPLOYMENT_STACKS.md),
 [Compose template](deploy/compose.yaml) and
-[stack environment template](deploy/.env.example). These are preparatory
-templates, not a published, runtime-verified release.
+[stack environment template](deploy/.env.example). Actual Linux container and
+Dockhand API acceptance pass; use the versioned test-release artifacts and
+consult the [acceptance boundaries](docs/RELEASE_ACCEPTANCE.md).
 
 Install these locally before running the app:
 
@@ -170,8 +171,9 @@ and photo-edit regression. Browser acceptance exercised the new private photo
 workflow; see [PHOTO_WORKFLOW.md](docs/PHOTO_WORKFLOW.md) for scope and limits.
 
 The [quality workflow](.github/workflows/quality.yml) includes an Apache
-pending-onboarding and persistent-state restart smoke test. That container job has not yet
-run: the current development machine has no Docker engine. The production PHP ZIP has been built, unpacked without Composer and exercised
+pending-onboarding and persistent-state restart smoke test. Linux run
+`35051355300` passes the complete container, restore and Dockhand API gates;
+the local Windows machine has no Docker engine. The production PHP ZIP has been built, unpacked without Composer and exercised
 through real HTTP onboarding and queue processing. No Docker image or
 Komodo/Dockhand installation is runtime-verified yet. See
 [ONBOARDING.md](docs/ONBOARDING.md) for the implemented wizard and its test scope.

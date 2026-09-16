@@ -4,16 +4,17 @@
 
 [compose.yaml](../deploy/compose.yaml) and its
 [environment template](../deploy/.env.example) define the image-only stack.
-They are not yet a runnable release: no verified application image is published,
-the PHP 8.5.10 / Apache image build is not runtime-verified, and import/start
-has not yet been tested in either manager. The template is wired for the
+Linux Quality run `35051355300` built and accepted the PHP 8.5.10 / Apache
+image, including real Dockhand v1.0.48 API import/start and onboarding.
+It also verified queued photo processing, restart persistence and a separate
+backup/restore stack. Komodo UI import has not been executed. Use the versioned
+test-release artifacts rather than inferring a registry tag from an example;
+see the [acceptance ledger](RELEASE_ACCEPTANCE.md). The template supports the
 implemented first-start onboarding contract: the web container boots without an
 environment `APP_KEY`, application database credentials, Redis/Valkey, or S3
 credentials. It quietly prepares private installation state on the shared
 storage volume and the wizard owns the app key, PostgreSQL settings and storage
-settings after completion. Parent browser onboarding validation used an
-isolated PHP CLI-server router; it is not Apache, image-build, or container
-runtime proof. Both Compose templates pass the Compose parser.
+settings after completion. Both Compose templates also pass the Compose parser.
 
 ## Import contract
 

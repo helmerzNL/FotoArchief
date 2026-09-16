@@ -11,8 +11,8 @@ Redis, S3 or application key. The Dutch wizard provides:
 4. Schema migration, permission seeding and the first administrator.
 5. A locked installer, login, logout and an initial administrator dashboard.
 
-This is an installation slice, not a complete image bank. Photo management,
-scanning, derivatives, metadata editing and publication UI are not delivered yet.
+After installation, continue with [photo management](PHOTO_WORKFLOW.md),
+[catalogue and exchange](DATA_EXCHANGE.md) and [publication](PUBLIC_PORTAL.md).
 
 ## Hosting prerequisites
 
@@ -43,9 +43,11 @@ scanning, derivatives, metadata editing and publication UI are not delivered yet
   [the worker requirements](PHOTO_WORKFLOW.md#worker-php-webhosting-en-docker).
   Large archives still require appropriately provisioned workers and storage.
 
-The webhosting ZIP packaging workflow is still pending. The wizard works in
-the PHP source deployment; this does not mean a ready-to-upload archive has
-already been published.
+The release workflow builds a readable PHP ZIP with locked production
+dependencies. Its extracted application is checked without Composer or
+development dependencies; the same wizard is also accepted against the actual
+Apache container. Consult [release acceptance](RELEASE_ACCEPTANCE.md) and use
+the matching versioned test-release download.
 
 ## Ownership code
 

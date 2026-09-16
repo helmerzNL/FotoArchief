@@ -1,9 +1,10 @@
-# Eerste fotoworkflow (0.3.0)
+# Private fotoworkflow
 
-Deze versie levert een volledige **private** fotoketen na de onboarding:
+De applicatie levert een volledige **private** fotoketen na de onboarding:
 uploaden, achtergrondverwerking, overzicht, voorbeelden, metadata, rechten
-en revisiehistorie. Een publieke portal, publiceren, originele downloads,
-OCR, bulkimport/export en gebruikersbeheer zijn nog geen onderdeel hiervan.
+en revisiehistorie. Dit document beschrijft die keten. Zie daarnaast de
+[publieke portal](PUBLIC_PORTAL.md), [import/export](DATA_EXCHANGE.md) en
+[archiefoperaties met optionele OCR](OPERATIONS.md).
 
 ## Gebruik
 
@@ -34,7 +35,7 @@ eigen toegewezen foto's lezen, niet uploaden/bewerken. Deze regels gelden ook
 voor directe detail-, media- en retry-URL's, niet alleen voor de overzichtslijst.
 Foto's zonder eigenaar uit de oude foundation zijn alleen zichtbaar voor
 rollen met `assets.publish`. Die permissie geeft in deze versie archiefbrede
-toegang; er is nog geen publicatieactie.
+toegang. Publiceren vereist daarnaast de afzonderlijke publicatiereview.
 
 ### Verwerking en fouten
 
@@ -56,8 +57,9 @@ toegang; er is nog geen publicatieactie.
   Actieve en voltooide uploads worden niet opnieuw ingepland.
 - Bij een browsernetwerkfout: controleer eerst het archief voordat je opnieuw
   verstuurt. De server kan het bestand al ontvangen hebben.
-- Afgewezen/mislukte originelen blijven private quarantineobjecten. Automatisch
-  opruimen, bewaartermijnen en een purge-interface zijn nog niet gebouwd.
+- Afgewezen/mislukte originelen blijven private quarantineobjecten. Gebruik de
+  begrensde opruim-, bewaartermijn- en purgeprocessen in
+  [Operaties](OPERATIONS.md); verwijder bestanden niet handmatig.
 
 ## Worker: PHP-webhosting en Docker
 
