@@ -82,6 +82,23 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+### Integrated release candidate
+
+Revision `335af19`: **312 tests / 2243 assertions pass**, eight explicit
+environment-gated skips. The real PostgreSQL active-file test separately passes
+**1 test / 11 assertions**; the four real Operations/Portal integration tests
+run without skips. Whole Pint and Larastan checks pass.
+
+The primary-file forward migration also ran against the existing 50,000-record
+benchmark: 50,000 assets/files/version rows and 45,000 eligible publications are
+preserved. Final public HTTP timing is still being measured after the indexed
+EXISTS correction; the earlier COUNT regression is not accepted as passing.
+
+Draft PR `helmerzNL/FotoArchief#1` starts final Linux acceptance. Its opening
+produced no Actions run or registered workflow, so the initial integration branch
+also has a push trigger to bootstrap actual CI execution before merge. This does
+not replace any test or permit merging without green checks.
+
 ### Operations correction acceptance
 
 Revision `326b6d6` integrates OCR's 120-second job deadline, bounded process
