@@ -130,6 +130,13 @@ class OcrSmokeCommand extends Command
             @unlink($probe);
             Storage::disk('local')->put($storageKey, $bytes);
 
+            $unreadable = $this->alignFixtureWithRuntimeUser($storageKey);
+            if ($unreadable !== null) {
+                $this->error($unreadable);
+
+                return self::FAILURE;
+            }
+
             $asset = Asset::query()->create([
                 'accession_number' => $accession,
                 'title' => 'OCR-rookproef (tijdelijk)',
@@ -192,7 +199,84 @@ class OcrSmokeCommand extends Command
                 $asset->forceDelete();
             }
             Storage::disk('local')->delete($storageKey);
+            Storage::disk('local')->deleteDirectory('ocr-smoke');
         }
+    }
+
+    /**
+     * Makes the synthetic fixture readable by the account the worker runs as.
+     *
+     * The local disk stores privately, so Laravel creates directories 0700 and files
+     * 0600 owned by whoever wrote them. `docker compose exec` defaults to root while
+     * the worker runs as the web account, so a fixture written by root lands in a
+     * directory the worker cannot traverse: the job then reports the file as missing
+     * although it is plainly there, and the failure reads like a broken engine.
+     *
+     * Ownership is aligned with the disk root rather than permissions widened, so the
+     * fixture stays as private as every other stored file. When alignment is not
+     * possible the command says which account to use instead of dispatching a job
+     * that is certain to fail.
+     *
+     * @return string|null an actionable problem, or null when the fixture is readable
+     */
+    private function alignFixtureWithRuntimeUser(string $storageKey): ?string
+    {
+        // Windows and any system without POSIX ownership: nothing to align.
+        if (! function_exists('posix_geteuid') || ! function_exists('fileowner')) {
+            return null;
+        }
+
+        $disk = Storage::disk('local');
+        $filePath = $disk->path($storageKey);
+        $directoryPath = dirname($filePath);
+        $rootPath = $disk->path('');
+
+        clearstatcache();
+        $owner = @fileowner($rootPath);
+        if ($owner === false) {
+            return null;
+        }
+
+        $group = @filegroup($rootPath);
+        $isRoot = posix_geteuid() === 0;
+
+        foreach ([$directoryPath, $filePath] as $path) {
+            if (@fileowner($path) === $owner) {
+                continue;
+            }
+
+            if (! $isRoot) {
+                return $this->wrongOwnerMessage($owner);
+            }
+
+            @chown($path, $owner);
+            if ($group !== false) {
+                @chgrp($path, $group);
+            }
+        }
+
+        clearstatcache();
+        if (@fileowner($filePath) !== $owner || @fileowner($directoryPath) !== $owner) {
+            return $this->wrongOwnerMessage($owner);
+        }
+
+        return null;
+    }
+
+    /** Names the account the fixture must belong to, so the operator can act on it. */
+    private function wrongOwnerMessage(int $owner): string
+    {
+        $name = (string) $owner;
+        if (function_exists('posix_getpwuid')) {
+            $entry = posix_getpwuid($owner);
+            if (is_array($entry) && $entry['name'] !== '') {
+                $name = $entry['name'];
+            }
+        }
+
+        return 'De testafbeelding is niet leesbaar voor de worker: opslag hoort bij "'.$name
+            .'" maar het bestand niet. Draai dit commando als dat account, bijvoorbeeld met '
+            .'"docker compose exec --user '.$name.' app php artisan operations:ocr-smoke --queued".';
     }
 
     /** Writes a high-contrast probe image and returns its path, or null without GD. */

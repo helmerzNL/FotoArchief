@@ -198,6 +198,19 @@ so a failure in the real pipeline points at the image rather than at this code.
 What it cannot prove is recognition itself. Whether the packaged binary reads an
 actual scan, and whether the Dutch language data is present, is a property of the
 image and is only established by running the command above against a real container.
+### Which account runs it
+
+Stored files are private: Laravel creates directories `0700` and files `0600`, owned
+by whoever wrote them. `docker compose exec` defaults to **root**, while the worker
+runs as the web account — so a fixture written by root would sit in a directory the
+worker cannot enter, and the job would report the file as missing even though it is
+there. That failure reads like a broken engine and is not one.
+
+The command therefore gives its fixture the same owner as the storage root before
+dispatching anything, which keeps the file exactly as private as every other stored
+file. Running as root is fine and needs no extra flags. If it is run as some third
+account that can neither write as the owner nor change ownership, it stops and names
+the account to use rather than queueing a job that is certain to fail.
 ### Environment the worker needs
 
 OCR is off unless it is switched on, and the setting has to reach the **worker**

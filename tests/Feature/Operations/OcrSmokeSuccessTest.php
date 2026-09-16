@@ -10,6 +10,7 @@ use App\Modules\ArchiveOperations\Services\TesseractOcrService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -163,4 +164,25 @@ it('reports the binary as available with its version and languages', function ()
         ->and($diagnostics['version'])->toContain('5.3.4-stub')
         ->and($diagnostics['languages'])->toContain('eng')
         ->and($diagnostics['languages'])->toContain('nld');
+});
+
+it('writes a fixture the worker can actually read, and leaves none behind', function (): void {
+    // Deliberately not Storage::fake: the defect this covers was a real directory
+    // created 0700 by the wrong account, which a faked disk cannot reproduce.
+    installStubTesseract();
+
+    $before = Storage::disk('local')->directories();
+
+    // No worker runs in the suite, so the job is never picked up. That is the point:
+    // the run must get past writing and reading the fixture before it waits at all.
+    $this->artisan('operations:ocr-smoke', ['--queued' => true, '--wait' => 5])
+        ->assertExitCode(1);
+
+    $output = Artisan::output();
+
+    expect($output)->not->toContain('Bestand niet gevonden in opslag')
+        ->and($output)->not->toContain('niet leesbaar voor de worker');
+
+    expect(Storage::disk('local')->directories())->toEqual($before)
+        ->and(Asset::query()->where('accession_number', 'like', 'OCR-SMOKE-%')->count())->toBe(0);
 });
