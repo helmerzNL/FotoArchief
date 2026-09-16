@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Jobs\ProcessUpload;
-use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
 use App\Modules\Ingest\Services\QuarantineUploadService;
 use App\Modules\Installation\InstallationSettings;

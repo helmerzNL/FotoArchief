@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\ArchiveOperations\Services;
 
 use App\Modules\ArchiveOperations\Models\SystemHeartbeat;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -69,12 +70,12 @@ class SystemHeartbeatService
                 return $empty;
             }
 
-            /** @var \Illuminate\Database\Eloquent\Collection<int, SystemHeartbeat> $heartbeats */
-            $heartbeats = SystemHeartbeat::query()->get()->keyBy('role');
+            /** @var Collection<int, SystemHeartbeat> $heartbeats */
+            $heartbeats = SystemHeartbeat::query()->get();
 
             foreach (self::ROLES as $role) {
                 /** @var SystemHeartbeat|null $heartbeat */
-                $heartbeat = $heartbeats->get($role);
+                $heartbeat = $heartbeats->firstWhere('role', $role);
                 if ($heartbeat === null) {
                     continue;
                 }

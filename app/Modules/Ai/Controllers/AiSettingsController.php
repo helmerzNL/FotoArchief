@@ -86,7 +86,10 @@ class AiSettingsController extends Controller
             'asset_ids' => ['required', 'string'],
             'provider' => ['required', 'string', 'in:local,external'],
         ]);
-        $assetIds = array_values(array_filter(preg_split('/[\s,]+/', (string) $validated['asset_ids']) ?: [], 'strlen'));
+        $assetIds = array_values(array_filter(
+            preg_split('/[\s,]+/', (string) $validated['asset_ids']) ?: [],
+            fn (string $assetId): bool => $assetId !== '',
+        ));
 
         $run = $this->dispatch->dispatchEmbeddingIndex($assetIds, (string) $validated['provider'], $user);
 

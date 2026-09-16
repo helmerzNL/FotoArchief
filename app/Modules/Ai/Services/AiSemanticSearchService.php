@@ -119,10 +119,11 @@ class AiSemanticSearchService
             ->get()
             ->each(function (AiEmbedding $embedding) use (&$matches, $queryEmbedding, $generation): void {
                 $asset = $embedding->asset;
-                if ($asset === null) {
+                $imageEmbedding = $embedding->embedding;
+                if ($asset === null || ! is_array($imageEmbedding)) {
                     return;
                 }
-                $score = $this->cosine($queryEmbedding['embedding'], $embedding->embedding ?? []);
+                $score = $this->cosine($queryEmbedding['embedding'], array_values($imageEmbedding));
                 if ($score <= 0.0) {
                     return;
                 }

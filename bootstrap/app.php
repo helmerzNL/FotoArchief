@@ -5,11 +5,11 @@ declare(strict_types=1);
 use App\Http\Middleware\EnsureActiveUserSession;
 use App\Modules\Installation\InstallationBootstrap;
 use App\Modules\Installation\InstallationGate;
-use Illuminate\Http\Request;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Bootstrap\LoadConfiguration;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 $app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
