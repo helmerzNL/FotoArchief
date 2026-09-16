@@ -246,6 +246,8 @@ jobs:
           docker compose -f deploy/compose.yaml restart app worker scheduler
           docker compose -f deploy/compose.yaml up -d --wait app
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 404
+      - name: Accept real CSV import and authorized JSON CSV ZIP exports
+        run: php tests/Smoke/http-exchange.php
       - name: Save tested Docker image
         run: |
           mkdir -p dist
