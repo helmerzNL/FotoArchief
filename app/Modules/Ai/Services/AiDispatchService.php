@@ -34,14 +34,11 @@ class AiDispatchService
         if ($assetIds === [] || count($assetIds) > $limit) {
             $errors['asset_ids'] = "Selecteer 1 tot {$limit} assets voor een AI-batch.";
         }
-        if ($provider === 'local' && ! (bool) ($settings['local_ready'] ?? false)) {
-            $errors['provider'] = 'Lokale AI-provider is niet gereed.';
-        }
-        if ($provider === 'external' && ! (bool) ($settings['external_ready'] ?? false)) {
-            $errors['provider'] = 'Externe AI-provider is niet gereed of niet expliciet toegestaan.';
-        }
-        if (! in_array($provider, ['local', 'external'], true)) {
-            $errors['provider'] = 'Kies local of external als AI-provider.';
+        $configuredProvider = (string) ($settings['image_analysis_provider'] ?? '');
+        if ($provider === '' || $provider !== $configuredProvider) {
+            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde beeldanalyse-provider.';
+        } elseif (! (bool) ($settings['image_analysis_ready'] ?? false)) {
+            $errors['provider'] = 'De geconfigureerde beeldanalyse-provider is niet gereed (toestemming, model of budget ontbreekt).';
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -50,6 +47,7 @@ class AiDispatchService
         return $this->runs->dispatchRun(ProcessAiAnalysisJob::class, ProcessAiAnalysisJob::TYPE, $user, [
             'asset_ids' => $assetIds,
             'provider' => $provider,
+            'model' => (string) ($settings['image_analysis_model'] ?? ''),
             'cursor' => 0,
         ], count($assetIds));
     }
@@ -70,14 +68,11 @@ class AiDispatchService
         if ($assetIds === [] || count($assetIds) > $limit) {
             $errors['asset_ids'] = "Selecteer 1 tot {$limit} assets voor een AI-indexbatch.";
         }
-        if ($provider === 'local' && ! (bool) ($settings['local_ready'] ?? false)) {
-            $errors['provider'] = 'Lokale AI-provider is niet gereed.';
-        }
-        if ($provider === 'external' && ! (bool) ($settings['external_ready'] ?? false)) {
-            $errors['provider'] = 'Externe AI-provider is niet gereed of niet expliciet toegestaan.';
-        }
-        if (! in_array($provider, ['local', 'external'], true)) {
-            $errors['provider'] = 'Kies local of external als AI-provider.';
+        $configuredProvider = (string) ($settings['embeddings_provider'] ?? '');
+        if ($provider === '' || $provider !== $configuredProvider) {
+            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde embeddings-provider.';
+        } elseif (! (bool) ($settings['embeddings_ready'] ?? false)) {
+            $errors['provider'] = 'De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).';
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -86,6 +81,7 @@ class AiDispatchService
         return $this->runs->dispatchRun(ProcessAiIndexJob::class, ProcessAiIndexJob::TYPE, $user, [
             'asset_ids' => $assetIds,
             'provider' => $provider,
+            'model' => (string) ($settings['embeddings_model'] ?? ''),
             'cursor' => 0,
         ], count($assetIds));
     }

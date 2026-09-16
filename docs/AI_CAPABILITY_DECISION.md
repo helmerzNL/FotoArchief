@@ -149,3 +149,20 @@ These are implementation defaults until a later measured proof tightens them:
 - pgvector README: stores vectors in PostgreSQL, supports exact/approximate
   nearest-neighbor search, cosine/L2/IP distances, HNSW indexes and documented
   vector dimensional limits.
+
+## Native external providers
+
+FotoArchief can call the official OpenAI, Anthropic, Gemini and OpenRouter APIs
+directly for image analysis. Each native provider is separately configured by
+private runtime variables and separately enabled by an administrator. The
+image-analysis and embedding provider/model selections are independent.
+
+Only Gemini and an explicit OpenRouter multimodal-model allowlist are permitted
+for native semantic embeddings. OpenAI's documented embedding API is
+text-only, and Anthropic does not offer a native embeddings API. Neither is a
+valid substitute for image-content retrieval. Public external semantic search
+requires a clear per-visitor opt-in; declining leaves ordinary discovery
+search available and sends no semantic query to a provider.
+
+See [AI_PROVIDER_SETUP.md](AI_PROVIDER_SETUP.md) for safe configuration,
+budget and proof-set instructions.

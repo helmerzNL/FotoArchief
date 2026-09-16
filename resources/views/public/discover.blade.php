@@ -20,7 +20,11 @@
     <form class="actions" method="get" action="{{ route('public.discover') }}">
         <label for="semantic_q">Zoeken op beeldinhoud</label>
         <input id="semantic_q" name="semantic_q" value="{{ request('semantic_q') }}" maxlength="200" placeholder="bijvoorbeeld: kinderen bij een molen">
-        <input type="hidden" name="semantic_provider" value="{{ request('semantic_provider', 'local') }}">
+        <p class="hint">Semantisch zoeken stuurt je zoektekst naar een externe AI-provider om te vergelijken met beeldbeschrijvingen. Zonder toestemming hieronder wordt alleen op titel/beschrijving gezocht.</p>
+        <label>
+            <input type="checkbox" id="semantic_consent" name="semantic_consent" value="1" @checked(request()->boolean('semantic_consent'))>
+            Ik geef toestemming om deze zoektekst naar de AI-provider te sturen voor semantisch zoeken.
+        </label>
         <button class="secondary">Semantisch zoeken</button>
     </form>
     @if($semanticError)

@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Modules\Ai\Services;
 
+use App\Modules\Ai\Contracts\ConnectionProbe;
+use App\Modules\Ai\Contracts\EmbeddingProvider;
+use App\Modules\Ai\Contracts\ImageAnalysisProvider;
 use App\Modules\Ai\Exceptions\AiProviderException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 
-class ExternalAiProvider
+class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalysisProvider
 {
     public function __construct(
         private readonly AiConfigurationService $configuration,
@@ -63,9 +66,10 @@ class ExternalAiProvider
     }
 
     /**
+     * @param  array<string, mixed>  $context
      * @return array{embedding: list<float|int>, model_space: string, dimensions: int}
      */
-    public function embedImage(string $imageBytes): array
+    public function embedImage(string $imageBytes, array $context = []): array
     {
         $settings = $this->externalSettings();
         $payload = $this->postJson($settings, '/v1/embed-image', [
@@ -77,9 +81,10 @@ class ExternalAiProvider
     }
 
     /**
+     * @param  array<string, mixed>  $context
      * @return array{embedding: list<float|int>, model_space: string, dimensions: int}
      */
-    public function embedText(string $query): array
+    public function embedText(string $query, array $context = []): array
     {
         $settings = $this->externalSettings();
         $payload = $this->postJson($settings, '/v1/embed-text', [

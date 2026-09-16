@@ -8,6 +8,7 @@ use App\Modules\Ai\Services\AiConfigurationService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -113,4 +114,69 @@ it('lets the emergency stop override otherwise ready AI settings', function (): 
     expect($settings['active'])->toBeFalse()
         ->and($settings['local_ready'])->toBeFalse()
         ->and($settings['emergency_stop'])->toBeTrue();
+});
+
+it('runs a cheap, non-billable OpenAI connection test and reports whether the configured model is visible', function (): void {
+    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
+        'api_key' => 'sk-test',
+        'base_url' => 'https://api.openai.test/v1',
+    ])]);
+    Http::fake([
+        'https://api.openai.test/v1/models' => Http::response([
+            'data' => [['id' => 'gpt-4.1-mini'], ['id' => 'gpt-4.1']],
+        ]),
+    ]);
+    app(AiConfigurationService::class)->update(['image_analysis_model' => 'gpt-4.1-mini'], $this->admin);
+
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai/test-connection', [
+        'test_provider' => 'openai',
+        'test_capability' => 'image_analysis',
+    ]);
+
+    $response->assertRedirect('/admin/operations/ai');
+    $response->assertSessionHas('connection_test', function (array $result): bool {
+        return $result['status'] === 'ok'
+            && $result['models_count'] === 2
+            && $result['model_found'] === true;
+    });
+});
+
+it('reports a connection-test failure without ever leaking the raw response into the flashed message', function (): void {
+    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
+        'api_key' => 'sk-test',
+        'base_url' => 'https://api.openai.test/v1',
+    ])]);
+    Http::fake([
+        'https://api.openai.test/v1/models' => Http::response('geheime-inhoud', 401),
+    ]);
+
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai/test-connection', [
+        'test_provider' => 'openai',
+        'test_capability' => 'image_analysis',
+    ]);
+
+    $response->assertSessionHas('connection_test', function (array $result): bool {
+        return $result['status'] === 'error' && ! str_contains($result['message'], 'geheime-inhoud');
+    });
+});
+
+it('denies a non-admin from running a connection test', function (): void {
+    $this->actingAs($this->viewer)
+        ->post('/admin/operations/ai/test-connection', ['test_provider' => 'openai', 'test_capability' => 'image_analysis'])
+        ->assertStatus(403);
+});
+
+it('rejects a connection test for a provider that does not support the requested capability', function (): void {
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai/test-connection', [
+        'test_provider' => 'openai',
+        'test_capability' => 'embeddings',
+    ]);
+
+    // Route-level validation rejects the provider/capability combination
+    // via Rule::in against AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS
+    // for test_provider; openai is valid there, so the service layer itself
+    // rejects the mismatched capability instead.
+    $response->assertSessionHas('connection_test', function (array $result): bool {
+        return $result['status'] === 'error';
+    });
 });

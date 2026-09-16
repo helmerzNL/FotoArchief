@@ -7,8 +7,8 @@ namespace App\Modules\Ai\Jobs;
 use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
-use App\Modules\Ai\Services\ExternalAiProvider;
-use App\Modules\Ai\Services\LocalAiProvider;
+use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiProviderResolver;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
@@ -19,15 +19,23 @@ class ProcessAiIndexJob extends OperationJob
 {
     public const string TYPE = 'ai.index';
 
+    /** Providers billed via the per-request budget ledger; local/external are not natively metered here. */
+    private const NATIVE_PROVIDERS = ['gemini', 'openrouter'];
+
     protected function executeChunk(OperationRun $run): array
     {
         $payload = $run->payload ?? [];
         $assetIds = array_values(array_filter($payload['asset_ids'] ?? [], 'is_string'));
         $provider = (string) ($payload['provider'] ?? 'local');
+        $model = (string) ($payload['model'] ?? '');
         $cursor = (int) ($payload['cursor'] ?? 0);
         $slice = array_slice($assetIds, $cursor, self::CHUNK_SIZE);
         $processed = 0;
         $failed = 0;
+        $resolver = app(AiProviderResolver::class);
+        $ledgerService = app(AiBudgetLedgerService::class);
+        $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
+        $costCents = $isNative ? (int) config("ai.native_providers.{$provider}.cost_cents_per_embedding", 0) : 0;
 
         foreach ($slice as $assetId) {
             $asset = Asset::query()->with('files')->find($assetId);
@@ -48,9 +56,19 @@ class ProcessAiIndexJob extends OperationJob
                 continue;
             }
 
-            $embedding = $provider === 'external'
-                ? app(ExternalAiProvider::class)->embedImage($bytes)
-                : app(LocalAiProvider::class)->embedImage($bytes);
+            $ledger = $isNative && $costCents > 0 ? $ledgerService->reserve($provider, 'embeddings', $costCents) : null;
+            try {
+                $embedding = $resolver->resolveEmbeddings($provider)->embedImage($bytes, ['model' => $model]);
+            } catch (\Throwable $exception) {
+                if ($ledger !== null) {
+                    $ledgerService->release($ledger, $costCents);
+                }
+
+                throw $exception;
+            }
+            if ($ledger !== null) {
+                $ledgerService->consume($ledger, $costCents, $costCents);
+            }
 
             $asset->refresh();
             $file->refresh()->load('asset');
@@ -64,7 +82,7 @@ class ProcessAiIndexJob extends OperationJob
                 ['model_space' => $embedding['model_space']],
                 [
                     'provider_kind' => $provider,
-                    'provider_name' => $provider === 'external' ? 'external-http' : 'owned-http',
+                    'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
                     'model_id' => (string) $embedding['model_space'],
                     'dimensions' => $embedding['dimensions'],
                     'distance_metric' => 'cosine',
@@ -116,7 +134,7 @@ class ProcessAiIndexJob extends OperationJob
                     'source_asset_lock_version' => $sourceLock,
                     'source_file_sha256' => $sourceSha,
                     'provider_kind' => $provider,
-                    'provider_name' => $provider === 'external' ? 'external-http' : 'owned-http',
+                    'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
                     'model_id' => $generation->model_id,
                     'model_space' => $generation->model_space,
                     'input_contract' => [

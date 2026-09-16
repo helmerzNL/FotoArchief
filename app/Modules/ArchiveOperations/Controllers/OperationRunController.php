@@ -44,4 +44,18 @@ class OperationRunController extends Controller
             ->route('admin.operations.runs.index')
             ->with('status', "Taak {$run->id} is opnieuw in de wachtrij geplaatst; de voortgang wordt hervat.");
     }
+
+    public function cancel(Request $request, OperationRun $run): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
+
+        abort_unless($run->status === OperationRun::STATUS_QUEUED, 422);
+
+        $this->runService->cancelRun($run);
+
+        return redirect()
+            ->route('admin.operations.runs.index')
+            ->with('status', "Taak {$run->id} is geannuleerd voordat deze werd gestart.");
+    }
 }

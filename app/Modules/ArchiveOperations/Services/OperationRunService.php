@@ -68,6 +68,23 @@ class OperationRunService
     }
 
     /**
+     * Cancels a run that is still queued, so a worker that later claims it finds a
+     * non-queued status and stops without doing any work. Running or finished runs
+     * cannot be cancelled: there is no cooperative mid-chunk interrupt, so pretending
+     * to stop a run that is already executing would be misleading.
+     */
+    public function cancelRun(OperationRun $run): OperationRun
+    {
+        $run->forceFill([
+            'status' => OperationRun::STATUS_CANCELLED,
+            'claim_token' => null,
+            'finished_at' => now(),
+        ])->save();
+
+        return $run;
+    }
+
+    /**
      * @return LengthAwarePaginator<int, OperationRun>
      */
     public function recentRuns(int $perPage = 20): LengthAwarePaginator

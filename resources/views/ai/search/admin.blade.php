@@ -23,13 +23,12 @@
         <label>Zoekvraag
             <input type="search" name="q" value="{{ $query }}" placeholder="bijvoorbeeld: groepsfoto op dorpsplein">
         </label>
-        <label>Provider
-            <select name="provider">
-                <option value="local" @selected($provider === 'local')>Lokale/eigen provider</option>
-                <option value="external" @selected($provider === 'external')>Externe provider</option>
-            </select>
-        </label>
-        <button type="submit">Zoeken</button>
+        <p>Provider: <strong>{{ $provider ?: 'niet geconfigureerd' }}</strong> (ingesteld via <a href="{{ route('admin.operations.ai.edit') }}">AI-instellingen</a>; hier niet los te kiezen zodat tekst- en beeldembeddings altijd dezelfde modelruimte gebruiken).</p>
+        <input type="hidden" name="provider" value="{{ $provider }}">
+        <button type="submit" @disabled(! ($settings['embeddings_ready'] ?? false))>Zoeken</button>
+        @unless($settings['embeddings_ready'] ?? false)
+            <p role="alert">Embeddings-provider is niet gereed (toestemming, model of budget ontbreekt) — configureer deze eerst.</p>
+        @endunless
     </form>
 
     <section class="card">

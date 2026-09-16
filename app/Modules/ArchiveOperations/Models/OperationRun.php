@@ -38,6 +38,8 @@ class OperationRun extends CatalogueModel
 
     public const string STATUS_FAILED = 'failed';
 
+    public const string STATUS_CANCELLED = 'cancelled';
+
     protected $guarded = [];
 
     /** @var array<string, mixed> */
@@ -71,6 +73,6 @@ class OperationRun extends CatalogueModel
 
     public function isFinished(): bool
     {
-        return in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_FAILED], true);
+        return in_array($this->status, [self::STATUS_COMPLETED, self::STATUS_FAILED, self::STATUS_CANCELLED], true);
     }
 }
