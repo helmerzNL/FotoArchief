@@ -48,6 +48,7 @@ docker compose exec app php artisan about --only=environment
 docker compose exec app php artisan queue:failed
 docker compose exec scheduler php artisan schedule:list
 docker compose exec scheduler php artisan operations:heartbeat scheduler
+sh scripts/backup-copy-encrypted.sh /private/backups/latest /offsite/fotoarchief-latest.tar.gz.enc /private/fotoarchief-backup.key
 ```
 
 ## Upload limits
