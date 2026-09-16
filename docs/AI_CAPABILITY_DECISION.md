@@ -106,8 +106,12 @@ These are implementation defaults until a later measured proof tightens them:
   model space, suggestion review state and embedding generation id in dedicated
   AI tables. Jobs must compare their stored source snapshot with the current
   primary file before writing suggestions or embeddings.
-- Steps 42 and 43 must implement local and external adapters behind the same
-  contracts with no automatic cross-provider fallback.
+- Step 42 implements the local/organisation-owned HTTP adapter with
+  `/v1/capabilities`, `/v1/analyze-image`, `/v1/embed-image` and
+  `/v1/embed-text`. It refuses use unless the local provider is explicitly
+  enabled and reports one compatible text/image embedding space.
+- Step 43 must implement external adapters behind the same contracts with no
+  automatic cross-provider fallback.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after

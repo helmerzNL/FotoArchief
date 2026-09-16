@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Services\LocalAiProvider;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
@@ -79,6 +80,15 @@ Artisan::command('operations:check-alerts {--dry-run : Evaluate alert payload wi
 
     return 0;
 })->purpose('Evaluate diagnostics and send configured operational alerts');
+
+Artisan::command('ai:probe-local', function (LocalAiProvider $provider): int {
+    $capabilities = $provider->probe();
+    $this->info('Lokale AI-provider bereikbaar.');
+    $this->line('Modelruimte: '.(string) ($capabilities['model_space'] ?? 'onbekend'));
+    $this->line('Dimensies: '.(string) ($capabilities['dimensions'] ?? 'onbekend'));
+
+    return 0;
+})->purpose('Probe the explicitly configured local or organisation-owned AI service');
 
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();

@@ -1,0 +1,19 @@
+services:
+  ai-local:
+    image: ${AI_LOCAL_IMAGE:-replace-with-your-owned-ai-service-image}
+    profiles: ["ai-local"]
+    restart: unless-stopped
+    environment:
+      AI_SERVICE_BIND: 0.0.0.0:8080
+    networks:
+      - default
+
+  app:
+    environment:
+      AI_LOCAL_ENDPOINT: ${AI_LOCAL_ENDPOINT:-http://ai-local:8080}
+  worker:
+    environment:
+      AI_LOCAL_ENDPOINT: ${AI_LOCAL_ENDPOINT:-http://ai-local:8080}
+  scheduler:
+    environment:
+      AI_LOCAL_ENDPOINT: ${AI_LOCAL_ENDPOINT:-http://ai-local:8080}

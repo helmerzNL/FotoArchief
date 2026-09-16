@@ -94,6 +94,32 @@ Registry credentials belong in the manager's registry configuration if the
 chosen image is private. Select a verified release tag or digest for `APP_IMAGE`;
 do not infer a working image name from an example.
 
+## Optional local AI service
+
+AI is disabled by default. Operators who run their own AI service can add
+`deploy/ai-local-compose.override.example.yaml` as a private Compose override,
+replace `AI_LOCAL_IMAGE` with their own tested image and set
+`COMPOSE_PROFILES=ai-local`. FotoArchief expects that service to expose:
+
+- `GET /v1/capabilities`;
+- `POST /v1/analyze-image`;
+- `POST /v1/embed-image`;
+- `POST /v1/embed-text`.
+
+The capability response must identify `provider_kind=local`, support image
+analysis plus text/image embeddings and prove both embeddings share one model
+space. After configuring the admin AI settings, run:
+
+```sh
+docker compose exec app php artisan ai:probe-local
+```
+
+This probe is not a GPU/runtime endorsement. Record CPU/GPU, latency, model
+license and proof-set relevance evidence as required by
+[AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md). A normal PHP-ZIP host may
+point `AI_LOCAL_ENDPOINT` at an organisation-owned HTTPS service instead of
+running the model beside PHP.
+
 ## Operator changes
 
 ### Exchange worker recovery
