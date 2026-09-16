@@ -77,6 +77,31 @@ do not infer a working image name from an example.
 
 ## Operator changes
 
+### OCR and exchange settings
+
+The image includes Tesseract plus Dutch and English trained data. OCR remains
+disabled by default. To enable it, add `OCR_ENABLED=true` to the stack's private
+interpolation variables and redeploy both app and worker. The optional defaults
+are `OCR_BINARY=tesseract`, `OCR_LANGUAGES=nld+eng`, and `OCR_TIMEOUT=60` seconds.
+For the PHP ZIP route, the host must install Tesseract and allow subprocesses;
+uploading PHP files alone cannot install an operating-system executable.
+
+Both Compose templates forward these exact mappings to app, worker and scheduler:
+`OCR_ENABLED: ${OCR_ENABLED:-false}`, `OCR_BINARY: ${OCR_BINARY:-tesseract}`,
+`OCR_LANGUAGES: ${OCR_LANGUAGES:-nld+eng}`, `OCR_TIMEOUT: ${OCR_TIMEOUT:-60}`.
+Existing deployments keep working without adding these variables.
+
+CSV/export settings are also forwarded, rather than silently ignored by Compose.
+The optional defaults are `EXCHANGE_MAX_IMPORT_BYTES=5242880`,
+`EXCHANGE_MAX_IMPORT_ROWS=5000`, `EXCHANGE_SYNC_ANALYSIS_BYTES=262144`,
+`EXCHANGE_MAX_EXPORT_ASSETS=500`, `EXCHANGE_MAX_EXPORT_BYTES=1073741824`,
+`EXCHANGE_EXPORT_TTL_MINUTES=120`, and `EXCHANGE_DOWNLOAD_TTL_MINUTES=10`.
+Each uses the mapping `NAME: ${NAME:-default}` in both templates. No manual
+addition is required to retain those defaults. Upstream infrastructure must
+allow CSV requests of at least **6291456 bytes** and export responses of at least
+**1073741824 bytes**, with enough streaming time. Upload limits remain
+**104857600 bytes per image**, **115343360 bytes per request**, **300 seconds**.
+
 This is a separate image-only template. For source-build deployments and the
 change from the PHP development server to Apache, also see
 [DEPLOYMENT_LOCAL.md](DEPLOYMENT_LOCAL.md).

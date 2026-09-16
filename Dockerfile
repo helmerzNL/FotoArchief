@@ -3,7 +3,7 @@ FROM php:8.5.10-apache-bookworm AS runtime
 WORKDIR /var/www/html
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gosu libpq-dev libzip-dev libicu-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
+    && apt-get install -y --no-install-recommends gosu libpq-dev libzip-dev libicu-dev libjpeg62-turbo-dev libpng-dev libwebp-dev tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" pdo_pgsql zip intl pcntl gd exif \
     && pecl install redis-6.3.0 \
