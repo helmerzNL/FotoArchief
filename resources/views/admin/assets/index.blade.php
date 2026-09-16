@@ -26,13 +26,88 @@
 </section>
 <script src="/uploads.js" defer></script>
 @endcan
-<form class="actions" method="get">
-    <label for="q">Zoeken op titel of archiefnummer</label>
-    <input id="q" name="q" value="{{ request('q') }}" maxlength="200">
-    <button class="secondary">Zoeken</button>
-    <a href="{{ route('admin.assets.index') }}">Vernieuwen / filters wissen</a>
-</form>
-<section class="card"><h2>Archief</h2>
+
+<section class="card">
+    <h2>Geavanceerd zoeken &amp; filteren</h2>
+    <form method="get" action="{{ route('admin.assets.index') }}">
+        <div class="grid">
+            <div>
+                <label for="q">Zoekterm (titel, nummer, beschrijving)</label>
+                <input id="q" name="q" value="{{ request('q') }}" maxlength="200" placeholder="bijv. Marktplein of FA-01J...">
+            </div>
+            <div>
+                <label for="collection_id">Collectie / Album</label>
+                <select id="collection_id" name="collection_id">
+                    <option value="">Alle collecties</option>
+                    @foreach($filterCollections as $fc)
+                        <option value="{{ $fc->id }}" {{ request('collection_id') === $fc->id ? 'selected' : '' }}>{{ $fc->title }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for="person_id">Persoon / Organisatie</label>
+                <select id="person_id" name="person_id">
+                    <option value="">Alle personen/organisaties</option>
+                    @foreach($filterPeople as $fp)
+                        <option value="{{ $fp->id }}" {{ request('person_id') === $fp->id ? 'selected' : '' }}>{{ $fp->display_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="location_id">Locatie</label>
+                <select id="location_id" name="location_id">
+                    <option value="">Alle locaties</option>
+                    @foreach($filterLocations as $fl)
+                        <option value="{{ $fl->id }}" {{ request('location_id') === $fl->id ? 'selected' : '' }}>{{ $fl->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for="tag_id">Tag / Trefwoord</label>
+                <select id="tag_id" name="tag_id">
+                    <option value="">Alle tags</option>
+                    @foreach($filterTags as $ft)
+                        <option value="{{ $ft->id }}" {{ request('tag_id') === $ft->id ? 'selected' : '' }}>{{ $ft->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label for="rights_status">Rechtenstatus</label>
+                <select id="rights_status" name="rights_status">
+                    <option value="">Alle statussen</option>
+                    <option value="verified" {{ request('rights_status') === 'verified' ? 'selected' : '' }}>Geverifieerd</option>
+                    <option value="unverified" {{ request('rights_status') === 'unverified' ? 'selected' : '' }}>Ongeverifieerd</option>
+                    <option value="disputed" {{ request('rights_status') === 'disputed' ? 'selected' : '' }}>Betwist</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label for="date_from">Datum vanaf (YYYY-MM-DD)</label>
+                <input type="date" id="date_from" name="date_from" value="{{ request('date_from') }}">
+            </div>
+            <div>
+                <label for="date_to">Datum tot (YYYY-MM-DD)</label>
+                <input type="date" id="date_to" name="date_to" value="{{ request('date_to') }}">
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="submit">Filters toepassen</button>
+            <a href="{{ route('admin.assets.index') }}" class="button secondary">Filters wissen</a>
+        </div>
+    </form>
+</section>
+
+<section class="card">
+    <h2>Archieffoto’s ({{ $assets->count() }} op deze pagina)</h2>
     <ul class="asset-list">
     @forelse($assets as $asset)
         @php($file = $asset->files->first())
@@ -41,12 +116,18 @@
                 <img class="thumbnail" loading="lazy" src="{{ route('admin.assets.media', [$asset, $file, 'preview300']) }}" alt="">
             @endif
             <a href="{{ route('admin.assets.show', $asset) }}">{{ $asset->title ?: $asset->accession_number }}</a>
-            <small>{{ $asset->accession_number }} · {{ $asset->uploads->first()?->status ?? $file?->ingest_status ?? 'Geen upload' }} · Concept / privé</small>
+            <small>
+                {{ $asset->accession_number }} · {{ $asset->uploads->first()?->status ?? $file?->ingest_status ?? 'Geen upload' }} · {{ $asset->catalogue_status }}
+                @if($asset->date_display) · {{ $asset->date_display }} @elseif($asset->date_earliest) · {{ $asset->date_earliest->format('Y') }} @endif
+            </small>
         </li>
     @empty
-        <li>Geen foto’s gevonden binnen jouw toegang.</li>
+        <li>Geen foto’s gevonden binnen jouw zoekopdracht en toegang.</li>
     @endforelse
     </ul>
-    @if($nextCursor)<a class="button secondary" href="{{ route('admin.assets.index', array_filter(['q' => request('q'), 'cursor' => $nextCursor])) }}">Volgende pagina</a>@endif
+    @if($nextCursor)
+        @php($queryParams = array_merge(request()->query(), ['cursor' => $nextCursor]))
+        <a class="button secondary" href="{{ route('admin.assets.index', $queryParams) }}">Volgende pagina</a>
+    @endif
 </section>
 @endsection

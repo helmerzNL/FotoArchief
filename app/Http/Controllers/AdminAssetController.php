@@ -7,6 +7,9 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use App\Modules\Catalogue\Models\Collection;
+use App\Modules\Catalogue\Models\Location;
+use App\Modules\Catalogue\Models\Person;
 use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
@@ -34,23 +37,88 @@ class AdminAssetController extends Controller
     {
         $user = $this->user($request);
         abort_unless($user->hasPermission('assets.view'), 403);
-        $request->validate(['q' => ['nullable', 'string', 'max:200'], 'cursor' => ['nullable', 'ulid']]);
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:200'],
+            'cursor' => ['nullable', 'ulid'],
+            'date_from' => ['nullable', 'date_format:Y-m-d'],
+            'date_to' => ['nullable', 'date_format:Y-m-d'],
+            'date_precision' => ['nullable', 'string', 'max:30'],
+            'person_id' => ['nullable', 'string'],
+            'location_id' => ['nullable', 'string'],
+            'collection_id' => ['nullable', 'string'],
+            'tag_id' => ['nullable', 'string'],
+            'rights_status' => ['nullable', 'string', 'max:30'],
+            'catalogue_status' => ['nullable', 'string', 'max:30'],
+        ]);
+
         $query = Asset::query()->with(['files', 'uploads'])->latest('id');
+
         if (! $user->hasPermission('assets.publish')) {
             $query->where('created_by_user_id', $user->id);
         }
+
         if ($search = $request->string('q')->trim()->value()) {
-            $query->where(fn ($q) => $q->whereLike('title', '%'.$search.'%')->orWhereLike('accession_number', '%'.$search.'%'));
+            $query->where(fn ($q) => $q->whereLike('title', '%'.$search.'%')->orWhereLike('accession_number', '%'.$search.'%')->orWhereLike('description', '%'.$search.'%'));
         }
+
+        if (! empty($data['date_from'])) {
+            $query->where(fn ($q) => $q->where('date_latest', '>=', $data['date_from'])->orWhere('date_earliest', '>=', $data['date_from']));
+        }
+
+        if (! empty($data['date_to'])) {
+            $query->where(fn ($q) => $q->where('date_earliest', '<=', $data['date_to'])->orWhere('date_latest', '<=', $data['date_to']));
+        }
+
+        if (! empty($data['date_precision'])) {
+            $query->where('date_precision', $data['date_precision']);
+        }
+
+        if (! empty($data['person_id'])) {
+            $query->whereHas('people', fn ($q) => $q->where('people.id', $data['person_id']));
+        }
+
+        if (! empty($data['location_id'])) {
+            $query->whereHas('locations', fn ($q) => $q->where('locations.id', $data['location_id']));
+        }
+
+        if (! empty($data['collection_id'])) {
+            $query->whereHas('collections', fn ($q) => $q->where('collections.id', $data['collection_id']));
+        }
+
+        if (! empty($data['tag_id'])) {
+            $query->whereHas('tags', fn ($q) => $q->where('tags.id', $data['tag_id']));
+        }
+
+        if (! empty($data['rights_status'])) {
+            $query->whereHas('rights', fn ($q) => $q->where('verification_status', $data['rights_status']));
+        }
+
+        if (! empty($data['catalogue_status'])) {
+            $query->where('catalogue_status', $data['catalogue_status']);
+        }
+
         if ($cursor = $request->string('cursor')->value()) {
             $query->where('id', '<', $cursor);
         }
+
         $assets = $query->limit(26)->get();
         $hasMore = $assets->count() > 25;
         $assets = $assets->take(25);
         $nextCursor = $hasMore ? $assets->last()?->id : null;
 
-        return view('admin.assets.index', compact('assets', 'nextCursor'));
+        $filterCollections = Collection::query()->orderBy('title')->get();
+        $filterTags = Tag::query()->orderBy('name')->get();
+        $filterPeople = Person::query()->orderBy('sort_name')->limit(100)->get();
+        $filterLocations = Location::query()->orderBy('name')->limit(100)->get();
+
+        return view('admin.assets.index', compact(
+            'assets',
+            'nextCursor',
+            'filterCollections',
+            'filterTags',
+            'filterPeople',
+            'filterLocations'
+        ));
     }
 
     public function store(Request $request, QuarantineUploadService $uploads): RedirectResponse|JsonResponse
@@ -87,7 +155,7 @@ class AdminAssetController extends Controller
     public function show(Request $request, Asset $asset): View
     {
         $this->authorize('view', $asset);
-        $asset->load(['files', 'tags', 'rights', 'uploads']);
+        $asset->load(['files', 'tags', 'rights', 'uploads', 'people', 'locations', 'collections', 'sources', 'contributors']);
         $events = $asset->auditEvents()->latest('id')->limit(50)->get();
 
         return view('admin.assets.show', compact('asset', 'events'));
@@ -200,7 +268,7 @@ class AdminAssetController extends Controller
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $this->user($request)->id, 'event_type' => 'upload.retried', 'details' => ['upload_id' => $upload->id]]);
         });
 
-        return back()->with('status', 'Verwerking opnieuw ingepland.');
+        return redirect()->route('admin.assets.show', $asset)->with('status', 'Verwerking opnieuw gestart.');
     }
 
     private function user(Request $request): User
