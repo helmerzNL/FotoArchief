@@ -2,7 +2,8 @@
 @section('title', 'Ontdek de collectie - FotoArchief')
 @section('content')
     <p class="eyebrow">Publieke collectie</p>
-    <h1>Ontdek foto’s</h1>
+    <h1>@if(request()->routeIs('public.home'))FotoArchief @else Ontdek foto’s @endif</h1>
+    @if(request()->routeIs('public.home'))<p class="intro">Doorzoek de gepubliceerde foto's uit het archief. Elke foto toont bronvermelding, rechten en een permalink.</p>@endif
     <form class="actions" method="get" action="{{ route('public.discover') }}">
         <label for="q">Zoeken op titel of beschrijving</label>
         <input id="q" name="q" value="{{ request('q') }}" maxlength="200">

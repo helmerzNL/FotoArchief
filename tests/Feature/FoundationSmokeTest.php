@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
 it('boots with isolated test settings instead of a private environment file', function (): void {
     expect(app()->environmentPath())->toBe(dirname(__DIR__).'/Fixtures')
         ->and(app()->environmentFile())->toBe('test-settings');

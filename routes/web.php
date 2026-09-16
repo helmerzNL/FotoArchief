@@ -7,7 +7,7 @@ use App\Http\Controllers\InstallationController;
 use App\Http\Controllers\SessionController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+// The public homepage is defined in routes/portal.php (public.home).
 Route::get('/setup', [InstallationController::class, 'show']);
 Route::post('/setup/unlock', [InstallationController::class, 'unlock']);
 Route::post('/setup/check', [InstallationController::class, 'check']);

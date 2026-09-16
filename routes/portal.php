@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Publication\PublicDiscoveryController;
 use App\Http\Controllers\Publication\PublicPhotoController;
+use App\Http\Controllers\Publication\SitemapController;
 use App\Http\Controllers\Publication\StaffPublicationController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,8 +21,14 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/publications')->na
 // Public search, collections and the photo viewer only ever read through
 // Publication::publiclyVisible() (step 17/18): private, embargoed, revoked
 // or unscanned assets 404 instead of rendering.
+Route::get('/', [PublicDiscoveryController::class, 'search'])->name('public.home');
 Route::get('/ontdek', [PublicDiscoveryController::class, 'search'])->name('public.discover');
 Route::get('/collecties', [PublicDiscoveryController::class, 'collections'])->name('public.collections.index');
 Route::get('/collecties/{collection}', [PublicDiscoveryController::class, 'collectionShow'])->name('public.collections.show');
 Route::get('/foto/{publication}', [PublicPhotoController::class, 'show'])->name('public.photo');
 Route::get('/foto/{publication}/media/{size}', [PublicPhotoController::class, 'media'])->whereIn('size', ['preview300', 'preview1200', 'preview2000'])->name('public.photo.media');
+
+// Segmented sitemaps (step 18); each page is bounded (LIMIT/OFFSET, see
+// SitemapController) so crawling stays cheap even at 50k+ assets.
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('public.sitemap.index');
+Route::get('/sitemap-fotos-{page}.xml', [SitemapController::class, 'photos'])->whereNumber('page')->name('public.sitemap.photos');
