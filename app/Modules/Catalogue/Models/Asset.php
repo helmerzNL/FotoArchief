@@ -7,10 +7,12 @@ namespace App\Modules\Catalogue\Models;
 use App\Models\User;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use App\Modules\Publication\Models\Publication;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -130,5 +132,13 @@ class Asset extends CatalogueModel
     public function rights(): HasMany
     {
         return $this->hasMany(AssetRight::class);
+    }
+
+    /**
+     * @return HasOne<Publication, $this>
+     */
+    public function publication(): HasOne
+    {
+        return $this->hasOne(Publication::class);
     }
 }
