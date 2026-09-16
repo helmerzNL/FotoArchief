@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,9 +29,13 @@ class SessionController extends Controller
         if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages(['email' => 'De inloggegevens zijn niet geldig.']);
         }
+        if (Auth::user()?->is_active === false) {
+            Auth::logout();
+            throw ValidationException::withMessages(['email' => 'De inloggegevens zijn niet geldig.']);
+        }
         RateLimiter::clear($key);
         $request->session()->regenerate();
-        $request->session()->put('identity.session_revoked_at', Auth::user()?->session_revoked_at?->getTimestamp());
+        $request->session()->put('identity.session_revoked_at', $this->timestamp(Auth::user()?->session_revoked_at));
 
         return redirect()->intended(Auth::user()?->hasPermission('users.manage') ? '/admin' : '/admin/assets');
     }
@@ -41,5 +47,17 @@ class SessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/login');
+    }
+
+    private function timestamp(mixed $value): ?int
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+        if ($value !== null) {
+            return CarbonImmutable::parse($value)->getTimestamp();
+        }
+
+        return null;
     }
 }

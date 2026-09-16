@@ -69,8 +69,21 @@ without external providers. Administrators can invite users from
 single-use invitation URL only once to the administrator who created it. Share
 that URL through a trusted out-of-band channel. Role changes and deactivations
 immediately invalidate existing sessions on their next request, and concurrent
-updates are guarded so at least one active administrator remains. Passkeys and
-recovery codes are documented separately after enrollment is enabled.
+updates are guarded so at least one active administrator remains.
+
+Users can register passkeys from `/admin/identiteit/beveiliging`. Passkey
+Relying Party ID and allowed origin are derived from the configured `APP_URL`;
+set it to the exact public HTTPS origin before enrolling users. `http://localhost`
+is accepted only for local testing. WebAuthn challenges expire after five
+minutes, are stored encrypted, and are consumed once. Login starts without an
+email address by using discoverable passkeys, so the server does not reveal
+whether an account exists during challenge creation.
+
+Recovery codes are a break-glass login path. Generating codes replaces all
+existing codes, displays the new set only once, stores only framework-hashed
+code values, and marks a code used after a successful login. Operators should
+instruct users to keep recovery codes offline, rotate them after use, and
+deactivate accounts immediately when a device or code set is suspected lost.
 
 `state.json` contains a generated application encryption key, the installation
 code hash, status, and the submitted database/storage configuration. Database

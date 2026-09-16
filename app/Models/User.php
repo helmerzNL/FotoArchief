@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Modules\Identity\Models\UserInvitation;
+use App\Modules\Identity\Models\UserPasskey;
+use App\Modules\Identity\Models\UserRecoveryCode;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -59,6 +61,22 @@ class User extends Authenticatable
     public function sentInvitations(): HasMany
     {
         return $this->hasMany(UserInvitation::class, 'invited_by_user_id');
+    }
+
+    /**
+     * @return HasMany<UserPasskey, $this>
+     */
+    public function passkeys(): HasMany
+    {
+        return $this->hasMany(UserPasskey::class);
+    }
+
+    /**
+     * @return HasMany<UserRecoveryCode, $this>
+     */
+    public function recoveryCodes(): HasMany
+    {
+        return $this->hasMany(UserRecoveryCode::class);
     }
 
     public function hasPermission(string $permission): bool
