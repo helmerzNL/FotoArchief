@@ -4,20 +4,48 @@ declare(strict_types=1);
 
 namespace App\Modules\Catalogue\Models;
 
+use App\Models\User;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property string $id
+ * @property string $accession_number
+ * @property string $title
+ * @property string|null $description
+ * @property string|null $created_by_user_id
+ * @property string|null $deleted_by_user_id
+ * @property string|null $deletion_reason
+ * @property CarbonImmutable|null $deleted_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
+ * @property-read User|null $deletedBy
+ */
 class Asset extends CatalogueModel
 {
+    use SoftDeletes;
+
     protected function casts(): array
     {
         return [
             'date_earliest' => 'date:Y-m-d',
             'date_latest' => 'date:Y-m-d',
             'lock_version' => 'integer',
+            'deleted_at' => 'immutable_datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function deletedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by_user_id');
     }
 
     /** @return HasMany<QuarantineUpload, $this> */

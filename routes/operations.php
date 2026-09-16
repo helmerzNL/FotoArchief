@@ -8,6 +8,7 @@ use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
+use App\Modules\ArchiveOperations\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
@@ -46,5 +47,14 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
         Route::post('/start', [StorageMigrationController::class, 'start'])->name('start');
         Route::post('/{migration}/cutover', [StorageMigrationController::class, 'cutover'])->name('cutover');
         Route::post('/{migration}/cleanup', [StorageMigrationController::class, 'cleanup'])->name('cleanup');
+    });
+
+    Route::prefix('trash')->name('trash.')->group(function (): void {
+        Route::get('/', [TrashController::class, 'index'])->name('index');
+        Route::post('/assets/{asset}/trash', [TrashController::class, 'trash'])->name('trash');
+        Route::post('/assets/{asset}/restore', [TrashController::class, 'restore'])->name('restore');
+        Route::delete('/assets/{asset}/purge', [TrashController::class, 'purge'])->name('purge');
+        Route::post('/purge-expired', [TrashController::class, 'purgeExpired'])->name('purgeExpired');
+        Route::post('/cleanup-orphans', [TrashController::class, 'cleanupOrphans'])->name('cleanupOrphans');
     });
 });
