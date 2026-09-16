@@ -123,6 +123,11 @@ These are implementation defaults until a later measured proof tightens them:
   suggestion re-checks the asset lock version and source checksum, writes
   ordinary metadata/tag changes, increments the asset lock version and records
   an audit event. Rejecting a suggestion changes only review status.
+- Step 46 builds a bounded image-embedding index through operation runs.
+  Embeddings are stored per provider/model space/generation with the source
+  asset lock version and primary-file checksum. Text search must embed the
+  query through the same provider/model space; caption-only retrieval is still
+  not accepted as visual semantic search.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after

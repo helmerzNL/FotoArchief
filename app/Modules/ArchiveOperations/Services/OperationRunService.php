@@ -6,6 +6,7 @@ namespace App\Modules\ArchiveOperations\Services;
 
 use App\Models\User;
 use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
+use App\Modules\Ai\Jobs\ProcessAiIndexJob;
 use App\Modules\ArchiveOperations\Jobs\CleanupOrphanUploadsJob;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Jobs\PurgeAssetsJob;
@@ -93,6 +94,7 @@ class OperationRunService
             PurgeAssetsJob::TYPE => PurgeAssetsJob::class,
             CleanupOrphanUploadsJob::TYPE => CleanupOrphanUploadsJob::class,
             ProcessAiAnalysisJob::TYPE => ProcessAiAnalysisJob::class,
+            ProcessAiIndexJob::TYPE => ProcessAiIndexJob::class,
         ];
     }
 }

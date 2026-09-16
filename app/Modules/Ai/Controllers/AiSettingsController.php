@@ -76,4 +76,22 @@ class AiSettingsController extends Controller
             ->route('admin.operations.runs.index')
             ->with('status', "AI-analyse {$run->id} is in de achtergrondwachtrij geplaatst.");
     }
+
+    public function dispatchIndex(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('assets.update'), 403);
+
+        $validated = $request->validate([
+            'asset_ids' => ['required', 'string'],
+            'provider' => ['required', 'string', 'in:local,external'],
+        ]);
+        $assetIds = array_values(array_filter(preg_split('/[\s,]+/', (string) $validated['asset_ids']) ?: [], 'strlen'));
+
+        $run = $this->dispatch->dispatchEmbeddingIndex($assetIds, (string) $validated['provider'], $user);
+
+        return redirect()
+            ->route('admin.operations.runs.index')
+            ->with('status', "AI-index {$run->id} is in de achtergrondwachtrij geplaatst.");
+    }
 }

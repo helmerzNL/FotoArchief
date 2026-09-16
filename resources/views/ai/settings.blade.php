@@ -84,4 +84,20 @@
         <p>Secrets worden hier niet opgeslagen. Zet provider API-sleutels alleen in de private runtimeomgeving.</p>
         <button type="submit">AI-instellingen opslaan</button>
     </form>
+
+    <form method="POST" action="{{ route('admin.operations.ai.index') }}" class="card">
+        @csrf
+        <h2>Embeddingindex bouwen</h2>
+        <p>Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.</p>
+        <label>Asset-id's
+            <textarea name="asset_ids" rows="3" placeholder="ULID's gescheiden door komma's of regels"></textarea>
+        </label>
+        <label>Provider
+            <select name="provider">
+                <option value="local">Lokale/eigen provider</option>
+                <option value="external">Externe provider</option>
+            </select>
+        </label>
+        <button type="submit">Embeddingindex starten</button>
+    </form>
 @endsection
