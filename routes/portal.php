@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Publication\IiifManifestController;
 use App\Http\Controllers\Publication\PublicDiscoveryController;
 use App\Http\Controllers\Publication\PublicPhotoController;
 use App\Http\Controllers\Publication\PublicSuggestionController;
@@ -48,3 +49,7 @@ Route::post('/foto/{publication}/suggesties', [PublicSuggestionController::class
 // SitemapController) so crawling stays cheap even at 50k+ assets.
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('public.sitemap.index');
 Route::get('/sitemap-fotos-{page}.xml', [SitemapController::class, 'photos'])->whereNumber('page')->name('public.sitemap.photos');
+
+// IIIF Presentation 3 manifest over the existing bounded derivatives (step
+// 29); see IiifManifestController for why this is not a full Image API.
+Route::get('/iiif/{publication}/manifest.json', [IiifManifestController::class, 'manifest'])->name('iiif.manifest');

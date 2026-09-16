@@ -2,6 +2,7 @@
 @section('title', ($asset->title ?: $asset->accession_number).' - FotoArchief')
 @section('content')
     <link rel="canonical" href="{{ $canonicalUrl }}">
+    <link rel="alternate" type="application/ld+json" href="{{ route('iiif.manifest', $publication) }}" title="IIIF-manifest">
     <script type="application/ld+json">{!! json_encode($structuredData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) !!}</script>
     <p class="eyebrow">Foto</p>
     <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
@@ -35,6 +36,7 @@
         <ul class="share-links">
             <li><a rel="noopener" target="_blank" href="https://wa.me/?text={{ urlencode(($asset->title ?: $asset->accession_number).' '.$canonicalUrl) }}">Delen via WhatsApp</a></li>
             <li><a href="mailto:?subject={{ urlencode($asset->title ?: $asset->accession_number) }}&amp;body={{ urlencode($canonicalUrl) }}">Delen via e-mail</a></li>
+            @if($file)<li><a href="{{ route('iiif.manifest', $publication) }}">IIIF-manifest</a></li>@endif
         </ul>
     </section>
 
