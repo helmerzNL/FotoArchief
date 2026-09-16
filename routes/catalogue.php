@@ -10,6 +10,7 @@ use App\Modules\Catalogue\Controllers\LocationController;
 use App\Modules\Catalogue\Controllers\PersonController;
 use App\Modules\Catalogue\Controllers\SourceController;
 use App\Modules\Catalogue\Controllers\TagController;
+use App\Modules\Catalogue\Controllers\WorklistController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name('catalogue.')->group(function (): void {
@@ -19,6 +20,19 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name(
     Route::prefix('bulk')->name('bulk.')->group(function (): void {
         Route::get('/confirm', [BulkAssetController::class, 'create'])->name('confirm');
         Route::post('/apply', [BulkAssetController::class, 'store'])->name('apply');
+    });
+
+    // Worklists & Curation Queues
+    Route::prefix('worklists')->name('worklists.')->group(function (): void {
+        Route::get('/', [WorklistController::class, 'index'])->name('index');
+        Route::get('/create', [WorklistController::class, 'create'])->name('create');
+        Route::post('/', [WorklistController::class, 'store'])->name('store');
+        Route::get('/{worklist}', [WorklistController::class, 'show'])->name('show');
+        Route::get('/{worklist}/edit', [WorklistController::class, 'edit'])->name('edit');
+        Route::put('/{worklist}', [WorklistController::class, 'update'])->name('update');
+        Route::delete('/{worklist}', [WorklistController::class, 'destroy'])->name('destroy');
+        Route::post('/{worklist}/items/{item}', [WorklistController::class, 'updateItem'])->name('items.update');
+        Route::post('/{worklist}/assets', [WorklistController::class, 'addAssets'])->name('assets.add');
     });
 
     // Tags & Synonyms

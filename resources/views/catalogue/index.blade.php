@@ -4,7 +4,7 @@
 <div class="card">
     <div class="eyebrow">Beheer</div>
     <h1>Catalogus</h1>
-    <p class="intro">Beheer collecties, albums, personen, locaties, herkomstbronnen en tags voor het archief.</p>
+    <p class="intro">Beheer collecties, albums, personen, locaties, herkomstbronnen, tags en curatiewerklijsten voor het archief.</p>
 </div>
 
 <div class="grid">
@@ -50,10 +50,10 @@
         </div>
     </div>
     <div class="card">
-        <h2>Werklijsten</h2>
+        <h2>Werklijsten &amp; Curatie</h2>
         <p>Beheer curatiewerklijsten voor ontbrekende datums, rechten, herkomst en identificatie.</p>
         <div class="actions">
-            <a href="/admin/catalogue/worklists" class="button secondary">Werklijsten bekijken</a>
+            <a href="{{ route('catalogue.worklists.index') }}" class="button secondary">Werklijsten bekijken</a>
         </div>
     </div>
 </div>
