@@ -79,6 +79,7 @@ it('provides json diagnostics payload when requested', function (): void {
         'limits' => ['status', 'php_upload_max_filesize'],
         'scanner' => ['status', 'scanner'],
         'worker' => ['status', 'queue_driver'],
+        'activity' => ['status', 'roles'],
     ]);
 });
 
@@ -90,5 +91,18 @@ it('runs diagnostics service and reports valid structure', function (): void {
     expect($diagnostics['php']['version'])->toBeString();
     expect($diagnostics['extensions']['extensions'])->toBeArray();
     expect($diagnostics['storage']['disks'])->toBeArray();
-    expect($diagnostics['database']['connected'])->toBeTrue();
+    expect($diagnostics['database']['connected'])->toBeTrue()
+        ->and($diagnostics['activity']['roles'])->toHaveKeys(['worker', 'scheduler']);
+});
+
+it('records scheduler and worker heartbeats for diagnostics', function (): void {
+    expect($this->artisan('operations:heartbeat', ['role' => 'scheduler'])->run())->toBe(0)
+        ->and($this->artisan('operations:heartbeat', ['role' => 'worker', '--state' => 'starting'])->run())->toBe(0);
+
+    $diagnostics = app(SystemDiagnosticsService::class)->getAllDiagnostics();
+
+    expect($diagnostics['activity']['status'])->toBe('ok')
+        ->and($diagnostics['activity']['roles']['scheduler']['seen'])->toBeTrue()
+        ->and($diagnostics['activity']['roles']['scheduler']['stale'])->toBeFalse()
+        ->and($diagnostics['activity']['roles']['worker']['state'])->toBe('starting');
 });

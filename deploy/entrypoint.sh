@@ -73,6 +73,9 @@ if [ "${1:-}" = "php" ] && [ "${2:-}" = "artisan" ]; then
     case "${3:-}" in
         queue:work|queue:listen|schedule:work|schedule:run)
             wait_for_installation "$@"
+            if [ "${3:-}" = "queue:work" ] || [ "${3:-}" = "queue:listen" ]; then
+                run_as_app_user php artisan operations:heartbeat worker --state=starting || true
+            fi
             exec_as_app_user "$@"
             ;;
         *)

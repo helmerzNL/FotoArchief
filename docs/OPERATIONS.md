@@ -26,6 +26,13 @@ prove job completion. Upload a test image and inspect its preview/status.
 See [PHOTO_WORKFLOW.md](PHOTO_WORKFLOW.md) for statuses, host requirements,
 limits, scanning and exact 0.3.0 operator/upgrade instructions.
 
+System diagnostics measure background activity with persisted heartbeats. The
+scheduler writes one every minute from the Laravel schedule. The worker writes a
+startup heartbeat from the container entrypoint and updates the heartbeat again
+when ingest jobs start, finish or fail. A missing heartbeat means activity has
+not been observed by the application; it is not treated as proof that the
+process is healthy.
+
 ## Routine commands
 
 ```powershell
@@ -36,6 +43,7 @@ docker compose logs --tail=100 scheduler
 docker compose exec app php artisan about --only=environment
 docker compose exec app php artisan queue:failed
 docker compose exec scheduler php artisan schedule:list
+docker compose exec scheduler php artisan operations:heartbeat scheduler
 ```
 
 ## Upload limits

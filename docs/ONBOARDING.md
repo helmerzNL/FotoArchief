@@ -16,12 +16,12 @@ After installation, continue with [photo management](PHOTO_WORKFLOW.md),
 
 ## Hosting prerequisites
 
-- PHP 8.5 and production dependencies, including `pdo_pgsql`, OpenSSL,
-  fileinfo, GD with JPEG/PNG/WebP, EXIF, zip (package exports) and the other
-  extensions required by Composer. The wizard checks GD, EXIF, fileinfo and zip
-  before it writes anything and names the missing one in Dutch: an unpacked
-  release never runs Composer, so nothing else would catch a missing extension
-  until a photo failed to process or an export failed to build.
+- PHP 8.5 and production dependencies, including `pdo`, `pdo_pgsql`, OpenSSL,
+  fileinfo, GD with JPEG/PNG/WebP, EXIF, `intl`, `mbstring`, zip (package
+  exports) and the other extensions required by Composer. The wizard checks
+  these before it writes anything and names each missing extension in Dutch: an
+  unpacked release never runs Composer, so nothing else would catch a missing
+  extension until a photo failed to process or an export failed to build.
 - An **empty PostgreSQL database**, already created by the hosting provider
   or the Compose database service. The wizard creates tables, not the server
   or database itself. Its user needs table, index, constraint and function
@@ -42,12 +42,30 @@ After installation, continue with [photo management](PHOTO_WORKFLOW.md),
   cron invocation with a process lock after installation. See
   [the worker requirements](PHOTO_WORKFLOW.md#worker-php-webhosting-en-docker).
   Large archives still require appropriately provisioned workers and storage.
+- AI-image recognition and semantic search are disabled by default. The first
+  installer does **not** require a local AI service or external AI provider.
+  Enable those later from the AI configuration screens after reviewing the
+  privacy and cost scope.
 
 The release workflow builds a readable PHP ZIP with locked production
 dependencies. Its extracted application is checked without Composer or
 development dependencies; the same wizard is also accepted against the actual
 Apache container. Consult [release acceptance](RELEASE_ACCEPTANCE.md) and use
 the matching versioned test-release download.
+
+## Worker and scheduler measurement
+
+After onboarding, system diagnostics no longer infer background health from
+configuration alone. The scheduler records a heartbeat every minute through
+`php artisan operations:heartbeat scheduler`; the Docker entrypoint records a
+worker startup heartbeat before `queue:work` or `queue:listen`, and real ingest
+queue events update the worker heartbeat while jobs are processed. Missing or
+stale heartbeats are shown as operational warnings in `/admin/operations/diagnostics`.
+
+On PHP-ZIP hosting, keep the cron/systemd timer for `schedule:run` and the
+ingest worker under the same application user. If only cron-based
+`queue:work --stop-when-empty` is available, expect the worker heartbeat to be
+recent only after a worker invocation or processed job.
 
 ## Ownership code
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -53,5 +54,23 @@ Artisan::command('exchange:recover-imports', function (MetadataImportService $im
     return 0;
 })->purpose('Release metadata imports abandoned by a stopped worker');
 
+Artisan::command('operations:heartbeat {role : worker or scheduler} {--state=ok : State label stored with the heartbeat}', function (SystemHeartbeatService $heartbeats): int {
+    $role = (string) $this->argument('role');
+    if (! in_array($role, ['worker', 'scheduler'], true)) {
+        $this->error('Rol moet worker of scheduler zijn.');
+
+        return 1;
+    }
+
+    $heartbeats->record($role, (string) $this->option('state'), [
+        'command' => 'operations:heartbeat',
+        'sapi' => PHP_SAPI,
+    ]);
+    $this->info("Heartbeat opgeslagen voor {$role}.");
+
+    return 0;
+})->purpose('Record an operational heartbeat for diagnostics');
+
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();

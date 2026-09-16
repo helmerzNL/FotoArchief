@@ -134,5 +134,30 @@
                 <p style="color: #d97706; font-size: 0.875rem;"><strong>Actie:</strong> {{ $diagnostics['worker']['remediation'] }}</p>
             @endif
         </section>
+
+        {{-- Scheduler & Worker Activiteit --}}
+        <section class="card">
+            <h2>Scheduler & Worker Activiteit</h2>
+            @foreach($diagnostics['activity']['roles'] as $role => $heartbeat)
+                <div style="margin-bottom: 0.75rem;">
+                    <p>
+                        <strong>{{ $role === 'worker' ? 'Ingest-worker' : 'Scheduler' }}:</strong>
+                        @if($heartbeat['seen'] && !$heartbeat['stale'])
+                            <span style="color: #059669; font-weight: bold;">recent gemeten</span>
+                        @elseif($heartbeat['seen'])
+                            <span style="color: #d97706; font-weight: bold;">verouderd</span>
+                        @else
+                            <span style="color: #d97706; font-weight: bold;">nog niet gemeten</span>
+                        @endif
+                    </p>
+                    <p style="font-size: 0.875rem; color: #6b7280;">
+                        Status: {{ $heartbeat['state'] }}@if($heartbeat['last_seen_at']) &middot; Laatst gezien: {{ $heartbeat['last_seen_at'] }}@endif
+                    </p>
+                </div>
+            @endforeach
+            @if(!empty($diagnostics['activity']['remediation']))
+                <p style="color: #d97706; font-size: 0.875rem;"><strong>Actie:</strong> {{ $diagnostics['activity']['remediation'] }}</p>
+            @endif
+        </section>
     </div>
 @endsection
