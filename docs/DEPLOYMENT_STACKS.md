@@ -42,6 +42,15 @@ registry credentials (`fotoarchief-ci:<source-commit>`). For deployment to other
 servers, distribute/load the saved image or publish it to your own registry;
 do not configure automatic pull of a local-only CI tag.
 
+For HTTPS behind a reverse proxy, set `APP_URL` to the exact public origin
+including scheme and non-standard port. Set `TRUSTED_PROXIES` to only the
+proxy IP address or CIDR that injects `X-Forwarded-*` headers, and set
+`SESSION_SECURE_COOKIE=true`. Passkeys use the configured `APP_URL` as their
+Relying Party origin and reject a browser ceremony from any other origin.
+`http://localhost` is accepted only for local tests; production passkeys require
+HTTPS. Physical or phone passkey acceptance still requires a real authenticator
+on the final origin and must be recorded separately from automated tests.
+
 After deployment, open the web service, retrieve the private setup code through
 the app's terminal, connect to `postgres:5432` and complete onboarding. Upload a
 photo, wait for the worker and verify its private preview. Redeploy the same
@@ -131,6 +140,8 @@ change from the PHP development server to Apache, also see
 [DEPLOYMENT_LOCAL.md](DEPLOYMENT_LOCAL.md).
 
 - Set `APP_IMAGE` (no default) to an available image.
+- Set `APP_URL`, `TRUSTED_PROXIES` and `SESSION_SECURE_COOKIE` as described
+  above before registering passkeys.
 - Set `DB_PASSWORD` (no default) once for the PostgreSQL container. Changing
   this variable does not change a password in an existing database; rotation
   requires changing the database role password as well. The app does not receive

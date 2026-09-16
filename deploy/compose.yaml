@@ -12,6 +12,8 @@ x-app: &app
     APP_ENV: production
     APP_DEBUG: "false"
     APP_URL: ${APP_URL:-http://localhost:8080}
+    TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+    SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-}
     LOG_CHANNEL: stderr
     CACHE_STORE: ${CACHE_STORE:-file}
     SESSION_DRIVER: ${SESSION_DRIVER:-file}

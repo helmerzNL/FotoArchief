@@ -36,7 +36,11 @@ After installation, continue with [photo management](PHOTO_WORKFLOW.md),
 - Writable `storage/` and `bootstrap/cache/`; private installation directory
   permissions 0700 and configuration files 0600 on POSIX.
 - HTTPS outside a local test environment. Ensure the web server/framework
-  correctly recognises HTTPS when a trusted reverse proxy terminates TLS.
+  correctly recognises HTTPS when a trusted reverse proxy terminates TLS. Set
+  `APP_URL` to the exact browser origin before enrolling passkeys. Behind a TLS
+  proxy, set `TRUSTED_PROXIES` to the proxy IP/CIDR and
+  `SESSION_SECURE_COOKIE=true`; do not trust arbitrary client-supplied
+  `X-Forwarded-*` headers.
 - Cron for `php artisan schedule:run`, and a queue worker or a bounded
   `php artisan queue:work ingest --stop-when-empty --max-time=50 --tries=3 --timeout=120`
   cron invocation with a process lock after installation. See
@@ -102,6 +106,8 @@ is accepted only for local testing. WebAuthn challenges expire after five
 minutes, are stored encrypted, and are consumed once. Login starts without an
 email address by using discoverable passkeys, so the server does not reveal
 whether an account exists during challenge creation.
+If `APP_URL` or the public TLS proxy origin changes, old browser passkey
+ceremonies fail by design; configure the final HTTPS origin first.
 
 Recovery codes are a break-glass login path. Generating codes replaces all
 existing codes, displays the new set only once, stores only framework-hashed
