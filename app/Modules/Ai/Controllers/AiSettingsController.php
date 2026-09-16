@@ -7,6 +7,7 @@ namespace App\Modules\Ai\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\AiDispatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,6 +16,7 @@ class AiSettingsController extends Controller
 {
     public function __construct(
         private readonly AiConfigurationService $configuration,
+        private readonly AiDispatchService $dispatch,
     ) {}
 
     public function edit(Request $request): View
@@ -55,5 +57,23 @@ class AiSettingsController extends Controller
         return redirect()
             ->route('admin.operations.ai.edit')
             ->with('status', 'AI-instellingen opgeslagen. Wijzigingen activeren nooit automatisch externe fallback.');
+    }
+
+    public function dispatchAnalysis(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
+
+        $validated = $request->validate([
+            'asset_ids' => ['required', 'array', 'min:1', 'max:25'],
+            'asset_ids.*' => ['required', 'string'],
+            'provider' => ['required', 'string', 'in:local,external'],
+        ]);
+
+        $run = $this->dispatch->dispatchImageAnalysis($validated['asset_ids'], $validated['provider'], $user);
+
+        return redirect()
+            ->route('admin.operations.runs.index')
+            ->with('status', "AI-analyse {$run->id} is in de achtergrondwachtrij geplaatst.");
     }
 }

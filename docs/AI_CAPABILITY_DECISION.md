@@ -115,6 +115,10 @@ These are implementation defaults until a later measured proof tightens them:
   the admin settings have external provider, external data-processing consent,
   public HTTPS endpoint, region/retention text and non-zero budget configured.
   API keys come only from private runtime configuration.
+- Step 44 queues AI image analysis through the existing bounded operation-run
+  mechanism. HTTP requests record selected asset ids and provider choice only;
+  workers read the current clean primary file, call the chosen provider and
+  store suggestions as pending review without metadata writes.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after

@@ -20,6 +20,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
     Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
+    Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');
