@@ -25,3 +25,5 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/assets')->name('ad
     Route::get('/{asset}/files/{file}/media/{size}', [AdminAssetController::class, 'media'])->whereIn('size', ['preview300', 'preview1200', 'preview2000'])->name('media');
     Route::post('/{asset}/uploads/{upload}/retry', [AdminAssetController::class, 'retry'])->name('retry');
 });
+
+require __DIR__.'/catalogue.php';

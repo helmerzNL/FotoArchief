@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-    <header><a href="/">FotoArchief</a><span>Jouw geschiedenis, zorgvuldig bewaard</span>@auth<a href="{{ route('admin.assets.index') }}">Foto’s</a><a href="{{ route('identity.security.show') }}">Beveiliging</a>@can('users.manage')<a href="{{ route('identity.users.index') }}">Identiteit</a>@endcan<form method="post" action="/logout">@csrf<button class="secondary">Uitloggen</button></form>@endauth</header>
+    <header><a href="/">FotoArchief</a><span>Jouw geschiedenis, zorgvuldig bewaard</span>@auth<a href="{{ route('admin.assets.index') }}">Foto’s</a><a href="{{ route('catalogue.index') }}">Catalogus</a><a href="{{ route('identity.security.show') }}">Beveiliging</a>@can('users.manage')<a href="{{ route('identity.users.index') }}">Identiteit</a>@endcan<form method="post" action="/logout">@csrf<button class="secondary">Uitloggen</button></form>@endauth</header>
     <main id="main">
         @if(session('status'))
             <div class="notice" role="status">{{ session('status') }}</div>

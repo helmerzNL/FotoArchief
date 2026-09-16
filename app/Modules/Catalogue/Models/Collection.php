@@ -10,6 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Collection extends CatalogueModel
 {
+    protected function casts(): array
+    {
+        return [
+            'position' => 'integer',
+        ];
+    }
+
     /**
      * @return BelongsTo<self, $this>
      */
@@ -23,7 +30,7 @@ class Collection extends CatalogueModel
      */
     public function children(): HasMany
     {
-        return $this->hasMany(self::class, 'parent_id');
+        return $this->hasMany(self::class, 'parent_id')->orderBy('position')->orderBy('title');
     }
 
     /**
@@ -31,6 +38,33 @@ class Collection extends CatalogueModel
      */
     public function assets(): BelongsToMany
     {
-        return $this->belongsToMany(Asset::class, 'collection_assets')->using(CollectionAsset::class)->withPivot(['id', 'position', 'note'])->withTimestamps();
+        return $this->belongsToMany(Asset::class, 'collection_assets')
+            ->using(CollectionAsset::class)
+            ->withPivot(['id', 'position', 'note'])
+            ->withTimestamps()
+            ->orderByPivot('position')
+            ->orderBy('assets.id');
+    }
+
+    /**
+     * Get all recursive descendant IDs to prevent cyclical hierarchies.
+     *
+     * @return array<int, string>
+     */
+    public function allDescendantIds(): array
+    {
+        $descendants = [];
+        $queue = $this->children()->pluck('id')->all();
+
+        while (! empty($queue)) {
+            $currentId = array_shift($queue);
+            $descendants[] = $currentId;
+            $childIds = self::query()->where('parent_id', $currentId)->pluck('id')->all();
+            foreach ($childIds as $cid) {
+                $queue[] = $cid;
+            }
+        }
+
+        return $descendants;
     }
 }
