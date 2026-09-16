@@ -12,6 +12,7 @@ use App\Modules\ArchiveOperations\Services\TesseractOcrService;
 use App\Modules\Catalogue\Models\Asset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\View\View;
 
 class OcrController extends Controller
@@ -69,7 +70,9 @@ class OcrController extends Controller
             return redirect()->back()->with('error', 'Geen archiefbestand gevonden voor deze asset.');
         }
 
-        ProcessAssetOcrJob::dispatch($primaryFile->id);
+        // Same connection and atomicity contract as the ingest pipeline: heavy work is
+        // pushed onto the dedicated ingest database connection, not the default queue.
+        Queue::connection('ingest')->push(new ProcessAssetOcrJob($primaryFile->id));
 
         return redirect()->back()->with('status', "OCR-taak geplaatst in de achtergrondwachtrij voor asset {$asset->accession_number}.");
     }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\ArchiveOperations\Services;
 
 use App\Models\User;
+use App\Modules\ArchiveOperations\Jobs\ProcessAssetOcrJob;
 use App\Modules\ArchiveOperations\Models\AssetOcrText;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Models\AssetAuditEvent;
@@ -92,6 +93,18 @@ class TesseractOcrService
         }
     }
 
+    /**
+     * Tesseract must always finish, be killed and be recorded inside the job timeout,
+     * so the configured process timeout is clamped below ProcessAssetOcrJob::$timeout.
+     */
+    public function resolveProcessTimeout(): int
+    {
+        $configured = (int) config('services.tesseract.timeout', 60);
+        $ceiling = ProcessAssetOcrJob::MAX_JOB_TIMEOUT_SECONDS - ProcessAssetOcrJob::PROCESS_TIMEOUT_HEADROOM_SECONDS;
+
+        return max(1, min($configured, $ceiling));
+    }
+
     public function processAssetFile(AssetFile $file): AssetOcrText
     {
         $diagnostics = $this->getDiagnostics();
@@ -155,7 +168,7 @@ class TesseractOcrService
             file_put_contents($tempPath, $storage->get($file->storage_key));
 
             $binary = $diagnostics['binary'];
-            $timeout = (int) config('services.tesseract.timeout', 60);
+            $timeout = $this->resolveProcessTimeout();
 
             $process = new Process([$binary, $tempPath, 'stdout', '-l', $language]);
             $process->setTimeout($timeout);

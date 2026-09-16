@@ -16,9 +16,26 @@ class ProcessAssetOcrJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    /**
+     * Job timeout must stay at or below the ingest worker timeout (120s) because a
+     * per-job timeout overrides the worker --timeout value, and it must stay below
+     * the ingest connection retry_after (180s) to avoid duplicate reservation.
+     */
+    public const int MAX_JOB_TIMEOUT_SECONDS = 120;
+
+    /**
+     * Headroom reserved for reading the original from storage, writing the temporary
+     * file and persisting the OCR record after the Tesseract process returns.
+     */
+    public const int PROCESS_TIMEOUT_HEADROOM_SECONDS = 20;
+
     public int $tries = 2;
 
-    public int $timeout = 180;
+    public int $timeout = self::MAX_JOB_TIMEOUT_SECONDS;
+
+    public bool $failOnTimeout = true;
+
+    public int $backoff = 10;
 
     public function __construct(
         public readonly string $assetFileId,
