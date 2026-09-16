@@ -22,7 +22,7 @@
         <p>Herkenbare identiteiten, biografische gegevens, historische aliassen en rollen bij foto’s.</p>
         <p><strong>{{ $stats['people_count'] }}</strong> personen en organisaties.</p>
         <div class="actions">
-            <a href="/admin/catalogue/people" class="button secondary">Personen beheren</a>
+            <a href="{{ route('catalogue.people.index') }}" class="button secondary">Personen beheren</a>
         </div>
     </div>
     <div class="card">
@@ -30,7 +30,7 @@
         <p>Hiërarchische geografische structuren, historische plaats- en straatnamen.</p>
         <p><strong>{{ $stats['locations_count'] }}</strong> locaties geregistreerd.</p>
         <div class="actions">
-            <a href="/admin/catalogue/locations" class="button secondary">Locaties beheren</a>
+            <a href="{{ route('catalogue.locations.index') }}" class="button secondary">Locaties beheren</a>
         </div>
     </div>
     <div class="card">
@@ -38,7 +38,7 @@
         <p>Schenkers, archieven, instellingen en provenance-informatie.</p>
         <p><strong>{{ $stats['sources_count'] + $stats['contributors_count'] }}</strong> herkomstregistraties.</p>
         <div class="actions">
-            <a href="/admin/catalogue/sources" class="button secondary">Bronnen beheren</a>
+            <a href="{{ route('catalogue.sources.index') }}" class="button secondary">Bronnen beheren</a>
         </div>
     </div>
     <div class="card">
@@ -46,7 +46,7 @@
         <p>Gecontroleerde trefwoordenlijst, synoniemen en samenvoegingen.</p>
         <p><strong>{{ $stats['tags_count'] }}</strong> trefwoorden actief.</p>
         <div class="actions">
-            <a href="/admin/catalogue/tags" class="button secondary">Tags beheren</a>
+            <a href="{{ route('catalogue.tags.index') }}" class="button secondary">Tags beheren</a>
         </div>
     </div>
     <div class="card">

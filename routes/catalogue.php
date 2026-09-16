@@ -9,6 +9,7 @@ use App\Modules\Catalogue\Controllers\ContributorController;
 use App\Modules\Catalogue\Controllers\LocationController;
 use App\Modules\Catalogue\Controllers\PersonController;
 use App\Modules\Catalogue\Controllers\SourceController;
+use App\Modules\Catalogue\Controllers\TagController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name('catalogue.')->group(function (): void {
@@ -18,6 +19,18 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name(
     Route::prefix('bulk')->name('bulk.')->group(function (): void {
         Route::get('/confirm', [BulkAssetController::class, 'create'])->name('confirm');
         Route::post('/apply', [BulkAssetController::class, 'store'])->name('apply');
+    });
+
+    // Tags & Synonyms
+    Route::prefix('tags')->name('tags.')->group(function (): void {
+        Route::get('/', [TagController::class, 'index'])->name('index');
+        Route::get('/create', [TagController::class, 'create'])->name('create');
+        Route::post('/', [TagController::class, 'store'])->name('store');
+        Route::get('/{tag}', [TagController::class, 'show'])->name('show');
+        Route::get('/{tag}/edit', [TagController::class, 'edit'])->name('edit');
+        Route::put('/{tag}', [TagController::class, 'update'])->name('update');
+        Route::delete('/{tag}', [TagController::class, 'destroy'])->name('destroy');
+        Route::post('/{tag}/merge', [TagController::class, 'merge'])->name('merge');
     });
 
     // Collections & Albums
