@@ -9,5 +9,5 @@ return [
     'scanner' => env('INGEST_SCANNER', 'none'),
     'clamav_host' => env('CLAMAV_HOST', '127.0.0.1'),
     'clamav_port' => (int) env('CLAMAV_PORT', 3310),
-    'clamav_timeout' => 30,
+    'clamav_timeout' => (int) env('CLAMAV_TIMEOUT', 30),
 ];

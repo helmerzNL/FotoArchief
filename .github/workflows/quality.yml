@@ -175,6 +175,9 @@ jobs:
       APP_URL: http://localhost:8080
       DB_PASSWORD: ci-disposable-database
       OCR_ENABLED: "true"
+      COMPOSE_PROFILES: clamav
+      INGEST_SCANNER: clamav
+      CLAMAV_HOST: clamav
     steps:
       - uses: actions/checkout@v4
       - name: Set up smoke-test PHP
@@ -187,6 +190,8 @@ jobs:
         run: docker compose -f deploy/compose.yaml config --quiet
       - name: Build production image
         run: docker build --tag "$APP_IMAGE" .
+      - name: Start optional ClamAV scanner
+        run: docker compose -f deploy/compose.yaml up -d --wait clamav
       - name: Start HTTP service without configured database or object storage
         run: docker compose -f deploy/compose.yaml up -d --wait app
       - name: Validate Apache and PHP
@@ -248,6 +253,32 @@ jobs:
           docker compose -f deploy/compose.yaml up -d --wait app
           test "$(curl --silent -o /dev/null -w '%{http_code}' http://localhost:8080/setup)" = 404
           curl --fail http://localhost:8080/api/status
+      - name: Accept real ClamAV clean and EICAR paths
+        run: |
+          docker compose -f deploy/compose.yaml exec -T app php -r '
+          require "vendor/autoload.php";
+          $app = require "bootstrap/app.php";
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $clean = tempnam(sys_get_temp_dir(), "clamav-clean-");
+          $eicar = tempnam(sys_get_temp_dir(), "clamav-eicar-");
+          file_put_contents($clean, "FotoArchief clean ClamAV smoke\n");
+          file_put_contents($eicar, "X5O!P%@AP[4\\PZX54(P^)7CC)7}\$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!\$H+H*");
+          try {
+              $scanner = $app->make(App\Modules\Ingest\Services\MalwareScanner::class);
+              if ($scanner->scan($clean) !== "clean") {
+                  throw new RuntimeException("Clean ClamAV scan was not accepted.");
+              }
+              try {
+                  $scanner->scan($eicar);
+                  throw new RuntimeException("EICAR was not blocked.");
+              } catch (Illuminate\Validation\ValidationException) {
+                  echo "ClamAV accepted clean bytes and blocked EICAR.\n";
+              }
+          } finally {
+              @unlink($clean);
+              @unlink($eicar);
+          }
+          '
       - name: Accept real CSV import and authorized JSON CSV ZIP exports
         run: php tests/Smoke/http-exchange.php
       - name: Accept real queued OCR through the production worker

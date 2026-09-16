@@ -27,6 +27,7 @@ x-app: &app
     INGEST_SCANNER: ${INGEST_SCANNER:-none}
     CLAMAV_HOST: ${CLAMAV_HOST:-127.0.0.1}
     CLAMAV_PORT: ${CLAMAV_PORT:-3310}
+    CLAMAV_TIMEOUT: ${CLAMAV_TIMEOUT:-30}
     APP_WORKER_JOB_TIMEOUT_SECONDS: ${APP_WORKER_JOB_TIMEOUT_SECONDS:-120}
     OCR_ENABLED: ${OCR_ENABLED:-false}
     OCR_BINARY: ${OCR_BINARY:-tesseract}
@@ -96,7 +97,25 @@ services:
       timeout: 5s
       retries: 5
 
+  clamav:
+    image: clamav/clamav:stable
+    restart: unless-stopped
+    profiles:
+      - clamav
+    environment:
+      CLAMD_CONF_MaxFileSize: ${CLAMAV_MAX_FILE_SIZE:-110M}
+      CLAMD_CONF_StreamMaxLength: ${CLAMAV_STREAM_MAX_LENGTH:-110M}
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD-SHELL", "clamdscan --version >/dev/null 2>&1 && clamdscan --no-summary /etc/hosts >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+
 volumes:
   app-storage:
   postgres-data:
   valkey-data:
+  clamav-data:
