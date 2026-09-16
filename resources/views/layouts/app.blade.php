@@ -21,8 +21,10 @@
             <a href="{{ route('identity.security.show') }}">Beveiliging</a>
             @can('users.manage')
                 <a href="{{ route('identity.users.index') }}">Identiteit</a>
-                <a href="{{ route('admin.operations.diagnostics') }}">Operaties</a>
             @endcan
+            @canany(['users.manage', 'audit.view', 'catalogue.manage', 'assets.update', 'assets.view'])
+                <a href="{{ route('admin.operations.index') }}">Operaties</a>
+            @endcanany
             <form method="post" action="/logout">@csrf<button class="secondary">Uitloggen</button></form>
         @endauth
         @guest <a href="{{ route('login') }}">Inloggen</a> @endguest

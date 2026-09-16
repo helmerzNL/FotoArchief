@@ -63,7 +63,17 @@ class StorageMigrationService
     }
 
     /**
-     * Copies and verifies at most $limit files after $afterFileId.
+     * A chunk is bounded by item count and by bytes. Counting items alone is not
+     * enough: twenty-five 100 MB originals on a slow target disk do not finish
+     * inside the 120s job timeout, and a job killed halfway leaves the operator
+     * with no progress at all. Once this many bytes have been copied the chunk
+     * stops and the next job continues from the cursor.
+     */
+    public const int CHUNK_BYTE_BUDGET = 268435456;
+
+    /**
+     * Copies and verifies at most $limit files after $afterFileId, stopping early
+     * once the chunk byte budget is reached.
      *
      * @return array{processed: int, failed: int, finished: bool, last_id: string|null}
      */
@@ -78,22 +88,53 @@ class StorageMigrationService
         $processed = 0;
         $failed = 0;
         $lastId = $afterFileId;
+        $bytes = 0;
+        $budgetReached = false;
 
         foreach ($files as $file) {
             $lastId = $file->id;
+
+            // Retrying a chunk must not copy or count a file twice: the previous
+            // attempt may have been killed after verifying some of them.
+            if ($this->alreadyRelocated($migration, $file)) {
+                $processed++;
+
+                continue;
+            }
+
             if ($this->relocateFile($migration, $file)) {
                 $processed++;
             } else {
                 $failed++;
+            }
+
+            $bytes += (int) $file->byte_size;
+            if ($bytes >= self::CHUNK_BYTE_BUDGET) {
+                $budgetReached = true;
+
+                break;
             }
         }
 
         return [
             'processed' => $processed,
             'failed' => $failed,
-            'finished' => $files->count() < $limit,
+            'finished' => ! $budgetReached && $files->count() < $limit,
             'last_id' => $lastId,
         ];
+    }
+
+    /**
+     * True when this file was already copied and checksum-verified for this
+     * migration, so the work is done and must not be repeated or recounted.
+     */
+    private function alreadyRelocated(StorageMigration $migration, AssetFile $file): bool
+    {
+        return StorageRelocation::query()
+            ->where('storage_migration_id', $migration->id)
+            ->where('asset_file_id', $file->id)
+            ->where('is_verified', true)
+            ->exists();
     }
 
     /**

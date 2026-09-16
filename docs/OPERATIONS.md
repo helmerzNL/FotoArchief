@@ -101,6 +101,54 @@ archivists should reach the module directly.
 
 The interface is checked at a 390 px viewport. Wide tables scroll inside their own
 container so the page itself never scrolls sideways.
+## Reliability of background operations
+
+The timing values below are a set, not independent knobs. Changing one without
+the others reintroduces a failure that is silent in production:
+
+- Worker timeout **120s** (`--timeout`), and each job declares the same value.
+  A per-job timeout overrides the worker's, so it must never be higher.
+- Stale-claim window **150s**. A run whose claim is older than this may be taken
+  over, because no worker can still be running the chunk.
+- Ingest `retry_after` **180s**. The queue redelivers a reserved message after
+  this long.
+
+The window must sit strictly between the other two. If it equalled `retry_after`,
+a redelivery could arrive while the row was not yet stale, fail to claim, and be
+dropped -- leaving the run "running" with nothing left to retry it.
+
+A delivery that cannot take the claim is **released back to the queue**, not
+deleted, while the run is unfinished. Deleting it is what strands an operation:
+if the holder was killed between claiming and finishing, its own redelivery is
+the only thing that can resume the run.
+
+### Size limits
+
+One job handles 25 items and then re-dispatches the remainder, so any run is made
+of jobs that each finish well inside the timeout. The chain is bounded at 2500
+jobs, which covers **62 500 items** -- a 50 000-file maintenance run completes in
+one go.
+
+A copy chunk is bounded by bytes as well as by items (256 MB), because twenty-five
+100 MB originals do not copy inside 120s on a slow target disk. Copies are
+idempotent: a file already copied and checksum-verified for that migration is
+skipped rather than copied and counted twice.
+
+Reaching a bound is **never reported as success**. The run is marked failed, with
+`result.resume_cursor` recording the last processed file, and starting it again
+continues from there. A run that stops making progress is stopped the same way
+rather than chaining forever.
+
+## Checking that OCR really works
+
+`php artisan operations:ocr-smoke` runs the configured Tesseract binary against a
+generated image and fails with a non-zero exit code if the binary is missing, the
+language data is absent, or no text comes back. Configuration alone proves
+nothing: a container can carry the right environment variables and have no binary
+at all. Run it in the image build or in CI, where a missing binary stops the
+pipeline instead of reaching an operator.
+
+Use `--language=nld` to verify the Dutch language data specifically.
 ## Which file a dossier currently serves
 
 A dossier keeps every original it has ever received: an improved scan is added,

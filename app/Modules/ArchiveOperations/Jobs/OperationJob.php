@@ -38,11 +38,28 @@ abstract class OperationJob implements ShouldQueue
      */
     public const int MAX_JOB_TIMEOUT_SECONDS = 120;
 
+    /**
+     * A claim is reclaimable once it is this old. It must sit strictly between the
+     * job timeout (120s, after which no worker can still be running the chunk) and
+     * the ingest retry_after (180s, when the queue redelivers the message). If it
+     * were equal to retry_after, a redelivery could arrive while the row was not yet
+     * stale, fail to claim, and be deleted -- leaving the run "running" forever with
+     * nothing left to retry it.
+     */
+    public const int STALE_CLAIM_SECONDS = 150;
+
+    /** How long a duplicate delivery waits before trying the claim again. */
+    public const int RECLAIM_DELAY_SECONDS = 30;
+
     /** Items handled by a single job before it re-dispatches the remainder. */
     public const int CHUNK_SIZE = 25;
 
-    /** Guards against an endless continuation chain if progress ever stalls. */
-    public const int MAX_CHUNKS = 400;
+    /**
+     * Upper bound on the continuation chain. At CHUNK_SIZE 25 this covers 62 500
+     * items, so a 50 000-file maintenance run completes in one go. Reaching the cap
+     * is treated as a failure with a resume cursor, never as success.
+     */
+    public const int MAX_CHUNKS = 2500;
 
     public int $tries = 3;
 
@@ -80,7 +97,7 @@ abstract class OperationJob implements ShouldQueue
                 $query->where('status', OperationRun::STATUS_QUEUED)
                     ->orWhere(function ($query): void {
                         $query->where('status', OperationRun::STATUS_RUNNING)
-                            ->where('started_at', '<', now()->subSeconds(self::MAX_JOB_TIMEOUT_SECONDS + 60));
+                            ->where('started_at', '<', now()->subSeconds(self::STALE_CLAIM_SECONDS));
                     });
             })
             ->update([
@@ -91,6 +108,8 @@ abstract class OperationJob implements ShouldQueue
             ]);
 
         if ($claimed !== 1) {
+            $this->handleUnclaimed();
+
             return;
         }
 
@@ -107,9 +126,7 @@ abstract class OperationJob implements ShouldQueue
                 'failed_items' => $run->failed_items + $outcome['failed'],
             ])->save();
 
-            $exhausted = $this->chunkNumber >= self::MAX_CHUNKS;
-
-            if ($outcome['finished'] || $exhausted) {
+            if ($outcome['finished']) {
                 $run->forceFill([
                     'status' => OperationRun::STATUS_COMPLETED,
                     'claim_token' => null,
@@ -117,8 +134,33 @@ abstract class OperationJob implements ShouldQueue
                     'result' => array_merge($outcome['result'] ?? [], [
                         'processed' => $run->processed_items,
                         'failed' => $run->failed_items,
-                        'truncated' => $exhausted && ! $outcome['finished'],
+                        'truncated' => false,
                     ]),
+                ])->save();
+
+                return;
+            }
+
+            // Work remains but the chain is at its bound, or a chunk made no progress
+            // at all. Either way the operation did not do what was asked, so it must
+            // not be recorded as completed: a run marked "completed" that silently
+            // skipped 40 000 files is worse than a run that failed, because nobody
+            // goes looking. The cursor stays on the run so it can be resumed.
+            $stalled = $outcome['processed'] === 0 && $outcome['failed'] === 0;
+            if ($this->chunkNumber >= self::MAX_CHUNKS || $stalled) {
+                $run->forceFill([
+                    'status' => OperationRun::STATUS_FAILED,
+                    'claim_token' => null,
+                    'finished_at' => now(),
+                    'result' => array_merge($outcome['result'] ?? [], [
+                        'processed' => $run->processed_items,
+                        'failed' => $run->failed_items,
+                        'truncated' => true,
+                        'resume_cursor' => $run->payload['cursor'] ?? null,
+                    ]),
+                    'error_message' => $stalled
+                        ? 'De bewerking maakte geen voortgang meer en is gestopt. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.'
+                        : 'De bewerking bereikte de maximale omvang van '.(self::MAX_CHUNKS * self::CHUNK_SIZE).' items en is niet afgerond. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.',
                 ])->save();
 
                 return;
@@ -157,6 +199,29 @@ abstract class OperationJob implements ShouldQueue
                 ? $this->describe($exception)
                 : 'De bewerking is mislukt. Controleer worker, opslag en rechten en probeer opnieuw.',
         ])->save();
+    }
+
+    /**
+     * Another delivery of this run could not take the claim.
+     *
+     * Deleting the message here is what strands an operation: if the holder was
+     * killed between claiming and finishing, its own redelivery is the only thing
+     * left that can resume the run, and a duplicate that silently disappears takes
+     * that chance away. So the message is released back to the ingest queue while
+     * the run is unfinished, and only dropped once the run has actually ended or
+     * the retries are spent (the live holder then owns the continuation).
+     */
+    private function handleUnclaimed(): void
+    {
+        $run = OperationRun::query()->find($this->runId);
+
+        if (! $run instanceof OperationRun || $run->isFinished()) {
+            return;
+        }
+
+        if ($this->attempts() < $this->tries) {
+            $this->release(self::RECLAIM_DELAY_SECONDS);
+        }
     }
 
     private function describe(Throwable $exception): string

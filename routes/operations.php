@@ -8,12 +8,14 @@ use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\OcrController;
 use App\Modules\ArchiveOperations\Controllers\OperationRunController;
+use App\Modules\ArchiveOperations\Controllers\OperationsLandingController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
+    Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
