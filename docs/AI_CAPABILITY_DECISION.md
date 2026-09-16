@@ -111,7 +111,10 @@ These are implementation defaults until a later measured proof tightens them:
   `/v1/embed-text`. It refuses use unless the local provider is explicitly
   enabled and reports one compatible text/image embedding space.
 - Step 43 must implement external adapters behind the same contracts with no
-  automatic cross-provider fallback.
+  automatic cross-provider fallback. The external adapter refuses use unless
+  the admin settings have external provider, external data-processing consent,
+  public HTTPS endpoint, region/retention text and non-zero budget configured.
+  API keys come only from private runtime configuration.
 - Step 46 must index real multimodal image embeddings; captions alone are not a
   substitute.
 - Steps 47 and 48 must apply SQL authorization and publication predicates after

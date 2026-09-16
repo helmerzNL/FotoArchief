@@ -120,6 +120,12 @@ license and proof-set relevance evidence as required by
 point `AI_LOCAL_ENDPOINT` at an organisation-owned HTTPS service instead of
 running the model beside PHP.
 
+External AI endpoints use the same `/v1/*` adapter contract but require
+separate admin opt-in, public HTTPS, region/retention documentation and a
+non-zero budget. Put `AI_EXTERNAL_API_KEY` only in the manager's private
+environment or secret store. FotoArchief never falls back from the local
+provider to the external provider after a local error.
+
 ## Operator changes
 
 ### Exchange worker recovery

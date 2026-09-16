@@ -20,4 +20,5 @@ return [
         'request_timeout_seconds' => 60,
         'monthly_external_budget_cents' => 0,
     ],
+    'external_api_key' => env('AI_EXTERNAL_API_KEY'),
 ];
