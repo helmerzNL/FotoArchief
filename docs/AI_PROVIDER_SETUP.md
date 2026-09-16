@@ -42,6 +42,21 @@ zonder ingebedde metadata. Beeldanalyse maakt uitsluitend suggesties; metadata
 wijzigt pas na menselijke acceptatie. Publieke semantische zoekopdrachten blijven
 achter de actuele publicatie- en rechtencontroles.
 
+### Foto's selecteren voor AI
+
+Beeldanalyse en embeddingindexering accepteren **fotonummers of interne IDs**.
+Gebruik bijvoorbeeld het volledige zichtbare `FA-...`-nummer of de interne ULID,
+gescheiden door komma's of regels (bestaande whitespace-scheiding blijft werken).
+Het fotonummer is een apart veld, niet de interne ID met een prefix.
+Verwijder `FA-` daarom niet. Een exact fotonummer heeft bij vrije invoer voorrang
+op een gelijkvormige interne ID; er wordt niet op deelwoorden gezocht.
+
+FotoArchief controleert de volledige batch voordat deze wordt gestart en slaat
+de werkelijke interne IDs op. Eén onbekende, verwijderde of niet-toegankelijke
+foto houdt de hele batch tegen. De invoer blijft beschikbaar om te corrigeren.
+Dubbele verwijzingen naar dezelfde foto tellen na controle eenmaal.
+De ingestelde batchlimiet blijft gelden voor de ingevoerde selectie.
+
 ### Taakstatus en auditlog
 
 Open **Beheer > Operations > Achtergrondtaken** om AI-taken te volgen. Een taak
@@ -55,6 +70,25 @@ Na een update naar `0.9.49` worden oudere AI-taken die als voltooid met mislukte
 items waren opgeslagen automatisch naar **Mislukt** gecorrigeerd. Gebruik
 **Opnieuw proberen**; FotoArchief start zo'n AI-taak opnieuw met schone tellers
 vanaf het eerste item.
+
+Vanaf `0.9.50` controleert **Opnieuw proberen** ook de fotoreferenties van oude
+AI-taken. Bestaande interne IDs behouden voorrang; oude fotonummers worden naar
+interne IDs omgezet. Het auditlog blijft behouden en krijgt een gebeurtenis
+`references_normalized` met de gecontroleerde koppelingen. Bij ongeldige invoer
+blijft de mislukte taak ongewijzigd. Reeds omgezette interne IDs worden nooit
+opnieuw als fotonummer geïnterpreteerd.
+
+Een fout kan tijdelijk naast **In wachtrij** staan terwijl de worker automatisch
+opnieuw probeert; na uitgeputte pogingen wordt de taak **Mislukt**.
+De melding "Foto ... bestaat niet meer" met lege bestands-/scannercontext
+ontstaat vóór scanning of een providerrequest en bewijst op zichzelf geen
+ClamAV- of OpenAI-storing. Een foto kan uiteraard ook echt verwijderd zijn.
+
+Voor deze hotfix zijn geen Compose-mappings, omgevingsvariabelen of nieuwe
+databasemigraties nodig. Haal na een geverifieerde backup de nieuwe image op en
+maak web-, worker- en schedulercontainers opnieuw aan met die image.
+Probeer daarna de mislukte taak handmatig opnieuw; deployment herstart geen
+historische AI-taken automatisch.
 
 ### Eenmalige upgrade-import
 
@@ -117,6 +151,21 @@ metadata removed. Image analysis creates suggestions only; metadata changes
 only after human acceptance. Public semantic queries remain subject to current
 publication and rights checks.
 
+### Selecting photos for AI
+
+Image analysis and embedding indexing accept **photo numbers or internal IDs**.
+Use the full visible `FA-...` number or the internal ULID, separated by commas
+or lines (existing whitespace separation remains supported). The photo number
+is a separate field, not the internal ID with a prefix. Do not remove `FA-`.
+For free-form input, an exact photo number takes precedence over an identically
+shaped internal ID; partial matching is not used.
+
+FotoArchief validates the entire batch before starting it and stores the actual
+internal IDs. One unknown, deleted, or inaccessible photo blocks the entire
+batch. Input remains available for correction. Duplicate references to the same
+photo count once after validation. The configured batch limit still applies to
+the submitted selection.
+
 ### Job status and audit log
 
 Open **Administration > Operations > Background jobs** to monitor AI jobs. A
@@ -129,6 +178,23 @@ The audit log never contains API keys, image bytes, or provider responses.
 After updating to `0.9.49`, older AI jobs stored as completed with failed items
 are automatically corrected to **Failed**. Use **Retry**; FotoArchief restarts
 such an AI job with clean counters from the first item.
+
+From `0.9.50`, **Retry** also validates photo references in old AI jobs.
+Existing internal IDs retain precedence; old photo numbers are converted to
+internal IDs. Audit history is preserved and a `references_normalized` event
+records the validated mappings. Invalid input leaves the failed job unchanged.
+Already converted internal IDs are never reinterpreted as photo numbers.
+
+An error can temporarily appear alongside **Queued** while the worker retries
+automatically; exhausted attempts change the job to **Failed**.
+The message "Photo ... no longer exists" with empty file/scanner context occurs
+before scanning or a provider request and does not itself establish a ClamAV or
+OpenAI failure. A photo may of course also have genuinely been deleted.
+
+This hotfix requires no Compose mappings, environment variables, or new database
+migrations. After a verified backup, pull the new image and recreate the web,
+worker, and scheduler containers with that image. Then retry the failed job
+manually; deployment does not automatically restart historical AI jobs.
 
 ### One-time upgrade import
 

@@ -6,6 +6,8 @@ namespace App\Modules\ArchiveOperations\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
+use App\Modules\Ai\Jobs\ProcessAiIndexJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
 use Illuminate\Http\RedirectResponse;
@@ -38,11 +40,14 @@ class OperationRunController extends Controller
         $jobClass = OperationRunService::jobMap()[$run->operation_type] ?? null;
         abort_if($jobClass === null, 422);
 
-        $this->runService->retryRun($run, $jobClass);
+        $this->runService->retryRun($run, $jobClass, $user);
+        $message = in_array($run->operation_type, [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE], true)
+            ? "AI-taak {$run->id} is opnieuw in de wachtrij geplaatst met gecontroleerde foto's en schone tellers."
+            : "Taak {$run->id} is opnieuw in de wachtrij geplaatst; de voortgang wordt hervat.";
 
         return redirect()
             ->route('admin.operations.runs.index')
-            ->with('status', "Taak {$run->id} is opnieuw in de wachtrij geplaatst; de voortgang wordt hervat.");
+            ->with('status', $message);
     }
 
     public function cancel(Request $request, OperationRun $run): RedirectResponse

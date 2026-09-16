@@ -690,6 +690,20 @@
             "batch": "ai"
         },
         {
+            "file": "app/Modules/Ai/Services/AiAssetBatchService.php",
+            "line": 30,
+            "kind": "php_string",
+            "text": "Onbekend formaat voor AI-fotoreferenties. Start een nieuwe taak.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiAssetBatchService.php",
+            "line": 38,
+            "kind": "php_string",
+            "text": "Een fotoreferentie ontbreekt of is ongeldig (maximaal 255 tekens).",
+            "batch": "ai"
+        },
+        {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
             "line": 195,
             "kind": "php_string",
@@ -768,42 +782,42 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 32,
+            "line": 33,
             "kind": "php_string",
             "text": "AI-beeldanalyse is niet actief.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 39,
+            "line": 40,
             "kind": "php_string",
             "text": "De provider moet overeenkomen met de geconfigureerde beeldanalyse-provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 41,
+            "line": 42,
             "kind": "php_string",
             "text": "De geconfigureerde beeldanalyse-provider is niet gereed (toestemming, model of budget ontbreekt).",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 66,
+            "line": 70,
             "kind": "php_string",
             "text": "AI-embeddings zijn niet actief.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 73,
+            "line": 77,
             "kind": "php_string",
             "text": "De provider moet overeenkomen met de geconfigureerde embeddings-provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiDispatchService.php",
-            "line": 75,
+            "line": 79,
             "kind": "php_string",
             "text": "De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).",
             "batch": "ai"
@@ -1583,6 +1597,27 @@
             "line": 126,
             "kind": "php_string",
             "text": "Integriteit geverifieerd.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
+            "line": 71,
+            "kind": "php_string",
+            "text": "De aanvrager van deze AI-taak bestaat niet meer. Start een nieuwe taak.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
+            "line": 77,
+            "kind": "php_string",
+            "text": "Deze AI-taak bevat ongeldige fotoreferenties. Start een nieuwe taak.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
+            "line": 101,
+            "kind": "php_string",
+            "text": "Fotoreferenties gecontroleerd en omgezet naar interne IDs voor een herpoging.",
             "batch": "shared_remaining"
         },
         {
@@ -5068,68 +5103,82 @@
             "file": "resources/views/ai/settings.blade.php",
             "line": 203,
             "kind": "blade_text",
-            "text": "Asset-id's",
+            "text": "Fotonummers of interne IDs",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 204,
             "kind": "blade_attribute",
-            "text": "ULID's gescheiden door komma's of regels",
+            "text": "FA-… of interne ULID; gescheiden door komma's of regels",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 214,
+            "line": 206,
+            "kind": "blade_text",
+            "text": "Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 215,
             "kind": "blade_text",
             "text": "Beeldanalyse is nog niet gereed: kies hierboven een provider/model en geef toestemming.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 216,
+            "line": 217,
             "kind": "blade_text",
             "text": "Beeldanalyse starten",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 221,
+            "line": 222,
             "kind": "blade_text",
             "text": "Embeddingindex bouwen",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 222,
+            "line": 223,
             "kind": "blade_text",
             "text": "Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 223,
-            "kind": "blade_text",
-            "text": "Asset-id's",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
             "line": 224,
-            "kind": "blade_attribute",
-            "text": "ULID's gescheiden door komma's of regels",
+            "kind": "blade_text",
+            "text": "Fotonummers of interne IDs",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 234,
+            "line": 225,
+            "kind": "blade_attribute",
+            "text": "FA-… of interne ULID; gescheiden door komma's of regels",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 227,
+            "kind": "blade_text",
+            "text": "Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 236,
             "kind": "blade_text",
             "text": "Embeddings zijn nog niet gereed: kies hierboven een provider/model en geef toestemming.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 236,
+            "line": 238,
             "kind": "blade_text",
             "text": "Embeddingindex starten",
             "batch": "ai"
