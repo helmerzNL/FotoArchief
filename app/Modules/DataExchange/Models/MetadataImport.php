@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\DataExchange\Models;
 
 use App\Models\User;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -67,5 +68,16 @@ class MetadataImport extends Model
     public function isBusy(): bool
     {
         return in_array($this->status, ['analysing', 'queued', 'running'], true);
+    }
+
+    /**
+     * Date casts are typed as string by static analysis, so every timestamp
+     * comparison goes through this narrowing helper.
+     */
+    public function timestamp(string $attribute): ?DateTimeInterface
+    {
+        $value = $this->getAttribute($attribute);
+
+        return $value instanceof DateTimeInterface ? $value : null;
     }
 }

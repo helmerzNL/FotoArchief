@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\DataExchange\Services\DataExportService;
+use App\Modules\DataExchange\Services\MetadataImportService;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -38,9 +39,19 @@ Artisan::command('installation:ready', function (InstallationStore $store): int 
 
 Artisan::command('exchange:prune-exports', function (DataExportService $exports): int {
     $pruned = $exports->prune();
+    $recovered = $exports->recoverStalled();
     $this->info('Verlopen exportbestanden opgeruimd: '.$pruned);
+    $this->info('Afgebroken exports vrijgegeven: '.$recovered);
 
     return 0;
-})->purpose('Delete expired export artifacts and release their download links');
+})->purpose('Delete expired export artifacts and release exports abandoned by a stopped worker');
+
+Artisan::command('exchange:recover-imports', function (MetadataImportService $imports): int {
+    $recovered = $imports->recoverStalled();
+    $this->info('Afgebroken imports vrijgegeven: '.$recovered);
+
+    return 0;
+})->purpose('Release metadata imports abandoned by a stopped worker');
 
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();

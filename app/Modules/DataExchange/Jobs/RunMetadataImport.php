@@ -20,7 +20,11 @@ class RunMetadataImport implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 300;
+    /**
+     * Kept below the queue retry_after so a redelivered job never races a job
+     * that is still running; see the window comment in config/exchange.php.
+     */
+    public int $timeout;
 
     public bool $failOnTimeout = true;
 
@@ -31,6 +35,7 @@ class RunMetadataImport implements ShouldQueue
         if (! in_array($mode, ['analyse', 'apply'], true)) {
             throw new InvalidArgumentException('Unsupported import mode.');
         }
+        $this->timeout = (int) config('exchange.job_timeout_seconds');
     }
 
     public function handle(MetadataImportService $service): void
@@ -39,7 +44,13 @@ class RunMetadataImport implements ShouldQueue
         if (! $import instanceof MetadataImport) {
             return;
         }
-        $this->mode === 'analyse' ? $service->analyse($import) : $service->apply($import);
+        $settled = $this->mode === 'analyse' ? $service->analyse($import) : $service->apply($import);
+        if (! $settled) {
+            // Another worker still holds a live claim. Reporting success here
+            // would delete the only job that can finish this import, so come
+            // back once the claim can be taken over instead.
+            $this->release((int) config('exchange.stale_claim_seconds'));
+        }
     }
 
     public function failed(?Throwable $exception): void

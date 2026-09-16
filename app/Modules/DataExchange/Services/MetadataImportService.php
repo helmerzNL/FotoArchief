@@ -102,11 +102,15 @@ class MetadataImportService
         $this->analyse($import);
     }
 
-    public function analyse(MetadataImport $import): void
+    /**
+     * @return bool false when another worker still holds a live claim, so the
+     *              job must come back instead of reporting the run as done
+     */
+    public function analyse(MetadataImport $import): bool
     {
         $token = $this->claim($import, ['received', 'analysing'], 'analysing');
         if ($token === null) {
-            return;
+            return ! $this->claimIsLive($import, ['analysing', 'running']);
         }
         try {
             $parsed = $this->read($import);
@@ -145,6 +149,8 @@ class MetadataImportService
             Log::error('Metadata import analysis failed.', ['import_id' => $import->id, 'exception_type' => $exception::class]);
             $this->release($import, $token, ['status' => 'failed', 'failure_reason' => 'Analyse mislukt. Controleer opslag en database en probeer opnieuw.']);
         }
+
+        return true;
     }
 
     public function confirm(MetadataImport $import, User $user, string $checksum): void
@@ -168,17 +174,24 @@ class MetadataImportService
         });
     }
 
-    public function apply(MetadataImport $import): void
+    /**
+     * @return bool false when another worker still holds a live claim, so the
+     *              job must come back instead of reporting the run as done
+     */
+    public function apply(MetadataImport $import): bool
     {
-        $token = $this->claim($import, ['queued'], 'running');
+        // "running" is included so a job redelivered after a worker was killed
+        // can take the run over; rows already applied are never re-selected and
+        // the version check inside each row transaction makes a repeat safe.
+        $token = $this->claim($import, ['queued', 'running'], 'running');
         if ($token === null) {
-            return;
+            return ! $this->claimIsLive($import, ['running']);
         }
         $user = $import->creator;
         if (! $user instanceof User || ! $user->hasPermission('assets.update')) {
             $this->release($import, $token, ['status' => 'failed', 'failure_reason' => 'De indiener heeft geen rechten meer om metadata bij te werken.']);
 
-            return;
+            return true;
         }
         $rows = $import->rows()->where('status', 'ready')->orderBy('row_number')->get();
         foreach ($rows as $row) {
@@ -190,6 +203,8 @@ class MetadataImportService
             }
         }
         $this->release($import, $token, ['status' => 'completed', 'completed_at' => now(), 'summary' => $this->summary($import)]);
+
+        return true;
     }
 
     public function markFailed(MetadataImport $import, string $reason): void
@@ -197,6 +212,29 @@ class MetadataImportService
         if ($import->isBusy()) {
             $import->update(['status' => 'failed', 'failure_reason' => $reason, 'claim_token' => null, 'summary' => $this->summary($import)]);
         }
+    }
+
+    /**
+     * Reports imports whose worker never came back as failed, so a run cannot
+     * sit in "bezig" for ever once no job is left to redeliver it.
+     *
+     * @return int the number of imports released from a dead claim
+     */
+    public function recoverStalled(): int
+    {
+        $cutoff = now()->subSeconds((int) config('exchange.abandoned_claim_seconds'));
+        $recovered = 0;
+        foreach (MetadataImport::query()->whereIn('status', ['analysing', 'running'])->where('started_at', '<', $cutoff)->cursor() as $import) {
+            $released = MetadataImport::query()->whereKey($import->id)->whereIn('status', ['analysing', 'running'])->where('started_at', '<', $cutoff)
+                ->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'De verwerking is afgebroken: de worker is gestopt voordat de import klaar was. Bevestig opnieuw om verder te gaan.',
+                    'claim_token' => null,
+                ]);
+            $recovered += $released;
+        }
+
+        return $recovered;
     }
 
     private function applyRow(MetadataImport $import, MetadataImportRow $row, User $user): void
@@ -530,7 +568,7 @@ class MetadataImportService
     {
         $token = (string) str()->uuid();
         $claimed = MetadataImport::query()->whereKey($import->id)->whereIn('status', $from)
-            ->where(fn ($query) => $query->whereNull('claim_token')->orWhere('started_at', '<', now()->subSeconds(180)))
+            ->where(fn ($query) => $query->whereNull('claim_token')->orWhere('started_at', '<', now()->subSeconds((int) config('exchange.stale_claim_seconds'))))
             ->update(['status' => $to, 'started_at' => now(), 'claim_token' => $token, 'attempts' => DB::raw('attempts + 1')]);
         if ($claimed !== 1) {
             return null;
@@ -538,6 +576,24 @@ class MetadataImportService
         $import->refresh();
 
         return $token;
+    }
+
+    /**
+     * True when the row is still held by a claim young enough to belong to a
+     * worker that may yet finish it. The caller must then wait rather than
+     * conclude there is nothing left to do.
+     *
+     * @param  list<string>  $busyStatuses
+     */
+    private function claimIsLive(MetadataImport $import, array $busyStatuses): bool
+    {
+        $fresh = MetadataImport::query()->whereKey($import->id)->first();
+        if (! $fresh instanceof MetadataImport || ! in_array($fresh->status, $busyStatuses, true)) {
+            return false;
+        }
+        $started = $fresh->timestamp('started_at');
+
+        return $started === null || $started->getTimestamp() >= now()->subSeconds((int) config('exchange.stale_claim_seconds'))->getTimestamp();
     }
 
     /**

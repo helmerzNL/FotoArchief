@@ -19,19 +19,32 @@ class BuildDataExport implements ShouldQueue
 
     public int $tries = 3;
 
-    public int $timeout = 600;
+    /**
+     * Kept below the queue retry_after so a redelivered job never races a job
+     * that is still running; see the window comment in config/exchange.php.
+     */
+    public int $timeout;
 
     public bool $failOnTimeout = true;
 
     public int $backoff = 10;
 
-    public function __construct(public readonly string $exportId) {}
+    public function __construct(public readonly string $exportId)
+    {
+        $this->timeout = (int) config('exchange.job_timeout_seconds');
+    }
 
     public function handle(DataExportService $service): void
     {
         $export = DataExport::query()->find($this->exportId);
-        if ($export instanceof DataExport) {
-            $service->build($export);
+        if (! $export instanceof DataExport) {
+            return;
+        }
+        if (! $service->build($export)) {
+            // Another worker still holds a live claim. Reporting success here
+            // would delete the only job that can finish this export, so come
+            // back once the claim can be taken over instead.
+            $this->release((int) config('exchange.stale_claim_seconds'));
         }
     }
 

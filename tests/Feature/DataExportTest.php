@@ -50,9 +50,16 @@ function exportPhoto(User $user): Asset
     return $asset->refresh();
 }
 
+function exchangeJobIsDue(): bool
+{
+    return DB::table('jobs')->where('queue', 'ingest')->where('available_at', '<=', now()->getTimestamp())->exists();
+}
+
 function exportRun(): void
 {
-    for ($pass = 0; $pass < 10 && DB::table('jobs')->where('queue', 'ingest')->exists(); $pass++) {
+    // Only jobs that are actually due count: a job released back with a delay
+    // must not be waited on, or the loop blocks until the worker times out.
+    for ($pass = 0; $pass < 10 && exchangeJobIsDue(); $pass++) {
         Artisan::call('queue:work', ['connection' => 'ingest', '--once' => true, '--tries' => 3]);
     }
 }
@@ -358,4 +365,106 @@ it('offers the export form in Dutch and lists the requested exports', function (
     // A user without export rights never sees the form.
     $this->actingAs(exportUser('volunteer'))->get('/exchange')->assertOk()->assertDontSee('Volledig pakket (ZIP met originelen en afgeleiden)');
     expect($export->status)->toBe('queued');
+});
+
+it('lets a redelivered job take over an export abandoned by a killed worker', function (): void {
+    $user = exportUser();
+    $asset = exportAsset($user, ['title' => 'Na de crash']);
+    $export = exportRequest($user, 'metadata_json', [$asset->id]);
+
+    // Exactly what a killed or timed-out worker leaves behind: claimed, running,
+    // never released. The queue redelivers the job after retry_after.
+    DataExport::query()->whereKey($export->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.stale_claim_seconds') + 60),
+        'attempts' => 1,
+    ]);
+    exportRun();
+    $export->refresh();
+
+    expect($export->status)->toBe('ready')
+        ->and($export->attempts)->toBe(2)
+        ->and($export->storage_key)->not->toBeNull();
+    exportDownload($user, $export)->assertOk();
+});
+
+it('never steals an export from a worker that is still building it', function (): void {
+    $user = exportUser();
+    $asset = exportAsset($user);
+    $export = exportRequest($user, 'metadata_json', [$asset->id]);
+    $token = (string) str()->uuid();
+    DataExport::query()->whereKey($export->id)->update([
+        'status' => 'running',
+        'claim_token' => $token,
+        'started_at' => now()->subSeconds((int) config('exchange.stale_claim_seconds') - 60),
+    ]);
+
+    exportRun();
+
+    $export->refresh();
+    expect($export->status)->toBe('running')->and($export->claim_token)->toBe($token);
+    // And the job that could not claim is still on the queue, delayed rather
+    // than deleted. Reporting success here was the defect that left a killed
+    // build "bezig" for ever: the queue redelivers only until a job reports
+    // done, so the one job able to finish the export disappeared.
+    $job = DB::table('jobs')->where('queue', 'ingest')->first();
+    expect($job)->not->toBeNull()
+        ->and((int) $job->available_at)->toBeGreaterThan(now()->getTimestamp());
+});
+
+it('keeps the job timeout under the queue retry window so a redelivery can reclaim', function (): void {
+    $timeout = (int) config('exchange.job_timeout_seconds');
+    $stale = (int) config('exchange.stale_claim_seconds');
+    $retryAfter = (int) config('queue.connections.ingest.retry_after');
+
+    // The ordering is the whole recovery contract. Above retry_after the single
+    // redelivery arrives too early to reclaim; below the job timeout a live
+    // worker gets robbed. Both were observed against a real worker.
+    expect($timeout)->toBeLessThan($stale)
+        ->and($stale)->toBeLessThan($retryAfter);
+
+    $export = exportRequest(exportUser(), 'metadata_json', [exportAsset(exportUser())->id]);
+    $payload = json_decode((string) DB::table('jobs')->where('queue', 'ingest')->value('payload'), true);
+    expect($payload['timeout'])->toBe($timeout)->and($export->status)->toBe('queued');
+});
+
+it('releases an export whose worker never returned so the owner can retry', function (): void {
+    $user = exportUser();
+    $asset = exportAsset($user);
+    $export = exportRequest($user, 'metadata_json', [$asset->id]);
+    // No job left to redeliver: the row would otherwise stay busy for ever.
+    DB::table('jobs')->where('queue', 'ingest')->delete();
+    DataExport::query()->whereKey($export->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.abandoned_claim_seconds') + 60),
+    ]);
+
+    Artisan::call('exchange:prune-exports');
+
+    $export->refresh();
+    expect($export->status)->toBe('failed')
+        ->and($export->failure_reason)->toContain('worker is gestopt')
+        ->and($export->claim_token)->toBeNull();
+    $this->actingAs($user)->get('/exchange/exports/'.$export->id)->assertOk()->assertSee('Export mislukt');
+
+    $this->actingAs($user)->post('/exchange/exports/'.$export->id.'/retry')->assertRedirect();
+    exportRun();
+    expect($export->fresh()->status)->toBe('ready');
+});
+
+it('leaves a recently started export alone when recovering', function (): void {
+    $user = exportUser();
+    $asset = exportAsset($user);
+    $export = exportRequest($user, 'metadata_json', [$asset->id]);
+    DataExport::query()->whereKey($export->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.abandoned_claim_seconds') - 60),
+    ]);
+
+    Artisan::call('exchange:prune-exports');
+
+    expect($export->fresh()->status)->toBe('running');
 });

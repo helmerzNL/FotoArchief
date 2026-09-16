@@ -18,7 +18,10 @@ scanning, derivatives, metadata editing and publication UI are not delivered yet
 
 - PHP 8.5 and production dependencies, including `pdo_pgsql`, OpenSSL,
   fileinfo, GD with JPEG/PNG/WebP, EXIF, zip (package exports) and the other
-  extensions required by Composer.
+  extensions required by Composer. The wizard checks GD, EXIF, fileinfo and zip
+  before it writes anything and names the missing one in Dutch: an unpacked
+  release never runs Composer, so nothing else would catch a missing extension
+  until a photo failed to process or an export failed to build.
 - An **empty PostgreSQL database**, already created by the hosting provider
   or the Compose database service. The wizard creates tables, not the server
   or database itself. Its user needs table, index, constraint and function

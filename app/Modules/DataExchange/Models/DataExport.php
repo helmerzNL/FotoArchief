@@ -110,7 +110,11 @@ class DataExport extends Model
             && hash_equals($hash, hash('sha256', $token));
     }
 
-    private function timestamp(string $attribute): ?DateTimeInterface
+    /**
+     * Date casts are typed as string by static analysis, so every timestamp
+     * comparison goes through this narrowing helper.
+     */
+    public function timestamp(string $attribute): ?DateTimeInterface
     {
         $value = $this->getAttribute($attribute);
 

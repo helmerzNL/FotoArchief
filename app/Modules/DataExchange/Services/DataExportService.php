@@ -74,17 +74,21 @@ class DataExportService
         });
     }
 
-    public function build(DataExport $export): void
+    /**
+     * @return bool false when another worker still holds a live claim, so the
+     *              job must come back instead of reporting the build as done
+     */
+    public function build(DataExport $export): bool
     {
         $token = $this->claim($export);
         if ($token === null) {
-            return;
+            return ! $this->claimIsLive($export);
         }
         $user = $export->creator;
         if (! $user instanceof User || ! $user->hasPermission('exports.create')) {
             $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'De aanvrager heeft geen exportrechten meer.']);
 
-            return;
+            return true;
         }
         try {
             $authorized = [];
@@ -108,7 +112,7 @@ class DataExportService
             if ($authorized === []) {
                 $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'Geen enkele geselecteerde foto valt nog binnen jouw toegang.']);
 
-                return;
+                return true;
             }
             $result = $this->archiver->build($export, $authorized, $skipped);
             DB::transaction(function () use ($export, $token, $result, $authorized, $user): void {
@@ -139,6 +143,8 @@ class DataExportService
             Log::error('Export build failed.', ['export_id' => $export->id, 'exception_type' => $exception::class]);
             $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'Samenstellen mislukt. Controleer opslag en worker en probeer opnieuw.']);
         }
+
+        return true;
     }
 
     public function retry(DataExport $export, User $user): void
@@ -213,6 +219,30 @@ class DataExportService
         return $pruned;
     }
 
+    /**
+     * Reports exports whose worker never came back as failed. The reclaim in
+     * claim() handles a redelivered job; this handles the case where no job is
+     * left to redeliver, so nothing would ever clear the row.
+     *
+     * @return int the number of exports released from a dead claim
+     */
+    public function recoverStalled(): int
+    {
+        $cutoff = now()->subSeconds((int) config('exchange.abandoned_claim_seconds'));
+        $recovered = 0;
+        foreach (DataExport::query()->where('status', 'running')->where('started_at', '<', $cutoff)->cursor() as $export) {
+            $released = DataExport::query()->whereKey($export->id)->where('status', 'running')->where('started_at', '<', $cutoff)
+                ->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Samenstellen is afgebroken: de worker is gestopt voordat de export klaar was. Probeer het opnieuw.',
+                    'claim_token' => null,
+                ]);
+            $recovered += $released;
+        }
+
+        return $recovered;
+    }
+
     public function revoke(DataExport $export): void
     {
         $this->discard($export, 'revoked');
@@ -284,10 +314,19 @@ class DataExportService
         return $query;
     }
 
+    /**
+     * Claims the export for this worker. A row left in "running" by a killed or
+     * timed-out worker is reclaimed once the reclaim window has passed: without
+     * that, the redelivered job finds a claimed row, does nothing, and the
+     * export stays "being built" for ever with no way back.
+     */
     private function claim(DataExport $export): ?string
     {
         $token = (string) str()->uuid();
-        $claimed = DataExport::query()->whereKey($export->id)->where('status', 'queued')
+        $stale = now()->subSeconds((int) config('exchange.stale_claim_seconds'));
+        $claimed = DataExport::query()->whereKey($export->id)
+            ->where(fn ($query) => $query->where('status', 'queued')
+                ->orWhere(fn ($running) => $running->where('status', 'running')->where('started_at', '<', $stale)))
             ->update(['status' => 'running', 'started_at' => now(), 'claim_token' => $token, 'attempts' => DB::raw('attempts + 1')]);
         if ($claimed !== 1) {
             return null;
@@ -295,6 +334,22 @@ class DataExportService
         $export->refresh();
 
         return $token;
+    }
+
+    /**
+     * True when the row is still held by a claim young enough to belong to a
+     * worker that may yet finish it. The caller must then wait rather than
+     * conclude there is nothing left to do.
+     */
+    private function claimIsLive(DataExport $export): bool
+    {
+        $fresh = DataExport::query()->whereKey($export->id)->first();
+        if (! $fresh instanceof DataExport || $fresh->status !== 'running') {
+            return false;
+        }
+        $started = $fresh->timestamp('started_at');
+
+        return $started === null || $started->getTimestamp() >= now()->subSeconds((int) config('exchange.stale_claim_seconds'))->getTimestamp();
     }
 
     /**

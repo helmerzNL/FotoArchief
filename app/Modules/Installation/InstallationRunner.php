@@ -18,10 +18,13 @@ class InstallationRunner
         private readonly InstallationStore $store,
         private readonly InstallationDatabase $database,
         private readonly InstallationStorage $storage,
+        private readonly InstallationPlatform $platform,
     ) {}
 
     public function check(InstallationSettings $settings): void
     {
+        // Cheapest to detect and most confusing to hit later, so it goes first.
+        $this->platform->check();
         try {
             $this->storage->check($settings);
         } catch (Throwable $exception) {

@@ -297,3 +297,89 @@ it('can retry a run that failed and stays idempotent afterwards', function (): v
     expect($asset->fresh()->lock_version)->toBe(2)
         ->and(AssetAuditEvent::query()->where('event_type', 'metadata.imported')->count())->toBe(1);
 });
+
+it('lets a redelivered job finish an import abandoned by a killed worker', function (): void {
+    $user = exchangeUser();
+    $asset = exchangeAsset($user);
+    $import = exchangeUpload($user, "accession_number,lock_version,title\n".$asset->accession_number.",1,Na de crash\n");
+    $this->actingAs($user)->post('/exchange/imports/'.$import->id.'/confirm', ['checksum' => $import->content_sha256]);
+
+    // What a killed or timed-out worker leaves behind, mid-apply.
+    MetadataImport::query()->whereKey($import->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.stale_claim_seconds') + 60),
+    ]);
+    exchangeRun();
+
+    expect($import->fresh()->status)->toBe('completed')
+        ->and($asset->fresh()->title)->toBe('Na de crash')
+        ->and($asset->fresh()->lock_version)->toBe(2);
+});
+
+it('never steals an import from a worker that is still applying it', function (): void {
+    $user = exchangeUser();
+    $asset = exchangeAsset($user);
+    $import = exchangeUpload($user, "accession_number,lock_version,title\n".$asset->accession_number.",1,Niet stelen\n");
+    $this->actingAs($user)->post('/exchange/imports/'.$import->id.'/confirm', ['checksum' => $import->content_sha256]);
+    $token = (string) str()->uuid();
+    MetadataImport::query()->whereKey($import->id)->update([
+        'status' => 'running',
+        'claim_token' => $token,
+        'started_at' => now()->subSeconds((int) config('exchange.stale_claim_seconds') - 60),
+    ]);
+
+    exchangeRun();
+
+    expect($import->fresh()->status)->toBe('running')
+        ->and($import->fresh()->claim_token)->toBe($token)
+        ->and($asset->fresh()->title)->toBeNull();
+    // The job that could not claim stays on the queue, delayed rather than
+    // deleted: reporting success would throw away the only job able to finish
+    // this run, leaving it "bezig" for ever.
+    $job = DB::table('jobs')->where('queue', 'ingest')->first();
+    expect($job)->not->toBeNull()
+        ->and((int) $job->available_at)->toBeGreaterThan(now()->getTimestamp());
+});
+
+it('releases an import whose worker never returned so it can be confirmed again', function (): void {
+    $user = exchangeUser();
+    $asset = exchangeAsset($user);
+    $import = exchangeUpload($user, "accession_number,lock_version,title\n".$asset->accession_number.",1,Hersteld\n");
+    $this->actingAs($user)->post('/exchange/imports/'.$import->id.'/confirm', ['checksum' => $import->content_sha256]);
+    // No job left to redeliver.
+    DB::table('jobs')->where('queue', 'ingest')->delete();
+    MetadataImport::query()->whereKey($import->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.abandoned_claim_seconds') + 60),
+    ]);
+
+    Artisan::call('exchange:recover-imports');
+
+    expect($import->fresh()->status)->toBe('failed')
+        ->and($import->fresh()->failure_reason)->toContain('worker is gestopt')
+        ->and($import->fresh()->claim_token)->toBeNull()
+        ->and($asset->fresh()->title)->toBeNull();
+
+    $this->actingAs($user)->post('/exchange/imports/'.$import->id.'/confirm', ['checksum' => $import->content_sha256])
+        ->assertRedirect('/exchange/imports/'.$import->id);
+    exchangeRun();
+    expect($import->fresh()->status)->toBe('completed')->and($asset->fresh()->title)->toBe('Hersteld');
+});
+
+it('leaves a recently started import alone when recovering', function (): void {
+    $user = exchangeUser();
+    $asset = exchangeAsset($user);
+    $import = exchangeUpload($user, "accession_number,lock_version,title\n".$asset->accession_number.",1,Bezig\n");
+    $this->actingAs($user)->post('/exchange/imports/'.$import->id.'/confirm', ['checksum' => $import->content_sha256]);
+    MetadataImport::query()->whereKey($import->id)->update([
+        'status' => 'running',
+        'claim_token' => (string) str()->uuid(),
+        'started_at' => now()->subSeconds((int) config('exchange.abandoned_claim_seconds') - 60),
+    ]);
+
+    Artisan::call('exchange:recover-imports');
+
+    expect($import->fresh()->status)->toBe('running');
+});

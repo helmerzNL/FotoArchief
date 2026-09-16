@@ -110,10 +110,46 @@ foutmelding in de applicatielogboeken. In `deploy/php.ini` gelden daarnaast
   dezelfde database als de gegevens zelf.
 - Zonder actieve worker (`php artisan queue:work --queue=ingest`) blijft een
   import in "Controle bezig" of "In wachtrij" staan.
-- Een vastgelopen run wordt na drie minuten opnieuw claimbaar; een mislukte run
-  kan opnieuw worden bevestigd.
+- Wordt de worker gestopt terwijl een run bezig is, dan pakt de wachtrij de run
+  vanzelf weer op; zie "Wat er gebeurt als de worker stopt" hieronder.
+- Een mislukte run kan opnieuw worden bevestigd.
 - Een tweede uitvoering van dezelfde import wijzigt niets extra: rijen die al
   zijn bijgewerkt staan niet meer op `ready`.
+
+### Wat er gebeurt als de worker stopt
+
+Een import of export die wordt verwerkt is *geclaimd* door de worker. Wordt die
+worker afgebroken -- door een herstart, een crash, een container die wordt
+vervangen of een tijdslimiet -- dan blijft die claim achter terwijl er niemand
+meer aan werkt. Zonder herstel blijft het scherm dan voor altijd "bezig" tonen.
+Er zijn twee herstelwegen, en samen dekken ze beide gevallen:
+
+1. **De wachtrij levert de taak opnieuw af.** Dat gebeurt `retry_after` seconden
+   (180 voor `ingest`) na de claim. De taak neemt de run dan over: de import gaat
+   verder met de rijen die nog op `ready` staan, de export wordt opnieuw
+   samengesteld. Kan de taak de claim nog niet overnemen -- omdat er misschien
+   nog een levende worker aan werkt -- dan wordt de taak *teruggezet* in de
+   wachtrij in plaats van afgerond, zodat er een taak blijft die de run kan
+   afmaken.
+2. **Is er geen taak meer over**, bijvoorbeeld omdat de wachtrijtabel is geleegd
+   of alle pogingen op zijn, dan meldt de planner de run na
+   `EXCHANGE_ABANDONED_CLAIM_SECONDS` (30 minuten) als mislukt, met een
+   Nederlandse uitleg in het scherm. De indiener kan de import opnieuw
+   bevestigen of de export opnieuw laten samenstellen. Handmatig:
+   `php artisan exchange:recover-imports` en `php artisan exchange:prune-exports`.
+
+De drie tijden horen in deze volgorde te staan, en `.env.example` legt uit
+waarom:
+
+| Instelling | Standaard | Betekenis |
+| --- | --- | --- |
+| `EXCHANGE_JOB_TIMEOUT_SECONDS` | 120 | de worker breekt de taak hierna af |
+| `EXCHANGE_STALE_CLAIM_SECONDS` | 150 | pas hierna mag een claim worden overgenomen |
+| `retry_after` (`ingest`) | 180 | hierna levert de wachtrij de taak opnieuw af |
+
+Staat het overnamevenster *boven* `retry_after`, dan komt de enige heraflevering
+te vroeg om de run over te nemen. Staat het *onder* de taaklimiet, dan kan een
+run die nog gewoon draait een tweede keer worden opgepakt.
 
 ---
 
@@ -209,7 +245,9 @@ afbreking niet en staat er niets in het applicatielogboek.
 
 - De ZIP wordt gemaakt met de PHP-extensie `zip` (`ext-zip`). Die staat in
   `composer.json` als platformeis en in het Docker-image; zonder die extensie
-  mislukt een pakketexport met een duidelijke foutmelding.
+  mislukt een pakketexport met een duidelijke foutmelding. De installatiewizard
+  controleert de extensie vooraf, omdat een uitgepakte release geen Composer
+  draait en de eis daar anders pas bij de eerste export zou opvallen.
 - Verlopen exports worden elk kwartier opgeruimd door de planner
   (`php artisan schedule:work` of een cron op `schedule:run`). Handmatig:
   `php artisan exchange:prune-exports`.
@@ -217,5 +255,9 @@ afbreking niet en staat er niets in het applicatielogboek.
   te plannen met de knop "Opnieuw samenstellen". De aanvraag zelf blijft bewaard.
 - Zonder actieve worker (`php artisan queue:work --queue=ingest`) blijft een
   export in "In wachtrij" staan.
+- Wordt de worker afgebroken terwijl een export wordt samengesteld, dan neemt de
+  opnieuw afgeleverde taak de export over; blijft er geen taak over, dan meldt
+  `php artisan exchange:prune-exports` de export als mislukt zodat hij opnieuw
+  kan worden ingepland. Zie "Wat er gebeurt als de worker stopt" hierboven.
 - Exportbestanden staan onder `exchange/exports/` op de private schijf. Ze horen
   **niet** in een backup thuis: het zijn afgeleide, kortlopende kopieën.
