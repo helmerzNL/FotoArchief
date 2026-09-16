@@ -109,6 +109,7 @@ buffer hits total, no per-row loop) on the same benchmark. A defensive
 `is_primary` is absent, so the predicate never silently regresses to "at
 least one" if that assumption is ever violated. See
 `app/Modules/Publication/Models/Publication.php` for the exact branch.
+
 ## Verification
 
 - [`tests/Feature/PublicationActiveFileConsistencyTest.php`](../tests/Feature/PublicationActiveFileConsistencyTest.php) —
@@ -126,6 +127,19 @@ least one" if that assumption is ever violated. See
   PostgreSQL engine was available to execute this locally; Parent/CI must run
   it with `FOTOARCHIEF_TEST_PG_PORTAL_DATABASE` set, mirroring
   `PostgresInstallationTest`/`PhotoUpgradeTest`).
+- [`tests/Feature/OperationsPortalActiveFileIntegrationTest.php`](../tests/Feature/OperationsPortalActiveFileIntegrationTest.php) —
+  drives the real Operations services (`FileVersionService::setActiveVersion()`,
+  `TrashService::moveToTrash()`) against the portal's real predicate and
+  resolver, proving the two modules' contracts hold together rather than
+  merely each side's own simulation of the other. Three of its four cases
+  require Operations' `ArchiveOperations` module, which does not exist on
+  this branch in isolation, and are skipped (not faked) here via
+  `class_exists()` until Parent merges this branch together with
+  Operations'; the fourth (the two-primary-state guard) needs only the
+  Catalogue schema and always runs. Confirmed to pass all four, fully
+  unskipped, against a scratch tree with both branches merged
+  (`scratch/ops-portal-integration@261ee44`) before being included here, so
+  Parent does not have to author it a second time after integration.
 
 ## Non-goals for this document
 
