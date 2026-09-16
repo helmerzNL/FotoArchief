@@ -82,6 +82,30 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+### Portal correction acceptance
+
+Revision `f936e64` integrates object-level suggestion authorization and a shared
+active-public-file resolver. The integrated targeted run has **9 passing tests
+and 2 failing tests**: the latter try to create an `is_primary` column already
+provided by archive operations. These tests and the active-version integration
+contract are being corrected before release; a feature-branch pass does not
+establish compatibility with the integrated schema. Quality now provisions a
+dedicated PostgreSQL portal database so this boundary cannot remain an opt-in
+skip in CI.
+
+A real browser against the PostgreSQL-backed synthetic corpus submitted an
+anonymous visitor suggestion, then logged in and accepted it through the staff
+queue. At viewport **390**, the populated accepted-suggestions page after the
+table fix measures document width **375**, with a **343**-pixel internal region
+around **1095** pixels of table content. The region has `tabindex="0"` and
+ArrowRight advances its scroll position by **40** pixels. Acceptance records the
+moderation decision only; no automatic metadata edit is asserted.
+
+The clean private-then-public seed sequence also succeeds against a new
+PostgreSQL database. Repeating either seeder now exits **1**, preserving exactly
+50,000 assets, files and publications and one benchmark collection. Composer
+metadata validation, locked dependency audit and PHP platform checks pass.
+
 ### Integrated browser and package checks
 
 Real Playwright browser interactions against the isolated PostgreSQL-backed

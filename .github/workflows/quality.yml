@@ -115,6 +115,7 @@ jobs:
     env:
       FOTOARCHIEF_TEST_PG_DATABASE: release_onboarding_test
       FOTOARCHIEF_TEST_PG_UPGRADE_DATABASE: release_workflow_test
+      FOTOARCHIEF_TEST_PG_PORTAL_DATABASE: release_portal_test
       FOTOARCHIEF_TEST_PG_HOST: 127.0.0.1
       FOTOARCHIEF_TEST_PG_PORT: "5432"
       FOTOARCHIEF_TEST_PG_USER: fotoarchief
@@ -136,9 +137,10 @@ jobs:
         run: |
           createdb -h 127.0.0.1 -U fotoarchief release_onboarding_test
           createdb -h 127.0.0.1 -U fotoarchief release_workflow_test
+          createdb -h 127.0.0.1 -U fotoarchief release_portal_test
           createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
       - name: Test real PostgreSQL constraints and upgrade preservation
-        run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php --compact
+        run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php --compact
       - name: Measure real HTTP on 50000 synthetic records
         shell: bash
         run: |

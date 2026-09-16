@@ -39,7 +39,8 @@ This repository contains the installable application and the archive expansion:
   worklists;
 - publication review and revocation, rights/privacy/embargo checks, public
   discovery and collections, a photo viewer, moderated visitor suggestions,
-  sitemaps and IIIF Presentation 3 manifests (not a full IIIF Image API);
+  sitemaps and IIIF Presentation 3 manifests (not a full IIIF Image API); see
+  [the public portal operator handbook](docs/PUBLIC_PORTAL.md);
 - diagnostics, duplicate dossiers, scan versions, processing operations,
   integrity checks, storage relocation, recoverable deletion and optional OCR;
 - reproducible production PHP/deployment archives, container acceptance and a
