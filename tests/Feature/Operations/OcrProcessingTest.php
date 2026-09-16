@@ -20,12 +20,14 @@ beforeEach(function (): void {
     $this->manageUsersPermission = Permission::query()->firstOrCreate(['key' => 'users.manage'], ['name' => 'Users Manage']);
     $this->manageCataloguePermission = Permission::query()->firstOrCreate(['key' => 'catalogue.manage'], ['name' => 'Catalogue Manage']);
     $this->viewAssetsPermission = Permission::query()->firstOrCreate(['key' => 'assets.view'], ['name' => 'Assets View']);
+    // Starting OCR writes machine text onto the dossier, so it needs assets.update.
+    $this->updateAssetsPermission = Permission::query()->firstOrCreate(['key' => 'assets.update'], ['name' => 'Assets Update']);
 
     $adminRole = Role::query()->firstOrCreate(['key' => 'administrator'], ['name' => 'Administrator']);
-    $adminRole->permissions()->syncWithoutDetaching([$this->manageUsersPermission->id, $this->manageCataloguePermission->id, $this->viewAssetsPermission->id]);
+    $adminRole->permissions()->syncWithoutDetaching([$this->manageUsersPermission->id, $this->manageCataloguePermission->id, $this->viewAssetsPermission->id, $this->updateAssetsPermission->id]);
 
     $archivistRole = Role::query()->firstOrCreate(['key' => 'archivist'], ['name' => 'Archivist']);
-    $archivistRole->permissions()->syncWithoutDetaching([$this->manageCataloguePermission->id, $this->viewAssetsPermission->id]);
+    $archivistRole->permissions()->syncWithoutDetaching([$this->manageCataloguePermission->id, $this->viewAssetsPermission->id, $this->updateAssetsPermission->id]);
 
     $viewerRole = Role::query()->firstOrCreate(['key' => 'viewer'], ['name' => 'Viewer']);
     $viewerRole->permissions()->syncWithoutDetaching([$this->viewAssetsPermission->id]);
@@ -178,15 +180,15 @@ test('searching OCR text finds matching assets', function (): void {
 
     $service = app(TesseractOcrService::class);
 
-    $resultsUtrecht = $service->searchOcrText('Utrecht');
+    $resultsUtrecht = $service->searchOcrText('Utrecht', $this->archivist);
     expect($resultsUtrecht->total())->toBe(1);
     expect($resultsUtrecht->first()?->asset_id)->toBe($asset1->id);
 
-    $resultsRotterdam = $service->searchOcrText('Rotterdam');
+    $resultsRotterdam = $service->searchOcrText('Rotterdam', $this->archivist);
     expect($resultsRotterdam->total())->toBe(1);
     expect($resultsRotterdam->first()?->asset_id)->toBe($asset2->id);
 
-    $resultsNone = $service->searchOcrText('Groningen');
+    $resultsNone = $service->searchOcrText('Groningen', $this->archivist);
     expect($resultsNone->total())->toBe(0);
 });
 

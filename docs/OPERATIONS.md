@@ -101,6 +101,22 @@ archivists should reach the module directly.
 
 The interface is checked at a 390 px viewport. Wide tables scroll inside their own
 container so the page itself never scrolls sideways.
+## Who may see which dossier
+
+Every archive operation is authorised against the dossier it touches, not against
+a global permission, because a global permission would let any account holding
+`assets.view` read a private dossier belonging to someone else.
+
+- Reading a dossier requires `assets.view` **and** either owning it or holding
+  `assets.publish`. `assets.publish` is a role permission that widens private
+  read access; it is not a published status on the dossier.
+- Changing a dossier additionally requires `assets.update`; uploading a new file
+  version additionally requires `assets.create`.
+- OCR listing, searching, viewing, correcting and dispatching are scoped the same
+  way. A search never returns text from a dossier the actor may not open, and rows
+  whose dossier is trashed or gone are excluded everywhere.
+- Dispatching OCR writes machine text onto the dossier, so it requires the update
+  permission rather than only the read permission.
 ## Security and storage posture
 
 - Keep originals, quarantine and private derivatives out of public buckets.

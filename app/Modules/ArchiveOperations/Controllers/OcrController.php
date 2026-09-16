@@ -15,6 +15,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\View\View;
 
+/**
+ * OCR text is a verbatim transcription of a private scan, so every action here is
+ * authorised against the dossier the text belongs to, never against a bare
+ * permission. A broad assets.view check would have let any signed-in viewer read
+ * the contents of every other owner's private photographs.
+ */
 class OcrController extends Controller
 {
     public function __construct(
@@ -24,12 +30,14 @@ class OcrController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('catalogue.manage') || $user->hasPermission('users.manage') || $user->hasPermission('assets.view')), 403);
+        abort_unless($user instanceof User, 403);
+        abort_unless($user->hasPermission('assets.view'), 403);
 
         $diagnostics = $this->ocrService->getDiagnostics();
         $query = $request->query('q');
         $queryString = is_string($query) ? $query : null;
-        $ocrRecords = $this->ocrService->searchOcrText($queryString);
+        // Scoped to the dossiers this actor may view; trashed and orphan rows are out.
+        $ocrRecords = $this->ocrService->searchOcrText($queryString, $user);
 
         return view('operations.ocr.index', compact('diagnostics', 'ocrRecords', 'queryString'));
     }
@@ -37,8 +45,9 @@ class OcrController extends Controller
     public function show(Request $request, AssetOcrText $ocr): View
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('catalogue.manage') || $user->hasPermission('users.manage') || $user->hasPermission('assets.view')), 403);
+        abort_unless($user instanceof User, 403);
 
+        $this->authorizeOcrRecord($ocr, 'view');
         $ocr->load(['asset', 'file']);
 
         return view('operations.ocr.show', compact('ocr'));
@@ -47,7 +56,10 @@ class OcrController extends Controller
     public function update(Request $request, AssetOcrText $ocr): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('catalogue.manage') || $user->hasPermission('users.manage')), 403);
+        abort_unless($user instanceof User, 403);
+
+        // Correcting a transcription edits the dossier's description of itself.
+        $this->authorizeOcrRecord($ocr, 'update');
 
         $validated = $request->validate([
             'edited_text' => ['required', 'string'],
@@ -63,7 +75,8 @@ class OcrController extends Controller
     public function dispatchOcr(Request $request, Asset $asset): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('catalogue.manage') || $user->hasPermission('users.manage')), 403);
+        abort_unless($user instanceof User, 403);
+        $this->authorize('update', $asset);
 
         $primaryFile = $asset->files()->where('is_primary', true)->first() ?? $asset->files()->first();
         if (! $primaryFile) {
@@ -75,5 +88,19 @@ class OcrController extends Controller
         Queue::connection('ingest')->push(new ProcessAssetOcrJob($primaryFile->id));
 
         return redirect()->back()->with('status', "OCR-taak geplaatst in de achtergrondwachtrij voor asset {$asset->accession_number}.");
+    }
+
+    /**
+     * Authorises an OCR row through the dossier it transcribes.
+     *
+     * A row whose dossier is trashed or already deleted has no dossier to authorise
+     * against, so it is treated as gone rather than as world-readable.
+     */
+    private function authorizeOcrRecord(AssetOcrText $ocr, string $ability): void
+    {
+        $asset = Asset::query()->find($ocr->asset_id);
+        abort_if($asset === null, 404);
+
+        $this->authorize($ability, $asset);
     }
 }

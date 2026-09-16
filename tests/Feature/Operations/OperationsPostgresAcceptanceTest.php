@@ -97,8 +97,9 @@ final class OperationsPostgresAcceptance
         $manageUsers = Permission::query()->firstOrCreate(['key' => 'users.manage'], ['name' => 'Users Manage']);
         $manageCatalogue = Permission::query()->firstOrCreate(['key' => 'catalogue.manage'], ['name' => 'Catalogue Manage']);
         $viewAssets = Permission::query()->firstOrCreate(['key' => 'assets.view'], ['name' => 'Assets View']);
+        $updateAssets = Permission::query()->firstOrCreate(['key' => 'assets.update'], ['name' => 'Assets Update']);
         $role = Role::query()->firstOrCreate(['key' => 'administrator'], ['name' => 'Administrator']);
-        $role->permissions()->syncWithoutDetaching([$manageUsers->id, $manageCatalogue->id, $viewAssets->id]);
+        $role->permissions()->syncWithoutDetaching([$manageUsers->id, $manageCatalogue->id, $viewAssets->id, $updateAssets->id]);
 
         $user = User::query()->create([
             'name' => 'Operations Acceptance',

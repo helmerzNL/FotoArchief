@@ -229,11 +229,36 @@ class TesseractOcrService
     }
 
     /**
+     * Searches OCR text within the dossiers the actor is actually allowed to see.
+     *
+     * OCR text is a verbatim transcription of a private scan, so reading it is reading
+     * the dossier. The boundary is therefore the same one AssetPolicy::view applies:
+     * the actor must hold assets.view, and may then see its own dossiers, or every
+     * dossier only when it also holds assets.publish. assets.publish is a permission
+     * granted to a role, not a statement that a photo is published, so it never makes
+     * a dossier public - it only widens which private dossiers this actor may read.
+     *
+     * Rows whose dossier is trashed or already gone are excluded: a deleted dossier
+     * must not keep leaking its transcribed text through a search box.
+     *
      * @return LengthAwarePaginator<int, AssetOcrText>
      */
-    public function searchOcrText(?string $query, int $perPage = 15): LengthAwarePaginator
+    public function searchOcrText(?string $query, User $actor, int $perPage = 15): LengthAwarePaginator
     {
         $builder = AssetOcrText::query()->with(['asset', 'file'])->latest('processed_at');
+
+        if (! $actor->hasPermission('assets.view')) {
+            // No read right at all: return an empty page rather than a filtered one.
+            $builder->whereRaw('1 = 0');
+        } else {
+            $builder->whereHas('asset', function ($assetQuery) use ($actor): void {
+                // whereHas on a SoftDeletes relation already drops trashed dossiers,
+                // and the join itself drops orphan rows whose dossier is gone.
+                if (! $actor->hasPermission('assets.publish')) {
+                    $assetQuery->where('created_by_user_id', $actor->id);
+                }
+            });
+        }
 
         if ($query !== null && trim($query) !== '') {
             $searchTerm = '%'.trim($query).'%';
