@@ -101,6 +101,45 @@ archivists should reach the module directly.
 
 The interface is checked at a 390 px viewport. Wide tables scroll inside their own
 container so the page itself never scrolls sideways.
+## Which file a dossier currently serves
+
+A dossier keeps every original it has ever received: an improved scan is added,
+never written over the previous one. Exactly one of those files is the one the
+archive currently serves, and any reader outside this module — the public
+catalogue, the viewer, media and IIIF endpoints, exports — must select it
+explicitly. Taking the first retained file of a dossier is wrong, because the
+oldest withdrawn scan is a retained file too.
+
+The contract:
+
+- `asset_files.is_primary = true` marks the file the dossier currently serves.
+  A dossier has **at most one**; this is enforced by the partial unique index
+  `asset_files_single_primary_per_asset`, not merely by convention, so a reader
+  may rely on it without defending against duplicates.
+- `asset_versions.is_current = true` marks the matching version row, and always
+  points at the same file as the primary flag. The two move together inside one
+  transaction.
+- A file that is not primary is retained history. It must never be served
+  publicly, and it must never be reachable through a viewer, media or IIIF route
+  by id alone.
+- Files ingested before version tracking existed have been given a version row
+  by the repair migration, so joining through `asset_versions` no longer loses
+  them. Readers may use either flag; `is_primary` is the cheaper one.
+
+### When a review becomes stale
+
+`assets.lock_version` is the dossier revision the metadata form validates
+against. It is incremented whenever the served bytes change, which invalidates
+any open review rather than letting it be saved over a file that is no longer
+the one being served:
+
+- activating a different version (operations),
+- rebuilding derivatives for a file (operations),
+- ingesting a replacement scan that takes over as primary (ingest),
+- merging a duplicate dossier (operations).
+
+A consumer that caches rendered output should treat `lock_version` as the cache
+key for a dossier; a bump means the previous rendition is withdrawn.
 ## Who may see which dossier
 
 Every archive operation is authorised against the dossier it touches, not against

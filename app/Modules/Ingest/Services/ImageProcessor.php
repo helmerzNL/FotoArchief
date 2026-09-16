@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ingest\Services;
 
+use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\AssetVersion;
 use App\Modules\Ingest\IngestStatus;
@@ -154,6 +155,9 @@ class ImageProcessor
                     if ($nextVersion > 1) {
                         AssetFile::query()->where('asset_id', $upload->asset_id)->update(['is_primary' => false]);
                         AssetVersion::query()->where('asset_id', $upload->asset_id)->update(['is_current' => false]);
+                        // A replaced primary changes what viewers receive, so an open
+                        // review of the previous scan must not be saved over it.
+                        Asset::query()->where('id', $upload->asset_id)->increment('lock_version');
                     }
                     $file = AssetFile::query()->create([
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,

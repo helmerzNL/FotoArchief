@@ -170,6 +170,10 @@ class FileVersionService
                     'processed_at' => now(),
                 ]);
 
+                // Rebuilt derivatives change what a viewer receives, so any open
+                // review of this dossier is stale and must be re-read.
+                $this->invalidateReview($file->asset_id);
+
                 AssetAuditEvent::query()->create([
                     'asset_id' => $file->asset_id,
                     'actor_user_id' => $actor->id,
@@ -207,6 +211,8 @@ class FileVersionService
             $file->is_primary = true;
             $file->save();
 
+            $this->invalidateReview($asset->id);
+
             AssetVersion::query()
                 ->where('asset_id', $asset->id)
                 ->where('asset_file_id', $file->id)
@@ -222,5 +228,15 @@ class FileVersionService
                 ],
             ]);
         });
+    }
+
+    /**
+     * Bumps the dossier revision so an open metadata or publication form is
+     * rejected on save instead of writing a review of a file that is no longer
+     * the one being served.
+     */
+    private function invalidateReview(string $assetId): void
+    {
+        Asset::query()->where('id', $assetId)->increment('lock_version');
     }
 }
