@@ -82,6 +82,25 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+### Operations correction acceptance
+
+Revision `326b6d6` integrates OCR's 120-second job deadline, bounded process
+timeout, explicit ingest-connection dispatch, persistent asynchronous archive
+maintenance runs, discoverable operation links, OCR/file-version object
+authorization, and the database-enforced single-primary-file invariant.
+The integrated full suite passes **303 tests / 2206 assertions**, with eight
+environment-gated skips and three portal fixture failures still being corrected.
+The failures attempt impossible duplicate primaries or recreate an existing
+column; they are not waived.
+
+Separate fresh PostgreSQL databases execute operation acceptance plus fresh
+onboarding and legacy forward upgrade: **7 tests / 140 assertions pass**.
+The operation tests use real private files, native immutable-original triggers,
+JPEG derivative decoding, verified storage cutover, trash/restore/purge, and a
+32 MB queued-maintenance fixture. The CI PostgreSQL job now explicitly runs
+these tests rather than silently skipping them. Real Linux Tesseract extraction
+and standalone maintenance-worker acceptance remain separate gates.
+
 ### Portal correction acceptance
 
 Revision `f936e64` integrates object-level suggestion authorization and a shared
