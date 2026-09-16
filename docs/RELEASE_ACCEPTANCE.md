@@ -78,6 +78,17 @@ cross-device flows or a production HTTPS origin.
 
 ## Limits of the evidence
 
+After integrating archive diagnostics, duplicates, file versions, processing,
+integrity, storage relocation, trash and OCR, plus the catalogue HTTP workflow
+regression test, revision `fdd38b4` passes **171 tests / 1273 assertions**,
+formatting and level-8 analysis. The complete migration set also passes the real
+PostgreSQL fresh installation and legacy forward-upgrade tests (**2 / 39**).
+The catalogue workflow is a Laravel HTTP feature test, not a standalone browser
+execution. OCR engine/language execution is a separate Docker CI gate; neither
+installing its package in the Dockerfile nor fake-process tests prove it ran.
+Integrated asynchronous operation, storage-trigger and portal acceptance remain
+pending.
+
 At integration revision `a4e3ed6`, identity, the eight catalogue milestones and
 CSV import/exports pass **135 tests / 1005 assertions**, formatting and level-8
 analysis. Both real PostgreSQL fresh/upgrade tests pass **39 assertions** after
