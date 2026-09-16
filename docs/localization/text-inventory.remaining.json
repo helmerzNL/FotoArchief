@@ -750,21 +750,21 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 240,
+            "line": 244,
             "kind": "php_string",
             "text": "Kies een model voor de gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 243,
+            "line": 247,
             "kind": "php_string",
             "text": "Native provider gebruik vereist expliciete toestemming per functie.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 246,
+            "line": 250,
             "kind": "php_string",
             "text": "Schakel de provider eerst in voordat je hem selecteert.",
             "batch": "ai"
@@ -4770,7 +4770,7 @@
             "file": "resources/views/ai/settings.blade.php",
             "line": 130,
             "kind": "blade_text",
-            "text": "Capabilities en noodstop",
+            "text": "AI-functies en noodstop",
             "batch": "ai"
         },
         {

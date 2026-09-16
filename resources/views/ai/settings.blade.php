@@ -127,7 +127,7 @@
 
     <form method="POST" action="{{ route('admin.operations.ai.update') }}" class="card">
         @csrf
-        <h2>Capabilities en noodstop</h2>
+        <h2>AI-functies en noodstop</h2>
         @foreach([
             'global_enabled' => 'AI globaal inschakelen',
             'emergency_stop' => 'Noodstop actief houden',
