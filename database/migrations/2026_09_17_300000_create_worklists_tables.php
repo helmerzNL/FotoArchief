@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('worklist_type', 50)->default('custom');
             $table->text('description')->nullable();
             $table->string('status', 30)->default('active');
-            $table->foreignId('created_by_user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('assigned_to_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUlid('created_by_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUlid('assigned_to_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->json('filter_criteria')->nullable();
             $table->timestampsTz();
         });
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->foreignUlid('asset_id')->constrained('assets')->cascadeOnDelete();
             $table->string('status', 30)->default('pending');
             $table->timestampTz('completed_at')->nullable();
-            $table->foreignId('completed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignUlid('completed_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->text('note')->nullable();
             $table->timestampsTz();
             $table->unique(['worklist_id', 'asset_id']);
