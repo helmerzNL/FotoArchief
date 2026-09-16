@@ -80,9 +80,20 @@ class Publication extends CatalogueModel
             ->whereHas('asset.rights', function (Builder $q): void {
                 $q->where('verification_status', 'verified');
             })
+            // Count must be exactly 1, not merely "at least one": if a future
+            // retained-file/reprocessing feature ever leaves two eligible
+            // files on one asset at once, this fails closed instead of
+            // letting the predicate say "public" while the viewer/media/IIIF
+            // routes (see Asset::currentPublicFile(), which mirrors this
+            // exact condition) independently pick whichever file the
+            // database happens to return first - which could be the
+            // superseded one. See docs/CONTRACT_ACTIVE_FILE.md.
             ->whereHas('asset.files', function (Builder $q): void {
                 $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean');
-            });
+                if (Schema::hasColumn('asset_files', 'is_primary')) {
+                    $q->where('is_primary', true);
+                }
+            }, '=', 1);
 
         // Forward-compatible cross-module guard (see
         // docs/CONTRACT_SOFT_DELETE.md): Operations owns adding a recoverable

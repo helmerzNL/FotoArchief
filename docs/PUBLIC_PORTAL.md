@@ -88,6 +88,16 @@ There is no separate "public copy" of a photo and no cache to invalidate:
   photo disappears from every public route on the very next request, with no
   separate revoke action required; `revoke` remains available for any other
   reason staff need to pull a photo immediately.
+- **Which file is "current"**: the predicate, the viewer, its media stream
+  and the IIIF manifest all resolve the same single canonical file for an
+  asset (`Asset::currentPublicFile()`, mirrored by the predicate's exact-count
+  `whereHas('asset.files', ..., '=', 1)`). This requires exactly one eligible
+  (clean, ready) file; today's ingest only ever produces one, so ordinary
+  photos are unaffected. If a future feature ever leaves more than one
+  eligible file on an asset at once, every public route fails closed (404)
+  rather than guessing which file is current — see
+  [`docs/CONTRACT_ACTIVE_FILE.md`](CONTRACT_ACTIVE_FILE.md) for the full
+  contract and what a future `is_primary` column must guarantee.
 
 ## 3. Download policy options
 
@@ -114,7 +124,15 @@ suggestion can only ever reference a photo the visitor actually saw.
 
 Staff moderate at `/admin/suggesties`
 ([`StaffSuggestionController`](../app/Http/Controllers/Publication/StaffSuggestionController.php)),
-requiring `assets.view` to list/read and `assets.update` to decide.
+requiring `assets.view` to list/read and `assets.update` to decide. Access is
+also scoped per asset, exactly like publication review: a staff member
+without `assets.publish` may only see and moderate suggestions filed against
+assets they themselves created, so they can never read another owner's
+visitor-submitted name/e-mail or moderate an asset outside their own scope.
+Staff with `assets.publish` see and moderate every asset's suggestions. A
+suggestion on a since-trashed asset 404s for every role and is excluded from
+the list, because it is resolved through the asset's normal (non-trashed)
+query.
 
 **Accepting a suggestion does not apply any metadata change.** `accept()`
 only records `status = 'accepted'`, the moderator, a timestamp and an
@@ -154,3 +172,4 @@ from visitor input straight into archive metadata.
   image. The manifest is denied with a 404 for any private, embargoed,
   revoked, unscanned or (post-integration) deleted asset, via the same route
   binding used by the human-facing viewer.
+

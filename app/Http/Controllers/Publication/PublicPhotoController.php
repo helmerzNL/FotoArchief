@@ -26,7 +26,11 @@ class PublicPhotoController extends Controller
     public function show(Request $request, Publication $publication): View
     {
         $asset = $publication->asset()->with(['files', 'rights.license', 'rights.rightsStatement', 'tags'])->firstOrFail();
-        $file = $asset->files->firstWhere('ingest_status', 'ready_private');
+        // Same canonical file every other public route agrees on (see
+        // Asset::currentPublicFile()); fail closed with a 404 rather than
+        // render a page around an ambiguous or missing file.
+        $file = $asset->currentPublicFile();
+        abort_unless($file !== null, 404);
         $right = $asset->rights->firstWhere('verification_status', 'verified');
         $canonicalUrl = route('public.photo', $publication);
         $structuredData = $this->structuredData($publication, $asset, $file, $right, $canonicalUrl);
@@ -39,8 +43,12 @@ class PublicPhotoController extends Controller
         abort_unless(in_array($size, self::SIZES, true), 404);
         $download = $request->boolean('download');
         abort_unless(! $download || ($publication->download_policy === 'preview_only' && $size === 'preview2000'), 403, 'Downloaden is niet toegestaan voor deze foto.');
-        $asset = $publication->asset()->firstOrFail();
-        $file = $asset->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->first();
+        // Same canonical file the predicate and viewer already agreed on
+        // (see Asset::currentPublicFile()) - never re-derive eligibility
+        // independently here, or the media stream could diverge from what
+        // the viewer just showed.
+        $asset = $publication->asset()->with('files')->firstOrFail();
+        $file = $asset->currentPublicFile();
         abort_unless($file !== null && $file->storage_disk !== null, 404);
         $key = $file->derivatives[$size] ?? null;
         abort_unless(is_string($key), 404);

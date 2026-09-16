@@ -27,7 +27,11 @@ class IiifManifestController extends Controller
     public function manifest(Publication $publication): JsonResponse
     {
         $asset = $publication->asset()->with(['files', 'rights.license', 'rights.rightsStatement'])->firstOrFail();
-        $file = $asset->files->firstWhere('ingest_status', 'ready_private');
+        // Same canonical file the predicate and viewer already agreed on
+        // (see Asset::currentPublicFile()); never re-derive eligibility
+        // independently, or the manifest could describe a different,
+        // superseded file than the one the viewer shows.
+        $file = $asset->currentPublicFile();
         abort_unless($file !== null && is_array($file->derivatives) && isset($file->derivatives['preview2000']), 404);
         $right = $asset->rights->firstWhere('verification_status', 'verified');
 

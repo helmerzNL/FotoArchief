@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @property string $id
@@ -69,6 +70,44 @@ class Asset extends CatalogueModel
     public function files(): HasMany
     {
         return $this->hasMany(AssetFile::class);
+    }
+
+    /**
+     * The single file every public route (predicate, viewer, media stream,
+     * IIIF manifest) must agree is "the" current publishable original for
+     * this asset. Requires `$this->files` to already be eager-loaded by the
+     * caller (never issues its own query), so it can never diverge from
+     * whatever the SQL-level predicate in
+     * {@see Publication::scopePubliclyVisible()}
+     * already validated.
+     *
+     * Deliberately returns null - fail closed - both when no file qualifies
+     * and when more than one does. Today's ingest pipeline only ever
+     * produces one ready_private/clean file per asset, so an original
+     * single-file ingest resolves unambiguously and remains publishable
+     * unchanged. If a future retained-file/reprocessing feature ever leaves
+     * two eligible files at once, this refuses to guess which is current
+     * instead of arbitrarily serving whichever the database happens to
+     * return first.
+     *
+     * Forward-compatible: the moment `asset_files.is_primary` (or an
+     * equivalent `is_current` flag) exists - see
+     * docs/CONTRACT_ACTIVE_FILE.md - only the flagged file is considered,
+     * and switching which file is primary is expected to bump lock_version
+     * (or another explicit privacy gate) so the change goes through
+     * re-review like any other edit, exactly like deleted_at in
+     * docs/CONTRACT_SOFT_DELETE.md.
+     */
+    public function currentPublicFile(): ?AssetFile
+    {
+        $eligible = $this->files->filter(
+            fn (AssetFile $file): bool => $file->ingest_status === 'ready_private' && $file->scanner_status === 'clean'
+        );
+        if (Schema::hasColumn('asset_files', 'is_primary')) {
+            $eligible = $eligible->filter(fn (AssetFile $file): bool => (bool) $file->getAttribute('is_primary'));
+        }
+
+        return $eligible->count() === 1 ? $eligible->first() : null;
     }
 
     /**
