@@ -186,11 +186,12 @@ before upgrading or moving a stack.
 
 ## Onboarding delivery gate
 
-The deployment template now expects the application onboarding contract to be
-present. CI smokes only the pending-onboarding start and restart persistence of
-the generated private state; it does not fake success with manual migrations or
-seeding. Acceptance testing still must cover fresh import in both managers,
-wizard completion against PostgreSQL and chosen storage, worker activation,
-restart/redeploy persistence after completion, and an upgrade without reopening
-installation. Until those manager runs pass, do not claim a verified Komodo or
-Dockhand release.
+The deployment template expects the implemented application onboarding contract.
+The Quality workflow now covers pending startup/key persistence, actual HTTP
+wizard completion against PostgreSQL/local storage, queued upload/JPEG delivery,
+restart after completion, and empty-target backup restoration. Its separate
+Dockhand API import creates a second stack and repeats onboarding. These are
+executable acceptance gates, not evidence that a run has passed: see the
+[acceptance ledger](RELEASE_ACCEPTANCE.md) for actual results. Komodo UI import,
+S3 storage and a production HTTPS origin require their own acceptance; neither
+Compose parsing nor a Dockhand API run proves those paths.

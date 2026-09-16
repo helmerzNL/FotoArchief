@@ -106,6 +106,31 @@ PostgreSQL database. Repeating either seeder now exits **1**, preserving exactly
 50,000 assets, files and publications and one benchmark collection. Composer
 metadata validation, locked dependency audit and PHP platform checks pass.
 
+The same 50,000-record HTTP gate was repeated after the portal correction.
+Private list/filter/detail p95 values are **606.50 / 376.81 / 353.87 ms**, all
+within their limits. Public detail passes at **224.45 ms**, but filtered public
+search regresses to **1912.93 ms** against its **700 ms** ceiling. This is a
+release-blocking regression in the active-file query work, not a waived
+threshold; the earlier 437.79 ms result cannot establish the new query's speed.
+
+### Exchange recovery and deletion acceptance
+
+Revisions `ab96843` and `2af9ef5` integrate worker-stop recovery and soft-deletion
+delivery guards. The complete integrated exchange subset passes **58 tests /
+323 assertions**, with whole-application formatting and level-8 analysis green.
+Both Compose templates parse with the new timing mappings in `54ac52a`.
+
+The exchange worktree's real PostgreSQL/HTTP/standalone-worker acceptance
+completed CSV dry-run and confirmation plus JSON, CSV and ZIP downloads.
+A worker killed mid-export left a running claim; redelivery reclaimed it on
+attempt 2 and produced an 18-asset, 74-file bundle with no checksum mismatches.
+Premature redelivery released rather than silently deleting the job. Abandoned
+claims are explicitly failed with a Dutch diagnostic. Import processing was too
+short to kill reliably, so import crash timing is covered deterministically,
+not claimed as a successful process-kill experiment. Trashed assets are denied
+at selection, build and delivery, including a link issued before deletion.
+Linux image execution of these corrections remains a separate pending gate.
+
 ### Integrated browser and package checks
 
 Real Playwright browser interactions against the isolated PostgreSQL-backed
