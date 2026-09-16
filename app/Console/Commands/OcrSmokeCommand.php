@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Modules\ArchiveOperations\Jobs\ProcessAssetOcrJob;
+use App\Modules\ArchiveOperations\Models\AssetOcrText;
 use App\Modules\ArchiveOperations\Services\TesseractOcrService;
+use App\Modules\Catalogue\Models\Asset;
+use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Symfony\Component\Process\Process;
 
 /**
@@ -20,12 +27,22 @@ use Symfony\Component\Process\Process;
  */
 class OcrSmokeCommand extends Command
 {
-    protected $signature = 'operations:ocr-smoke {--language=eng : Language code the binary must be able to load}';
+    protected $signature = 'operations:ocr-smoke
+        {--language=eng : Language code the binary must be able to load}
+        {--queued : Also prove the real ingest worker runs the job end to end}
+        {--wait=90 : Seconds to wait for the worker to finish the queued job}';
 
     protected $description = 'Verify that the configured Tesseract binary really extracts text';
 
     public function handle(TesseractOcrService $service): int
     {
+        // In a Compose deployment the binary belongs to the worker container, not
+        // necessarily to this one. Probing it here would fail a perfectly healthy
+        // installation, so the queued mode asks the worker to prove it instead.
+        if ($this->option('queued')) {
+            return $this->smokeQueuedJob((string) $this->option('language'));
+        }
+
         $diagnostics = $service->getDiagnostics();
 
         if ($diagnostics['available'] !== true) {
@@ -82,6 +99,100 @@ class OcrSmokeCommand extends Command
         $this->info('Tesseract werkt: versie '.($diagnostics['version'] ?? 'onbekend').', taal '.$language.'.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Proves the whole path an operator actually depends on: a job pushed onto the
+     * ingest connection, picked up by the real external worker, writing OCR text
+     * back to the live database.
+     *
+     * It runs against the onboarded installation on purpose -- a separate test
+     * database would prove the schema and not the deployment -- so it must leave no
+     * trace. Everything it creates is synthetic, carries a recognisable accession
+     * number, and is removed again in a finally block. It never touches
+     * installation state, existing dossiers, or the queue beyond its own message.
+     */
+    private function smokeQueuedJob(string $language): int
+    {
+        $accession = 'OCR-SMOKE-'.strtoupper(Str::random(8));
+        $storageKey = 'ocr-smoke/'.$accession.'.png';
+        $asset = null;
+
+        try {
+            $probe = $this->renderProbeImage();
+            if ($probe === null) {
+                $this->error('Kon geen testafbeelding maken; de GD-extensie ontbreekt.');
+
+                return self::FAILURE;
+            }
+
+            $bytes = (string) file_get_contents($probe);
+            @unlink($probe);
+            Storage::disk('local')->put($storageKey, $bytes);
+
+            $asset = Asset::query()->create([
+                'accession_number' => $accession,
+                'title' => 'OCR-rookproef (tijdelijk)',
+            ]);
+
+            $file = AssetFile::query()->create([
+                'asset_id' => $asset->id,
+                'storage_disk' => 'local',
+                'storage_key' => $storageKey,
+                'sha256' => hash('sha256', $bytes),
+                'media_type' => 'image/png',
+                'byte_size' => strlen($bytes),
+                'original_filename' => $accession.'.png',
+                'derivatives' => [],
+                'ingest_status' => 'ready_private',
+                'is_primary' => true,
+            ]);
+
+            Queue::connection('ingest')->push(new ProcessAssetOcrJob($file->id));
+            $this->line('Taak op de ingest-wachtrij geplaatst; wachten op de worker...');
+
+            $deadline = time() + max(5, (int) $this->option('wait'));
+            $record = null;
+
+            while (time() < $deadline) {
+                $record = AssetOcrText::query()->where('asset_file_id', $file->id)->first();
+                if ($record !== null && in_array($record->status, ['completed', 'failed', 'disabled'], true)) {
+                    break;
+                }
+                sleep(2);
+            }
+
+            if ($record === null) {
+                $this->error('De worker heeft de taak niet opgepakt. Draait de ingest-worker en staat OCR_ENABLED ook voor die container aan?');
+
+                return self::FAILURE;
+            }
+
+            if ($record->status !== 'completed') {
+                $this->error('De worker rondde de taak niet af: '.($record->error_message ?? $record->status));
+
+                return self::FAILURE;
+            }
+
+            $recognised = strtoupper(preg_replace('/[^A-Z]/i', '', (string) $record->extracted_text) ?? '');
+            if (! str_contains($recognised, 'ARCHIEF')) {
+                $this->error('De worker leverde geen bruikbare tekst op; controleer de taalbestanden in de worker-container.');
+
+                return self::FAILURE;
+            }
+
+            $this->info('De ingest-worker heeft de OCR-taak uitgevoerd en tekst opgeslagen (taal '.$language.').');
+
+            return self::SUCCESS;
+        } finally {
+            // The smoke test must not leave a dossier behind in a real archive.
+            if ($asset !== null) {
+                AssetOcrText::query()->where('asset_id', $asset->id)->delete();
+                AssetFile::query()->where('asset_id', $asset->id)->delete();
+                $asset->forceDelete();
+            }
+            Storage::disk('local')->delete($storageKey);
+        }
     }
 
     /** Writes a high-contrast probe image and returns its path, or null without GD. */

@@ -7,8 +7,13 @@ namespace Tests\Feature\Operations;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\ArchiveOperations\Models\AssetOcrText;
+use App\Modules\Catalogue\Models\Asset;
+use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -82,4 +87,34 @@ it('fails the ocr smoke command when OCR is switched off rather than pretending 
     config()->set('services.tesseract.enabled', false);
 
     $this->artisan('operations:ocr-smoke')->assertExitCode(1);
+});
+
+it('leaves no dossier, file or queue debris behind when the queued smoke test finds no worker', function (): void {
+    Storage::fake('local');
+
+    $before = Asset::query()->withTrashed()->count();
+
+    $this->artisan('operations:ocr-smoke', ['--queued' => true, '--wait' => 5])
+        ->expectsOutputToContain('niet opgepakt')
+        ->assertExitCode(1);
+
+    // The smoke test runs against a real archive, so anything it created must be
+    // gone again -- including the soft-deletable dossier.
+    expect(Asset::query()->withTrashed()->count())->toBe($before)
+        ->and(Asset::query()->withTrashed()->where('accession_number', 'like', 'OCR-SMOKE-%')->exists())->toBeFalse()
+        ->and(AssetFile::query()->where('storage_key', 'like', 'ocr-smoke/%')->exists())->toBeFalse()
+        ->and(AssetOcrText::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles())->toBe([]);
+});
+
+it('pushes the smoke job onto the ingest queue the real worker consumes', function (): void {
+    Storage::fake('local');
+
+    $this->artisan('operations:ocr-smoke', ['--queued' => true, '--wait' => 5])->assertExitCode(1);
+
+    $queued = DB::table('jobs')->get();
+
+    expect($queued)->toHaveCount(1)
+        ->and($queued->first()->queue)->toBe('ingest')
+        ->and($queued->first()->payload)->toContain('ProcessAssetOcrJob');
 });

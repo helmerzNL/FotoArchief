@@ -149,6 +149,57 @@ at all. Run it in the image build or in CI, where a missing binary stops the
 pipeline instead of reaching an operator.
 
 Use `--language=nld` to verify the Dutch language data specifically.
+
+The command ships inside the image (it lives in `app/`, which the Dockerfile
+copies; only `tests/` is excluded), so nothing has to be copied into a running
+container:
+
+```
+docker compose exec worker php artisan operations:ocr-smoke --language=nld
+```
+
+Run it against the **worker** container, because that is where the binary is
+installed. Running it against the web container proves nothing about the
+container that will actually do the work.
+
+### Proving the whole path, not just the binary
+
+```
+docker compose exec app php artisan operations:ocr-smoke --queued --wait=90
+```
+
+`--queued` skips the local binary probe entirely and instead creates a synthetic
+dossier, pushes a real `ProcessAssetOcrJob` onto the ingest queue, and waits for
+the worker to write the text back. It therefore proves the deployment an operator
+depends on: the queue connection, the running worker, its Tesseract binary and its
+language data. It is the mode to run against the **app** container, which may have
+no binary of its own.
+
+It runs against the live onboarded database on purpose -- a separate test database
+would prove the schema and not the deployment. Consequently:
+
+- It **never** resets, migrates or re-onboards anything. It only inserts its own
+  synthetic rows.
+- Everything it creates carries an `OCR-SMOKE-` accession number and is removed
+  again in a `finally` block, including the stored image, so a failure or a
+  timeout still leaves no dossier behind.
+- Do **not** set `APP_ENV=testing` for it. It must run in the application's own
+  environment, against the real configuration; forcing a testing environment would
+  point it at other credentials and prove nothing about the deployment.
+
+### Environment the worker needs
+
+OCR is off unless it is switched on, and the setting has to reach the **worker**
+container, not only the web one. Both read the same names:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `OCR_ENABLED` | `false` | Master switch. While false, OCR records are written with status `disabled` and no binary is ever invoked. |
+| `OCR_BINARY` | `tesseract` | Path or name of the executable. |
+| `OCR_LANGUAGES` | `nld+eng` | Languages passed to `-l`. The image must carry the matching language data. |
+
+A worker started without `OCR_ENABLED=true` will accept the job and record it as
+disabled, which the queued smoke test reports as a failure rather than a pass.
 ## Which file a dossier currently serves
 
 A dossier keeps every original it has ever received: an improved scan is added,
