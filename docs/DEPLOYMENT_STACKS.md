@@ -27,6 +27,15 @@ variables from `deploy/.env.example` in that stack's private environment.
 Review the resolved Compose, then deploy the stack. Do not create three separate
 application deployments: app, worker and scheduler must share the same named
 `app-storage` volume and image.
+The placeholder-only `deploy/komodo-stack.example.toml` mirrors Komodo's
+documented Stack fields (`server`, `run_directory`, `file_paths`,
+`project_name`, `environment`, `poll_for_updates`, `auto_update` and
+`send_alerts`). Copy it into your private Komodo resource configuration, replace
+the server name, public `APP_URL`, proxy settings, image tag/digest and
+PostgreSQL password, then import/deploy it from Komodo. Keep
+`auto_update=false` for FotoArchief release tags; use `poll_for_updates=true`
+only as a visible manager update indicator unless you deliberately operate a
+rolling tag with a tested rollback path.
 
 **Dockhand:** first enable authentication under Settings > Authentication and
 configure the Docker environment. Keep this administrative interface on a LAN
@@ -109,6 +118,22 @@ EXCHANGE_ABANDONED_CLAIM_SECONDS: ${EXCHANGE_ABANDONED_CLAIM_SECONDS:-1800}
 
 No port or volume mapping changes are required. Preserve the existing
 `app-storage` and `postgres-data` volumes and database password.
+
+### Manager update checks
+
+Komodo's update modes apply to the Stack resource. For pinned FotoArchief
+release tags, prefer `poll_for_updates=true` so Komodo shows an available digest
+change without redeploying unexpectedly. Leave `auto_update=false` unless a
+human has accepted the exact backup, migration and restore procedure for a
+rolling tag. Dockhand does not replace FotoArchief's own release gate; update
+the stack's private `APP_IMAGE` value to the tested tag/digest and redeploy
+without deleting volumes.
+
+For either manager, the acceptance evidence is the same as direct Compose:
+the stack is created by the manager, onboarding completes, a photo is processed
+by the worker, a redeploy preserves volumes, and an upgrade run preserves the
+installer lock, administrator, photo files and application key. A Compose parse
+alone is only a template syntax check.
 
 ### Safe Compose upgrade helper
 

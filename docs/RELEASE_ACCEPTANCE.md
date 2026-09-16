@@ -45,6 +45,10 @@ The Quality workflow provides independent jobs for:
   Compose and environment templates through its documented API. The independently
   created stack must complete the same HTTP onboarding/photo acceptance. This is
   manager API acceptance, not a browser UI walkthrough or Komodo verification.
+- Komodo support is delivered as a placeholder-only Stack template matching the
+  documented Stack fields and update modes. A real Komodo UI/API import remains
+  environment-specific until a disposable Komodo Core/Periphery test target is
+  supplied.
 - Consistent local-volume backup restored to a different Compose project with
   empty volumes/database; the old account, photos and setup lock must survive.
 - PHP/deployment ZIPs from one clean commit and production dependency lock.
