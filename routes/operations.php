@@ -24,6 +24,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
     Route::post('/ai/index', [AiSettingsController::class, 'dispatchIndex'])->name('ai.index');
+    Route::post('/ai/test-connection', [AiSettingsController::class, 'testConnection'])->name('ai.test-connection');
     Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
     Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
@@ -32,6 +33,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');
         Route::post('/{run}/retry', [OperationRunController::class, 'retry'])->name('retry');
+        Route::post('/{run}/cancel', [OperationRunController::class, 'cancel'])->name('cancel');
     });
 
     Route::prefix('duplicates')->name('duplicates.')->group(function (): void {

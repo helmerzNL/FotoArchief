@@ -19,6 +19,12 @@ class AiConfigurationService
         'local_provider_enabled',
         'external_provider_enabled',
         'external_processing_allowed',
+        'openai_provider_enabled',
+        'anthropic_provider_enabled',
+        'gemini_provider_enabled',
+        'openrouter_provider_enabled',
+        'image_analysis_native_consent',
+        'embeddings_native_consent',
     ];
 
     private const INT_KEYS = [
@@ -33,7 +39,23 @@ class AiConfigurationService
         'external_endpoint',
         'provider_region',
         'retention_notice',
+        'image_analysis_provider',
+        'image_analysis_model',
+        'embeddings_provider',
+        'embeddings_model',
     ];
+
+    /** Providers that can perform image analysis (capability-checked at dispatch time). */
+    public const IMAGE_ANALYSIS_PROVIDERS = ['local', 'external', 'openai', 'anthropic', 'gemini', 'openrouter'];
+
+    /**
+     * Embeddings providers restricted to genuinely multimodal / shared-space
+     * models: OpenAI embeddings are text-only and Anthropic has no native
+     * embeddings API, so neither is offered here.
+     */
+    public const EMBEDDINGS_PROVIDERS = ['local', 'external', 'gemini', 'openrouter'];
+
+    public const NATIVE_PROVIDERS = ['openai', 'anthropic', 'gemini', 'openrouter'];
 
     /**
      * @return array<string, bool|int|string|null>
@@ -59,7 +81,58 @@ class AiConfigurationService
             && is_string($settings['external_endpoint'] ?? null)
             && $settings['external_endpoint'] !== '';
 
+        foreach (self::NATIVE_PROVIDERS as $provider) {
+            $settings["{$provider}_configured"] = $this->nativeProviderConfigured($provider);
+            $settings["{$provider}_ready"] = (bool) ($settings['active'] ?? false)
+                && (bool) ($settings["{$provider}_provider_enabled"] ?? false)
+                && $settings["{$provider}_configured"];
+        }
+
+        $settings['image_analysis_ready'] = $this->capabilityReady(
+            $settings,
+            (string) ($settings['image_analysis_provider'] ?? ''),
+            (bool) ($settings['image_analysis_native_consent'] ?? false),
+            (string) ($settings['image_analysis_model'] ?? ''),
+        );
+        $settings['embeddings_ready'] = $this->capabilityReady(
+            $settings,
+            (string) ($settings['embeddings_provider'] ?? ''),
+            (bool) ($settings['embeddings_native_consent'] ?? false),
+            (string) ($settings['embeddings_model'] ?? ''),
+        );
+
         return $settings;
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     */
+    private function capabilityReady(array $settings, string $provider, bool $nativeConsent, string $model): bool
+    {
+        if ($provider === '') {
+            return false;
+        }
+        if ($provider === 'local') {
+            return (bool) ($settings['local_ready'] ?? false);
+        }
+        if ($provider === 'external') {
+            return (bool) ($settings['external_ready'] ?? false);
+        }
+        if (! in_array($provider, self::NATIVE_PROVIDERS, true)) {
+            return false;
+        }
+
+        return $nativeConsent && $model !== '' && (bool) ($settings["{$provider}_ready"] ?? false);
+    }
+
+    private function nativeProviderConfigured(string $provider): bool
+    {
+        $config = config("ai.native_providers.{$provider}", []);
+
+        return is_array($config)
+            && is_string($config['api_key'] ?? null) && $config['api_key'] !== ''
+            && is_string($config['base_url'] ?? null) && $config['base_url'] !== ''
+            && (int) ($config['monthly_budget_cents'] ?? 0) > 0;
     }
 
     /**
@@ -147,6 +220,42 @@ class AiConfigurationService
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
+        }
+
+        $this->validateCapability($values, 'image_analysis_provider', 'image_analysis_model', 'image_analysis_native_consent', self::IMAGE_ANALYSIS_PROVIDERS, $errors);
+        $this->validateCapability($values, 'embeddings_provider', 'embeddings_model', 'embeddings_native_consent', self::EMBEDDINGS_PROVIDERS, $errors);
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
+    /**
+     * @param  array<string, bool|int|string|null>  $values
+     * @param  list<string>  $allowedProviders
+     * @param  array<string, string>  $errors
+     */
+    private function validateCapability(array $values, string $providerKey, string $modelKey, string $consentKey, array $allowedProviders, array &$errors): void
+    {
+        $provider = (string) ($values[$providerKey] ?? '');
+        if ($provider === '') {
+            return;
+        }
+        if (! in_array($provider, $allowedProviders, true)) {
+            $errors[$providerKey] = "Ongeldige provider voor {$providerKey}: {$provider}.";
+
+            return;
+        }
+        if (in_array($provider, self::NATIVE_PROVIDERS, true)) {
+            if (trim((string) ($values[$modelKey] ?? '')) === '') {
+                $errors[$modelKey] = 'Kies een model voor de gekozen provider.';
+            }
+            if (! (bool) ($values[$consentKey] ?? false)) {
+                $errors[$consentKey] = 'Native provider gebruik vereist expliciete toestemming per functie.';
+            }
+            if (! (bool) ($values["{$provider}_provider_enabled"] ?? false)) {
+                $errors["{$provider}_provider_enabled"] = 'Schakel de provider eerst in voordat je hem selecteert.';
+            }
         }
     }
 

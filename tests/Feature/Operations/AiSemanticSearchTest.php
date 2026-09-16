@@ -39,6 +39,7 @@ beforeEach(function (): void {
         'embeddings_enabled' => '1',
         'local_provider_enabled' => '1',
         'local_endpoint' => 'http://127.0.0.1:8088',
+        'embeddings_provider' => 'local',
         'max_assets_per_batch' => 10,
         'derivative_max_pixels' => 512,
         'request_timeout_seconds' => 15,

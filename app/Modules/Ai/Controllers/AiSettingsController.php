@@ -7,9 +7,11 @@ namespace App\Modules\Ai\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\AiConnectionTestService;
 use App\Modules\Ai\Services\AiDispatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AiSettingsController extends Controller
@@ -17,6 +19,7 @@ class AiSettingsController extends Controller
     public function __construct(
         private readonly AiConfigurationService $configuration,
         private readonly AiDispatchService $dispatch,
+        private readonly AiConnectionTestService $connectionTest,
     ) {}
 
     public function edit(Request $request): View
@@ -42,6 +45,10 @@ class AiSettingsController extends Controller
             'local_provider_enabled' => ['nullable', 'boolean'],
             'external_provider_enabled' => ['nullable', 'boolean'],
             'external_processing_allowed' => ['nullable', 'boolean'],
+            'openai_provider_enabled' => ['nullable', 'boolean'],
+            'anthropic_provider_enabled' => ['nullable', 'boolean'],
+            'gemini_provider_enabled' => ['nullable', 'boolean'],
+            'openrouter_provider_enabled' => ['nullable', 'boolean'],
             'local_endpoint' => ['nullable', 'string', 'max:255'],
             'external_endpoint' => ['nullable', 'string', 'max:255'],
             'provider_region' => ['nullable', 'string', 'max:120'],
@@ -50,6 +57,12 @@ class AiSettingsController extends Controller
             'derivative_max_pixels' => ['required', 'integer', 'min:256', 'max:1024'],
             'request_timeout_seconds' => ['required', 'integer', 'min:5', 'max:60'],
             'monthly_external_budget_cents' => ['required', 'integer', 'min:0', 'max:10000000'],
+            'image_analysis_provider' => ['nullable', 'string', Rule::in(AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS)],
+            'image_analysis_model' => ['nullable', 'string', 'max:120'],
+            'image_analysis_native_consent' => ['nullable', 'boolean'],
+            'embeddings_provider' => ['nullable', 'string', Rule::in(AiConfigurationService::EMBEDDINGS_PROVIDERS)],
+            'embeddings_model' => ['nullable', 'string', 'max:120'],
+            'embeddings_native_consent' => ['nullable', 'boolean'],
         ]);
 
         $this->configuration->update($validated, $user);
@@ -65,12 +78,15 @@ class AiSettingsController extends Controller
         abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
 
         $validated = $request->validate([
-            'asset_ids' => ['required', 'array', 'min:1', 'max:25'],
-            'asset_ids.*' => ['required', 'string'],
-            'provider' => ['required', 'string', 'in:local,external'],
+            'asset_ids' => ['required', 'string'],
+            'provider' => ['required', 'string', Rule::in(AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS)],
         ]);
+        $assetIds = array_values(array_filter(
+            preg_split('/[\s,]+/', (string) $validated['asset_ids']) ?: [],
+            fn (string $assetId): bool => $assetId !== '',
+        ));
 
-        $run = $this->dispatch->dispatchImageAnalysis($validated['asset_ids'], $validated['provider'], $user);
+        $run = $this->dispatch->dispatchImageAnalysis($assetIds, $validated['provider'], $user);
 
         return redirect()
             ->route('admin.operations.runs.index')
@@ -84,7 +100,7 @@ class AiSettingsController extends Controller
 
         $validated = $request->validate([
             'asset_ids' => ['required', 'string'],
-            'provider' => ['required', 'string', 'in:local,external'],
+            'provider' => ['required', 'string', Rule::in(AiConfigurationService::EMBEDDINGS_PROVIDERS)],
         ]);
         $assetIds = array_values(array_filter(
             preg_split('/[\s,]+/', (string) $validated['asset_ids']) ?: [],
@@ -96,5 +112,25 @@ class AiSettingsController extends Controller
         return redirect()
             ->route('admin.operations.runs.index')
             ->with('status', "AI-index {$run->id} is in de achtergrondwachtrij geplaatst.");
+    }
+
+    public function testConnection(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
+
+        $validated = $request->validate([
+            'test_provider' => ['required', 'string', Rule::in(AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS)],
+            'test_capability' => ['required', 'string', Rule::in(['image_analysis', 'embeddings'])],
+        ]);
+
+        $result = $this->connectionTest->test((string) $validated['test_provider'], (string) $validated['test_capability']);
+
+        return redirect()
+            ->route('admin.operations.ai.edit')
+            ->with('connection_test', $result + [
+                'provider' => $validated['test_provider'],
+                'capability' => $validated['test_capability'],
+            ]);
     }
 }

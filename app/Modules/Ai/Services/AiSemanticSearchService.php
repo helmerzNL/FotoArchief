@@ -75,22 +75,18 @@ class AiSemanticSearchService
         if (! (bool) ($settings['active'] ?? false) || ! (bool) ($settings['embeddings_enabled'] ?? false)) {
             $errors['ai'] = 'AI-embeddings zijn niet actief.';
         }
-        if ($provider === 'local' && ! (bool) ($settings['local_ready'] ?? false)) {
-            $errors['provider'] = 'Lokale AI-provider is niet gereed.';
-        }
-        if ($provider === 'external' && ! (bool) ($settings['external_ready'] ?? false)) {
-            $errors['provider'] = 'Externe AI-provider is niet gereed of niet expliciet toegestaan.';
-        }
-        if (! in_array($provider, ['local', 'external'], true)) {
-            $errors['provider'] = 'Kies local of external als AI-provider.';
+        $configuredProvider = (string) ($settings['embeddings_provider'] ?? '');
+        if ($provider === '' || $provider !== $configuredProvider) {
+            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde embeddings-provider.';
+        } elseif (! (bool) ($settings['embeddings_ready'] ?? false)) {
+            $errors['provider'] = 'De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).';
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
         }
 
-        $queryEmbedding = $provider === 'external'
-            ? app(ExternalAiProvider::class)->embedText($query)
-            : app(LocalAiProvider::class)->embedText($query);
+        $queryEmbedding = app(AiProviderResolver::class)->resolveEmbeddings($provider)
+            ->embedText($query, ['model' => (string) ($settings['embeddings_model'] ?? '')]);
 
         $generation = AiEmbeddingGeneration::query()
             ->where('provider_kind', $provider)
