@@ -288,3 +288,46 @@ afbreking niet en staat er niets in het applicatielogboek.
   kan worden ingepland. Zie "Wat er gebeurt als de worker stopt" hierboven.
 - Exportbestanden staan onder `exchange/exports/` op de private schijf. Ze horen
   **niet** in een backup thuis: het zijn afgeleide, kortlopende kopieën.
+
+## Acceptatie van een draaiende installatie
+
+`tests/Smoke/http-exchange.php` rijdt de hele uitwisseling over echt HTTP na op
+een installatie die al draait, tegen een worker die al draait. Het is bedoeld
+als release-poort naast `tests/Smoke/http-onboarding.php` en gebruikt dezelfde
+afspraken: het leest nooit een echt wachtwoord, maar het wegwerpaccount dat de
+onboarding-acceptatie aanmaakt.
+
+```
+SMOKE_URL=http://127.0.0.1:8080 php tests/Smoke/http-exchange.php
+```
+
+| Variabele | Standaard | Betekenis |
+| --- | --- | --- |
+| `SMOKE_URL` | `http://127.0.0.1:8080` | De draaiende installatie. |
+| `SMOKE_EMAIL` | `release@example.test` | Het wegwerpaccount uit de onboarding-acceptatie. |
+| `SMOKE_PASSWORD` | `disposable-smoke-password` | Het wegwerpwachtwoord daarvan. |
+| `SMOKE_EXCHANGE_TIMEOUT` | `300` | Hoe lang per stap op de worker wordt gewacht. |
+
+Wat het nareist, in deze volgorde: een eigen foto uploaden en wachten tot de
+worker hem verwerkt heeft; die foto als CSV exporteren en downloaden; die
+export als import terugvoeren; controleren dat de proefdraai de foto **niet**
+wijzigt; bevestigen; controleren dat precies één rij is bijgewerkt; daarna een
+JSON-, CSV- en ZIP-export downloaden via een persoonlijke link en de
+controlegetallen narekenen, inclusief `manifest.json` en `checksums.sha256` in
+de ZIP; en ten slotte uitloggen en vaststellen dat dezelfde downloadlink dan
+niets meer afgeeft.
+
+Twee eigenschappen zijn met opzet zo:
+
+- **Het raakt alleen wat het zelf maakt.** De CSV die wordt geïmporteerd is de
+  export van de foto die het script zelf heeft geüpload. Daardoor kan het
+  draaien op een installatie die al gegevens bevat zonder daar iets aan te
+  veranderen, en het zet de onboarding nooit terug.
+- **Elke run maakt een eigen foto.** Het archief houdt een byte-identieke upload
+  tegen als duplicaat. Dat is juist, maar het betekent dat een vaste
+  testafbeelding alleen de eerste keer verwerkt zou worden en daarna stil zou
+  blijven liggen; het script zet daarom willekeurige beeldpunten in de foto.
+
+Blijft een stap hangen, dan stopt het script binnen `SMOKE_EXCHANGE_TIMEOUT` en
+noemt het de laatst geziene status, zodat zichtbaar is of de installatie of de
+worker het liet liggen.
