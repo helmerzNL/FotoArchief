@@ -15,8 +15,13 @@ verified them directly against
 [`tests/Feature/PublicationActiveFilePostgresTest.php`](../tests/Feature/PublicationActiveFilePostgresTest.php)
 (real PostgreSQL) and confirmed every public route agrees on exactly one
 current file with **no further Portal-side schema change** — only the model
-casts below and the pre-existing `Schema::hasColumn(...)` guards, which now
-resolve `true` unconditionally against this schema.
+casts below. Since `is_primary` is a required migration on every supported
+environment, `scopePubliclyVisible()`'s file-eligibility check is now
+unconditional (no `Schema::hasColumn('asset_files', 'is_primary')` probe) —
+that guard was removed once real deployments confirmed the column, so the
+predicate does not pay for an extra query per request to check something
+that is always true. The unrelated `Schema::hasColumn('assets', 'deleted_at')`
+guard for Operations' soft-delete contract is untouched by this change.
 
 ## The problem this closed
 
@@ -101,14 +106,19 @@ level, "at least one eligible primary file exists" (a plain `whereHas()`,
 exists" (the `COUNT(*) = 1` form) — the database has already ruled out the
 "two or more" case everywhere else, so `EXISTS` only ever has to distinguish
 "zero" from "one", exactly as `COUNT(*) = 1` did, but as a semi-join the
-planner can index and short-circuit. `scopePubliclyVisible()` therefore uses
-the plain `whereHas()` form whenever `asset_files.is_primary` exists (the
-real, integrated case), which restored a `Hash Semi Join` plan (~9,956
-buffer hits total, no per-row loop) on the same benchmark. A defensive
-`whereHas(..., '=', 1)` fallback is kept for the (currently dead) case where
-`is_primary` is absent, so the predicate never silently regresses to "at
-least one" if that assumption is ever violated. See
-`app/Modules/Publication/Models/Publication.php` for the exact branch.
+planner can index and short-circuit. `scopePubliclyVisible()` therefore
+always uses the plain `whereHas()` form, which restored a `Hash Semi Join`
+plan (~9,956 buffer hits total, no per-row loop) on the real benchmark.
+`is_primary` is a required migration on every supported environment (there
+is no deployment without it), so this check is unconditional rather than
+guarded behind a `Schema::hasColumn('asset_files', 'is_primary')` probe —
+that guard was removed once real, integrated deployments confirmed the
+column is always present, since the probe cost an extra query per request
+for protection that no longer applied. See
+`app/Modules/Publication/Models/Publication.php` for the exact clause, and
+`tests/Performance/measure-public.php` (run against the real 50k benchmark
+on the fully integrated stack) for the restored measurement: search p95
+~360ms, detail p95 ~165-175ms, both well inside the 700ms/400ms budget.
 
 ## Verification
 
