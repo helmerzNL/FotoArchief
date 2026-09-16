@@ -98,6 +98,14 @@ by `PharData`; this is corrected in a reusable helper with real-stream regressio
 tests (normal bytes preserved and unsafe entries rejected before extraction).
 Restore and Dockhand remain gated by the next Linux run.
 
+Run `35050943998` passes **real backup and restore** into separate PostgreSQL
+and private-storage volumes, followed by restored account/photo HTTP acceptance.
+The offline Docker image artifact was uploaded. Dockhand accepts the unchanged
+Compose and populated environment templates, but starts containers asynchronously;
+the immediate running-state assertion raced startup. Acceptance now waits up to
+180 seconds for every required service and HTTP liveness, with manager and stack
+diagnostics on failure. It never substitutes a CLI deployment for manager import.
+
 Revision `335af19`: **312 tests / 2243 assertions pass**, eight explicit
 environment-gated skips. The real PostgreSQL active-file test separately passes
 **1 test / 11 assertions**; the four real Operations/Portal integration tests
