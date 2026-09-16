@@ -302,10 +302,17 @@ not establish ingest throughput, multi-user concurrency, S3 latency, image
 delivery performance or production Apache latency.
 
 Accessibility review, real passkey authenticator coverage, manager UI imports,
-S3-provider operations, antivirus detection and OCR accuracy need explicit
-evidence appropriate to the capabilities enabled in a deployment. Do not infer
-those results from unit-test fakes or Compose parsing. Record unresolved gates
-in release notes; never label an incomplete validation set production-ready.
+S3-provider operations, antivirus detection, OCR accuracy and AI capability
+proof need explicit evidence appropriate to the capabilities enabled in a
+deployment. Do not infer those results from unit-test fakes, synthetic timings,
+SQLite, caption-only comparisons or Compose parsing. Record unresolved gates in
+release notes; never label an incomplete validation set production-ready.
+
+AI image-content analysis and semantic visual search must follow
+[AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md): approved non-sensitive
+proof images, explicit local and optional external providers, recorded model
+space/dimensions, resource/privacy/cost notes and a verified vector backend
+before adapters are marked production-ready.
 
 ## Running the isolated benchmark
 
