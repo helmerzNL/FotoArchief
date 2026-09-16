@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Role;
 use App\Models\User;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -48,42 +49,47 @@ it('keeps AI disabled by default and hides settings from non-admin users', funct
 });
 
 it('rejects unsafe external endpoints and missing external privacy consent', function (): void {
+    $response = $this->actingAs($this->admin)->post('/admin/operations/ai/providers/external', [
+        'enabled' => '1',
+        'endpoint' => 'http://127.0.0.1:8000',
+        'cost_cents_per_image' => 0,
+        'cost_cents_per_embedding' => 0,
+        'monthly_budget_cents' => 0,
+    ]);
+    $response->assertSessionHasErrors(['endpoint']);
+
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
         'global_enabled' => '1',
         'embeddings_enabled' => '1',
-        'external_provider_enabled' => '1',
-        'external_endpoint' => 'http://127.0.0.1:8000',
+        'external_processing_allowed' => '1',
         'max_assets_per_batch' => 25,
         'derivative_max_pixels' => 1024,
         'request_timeout_seconds' => 60,
-        'monthly_external_budget_cents' => 0,
     ]);
 
-    $response->assertSessionHasErrors([
-        'external_endpoint',
-        'external_processing_allowed',
-        'monthly_external_budget_cents',
-        'provider_region',
-        'retention_notice',
-    ]);
+    $response->assertSessionHasErrors(['external_processing_allowed']);
 });
 
 it('stores explicit local and external opt-ins without storing credentials', function (): void {
+    app(AiProviderConfigService::class)->update('external', [
+        'enabled' => true,
+        'endpoint' => 'https://ai-provider.example.test/v1',
+        'provider_region' => 'EU',
+        'retention_notice' => 'No training; 30 day abuse log retention.',
+        'monthly_budget_cents' => 5000,
+    ], $this->admin);
+    app(AiProviderConfigService::class)->setApiKey('external', 'external-secret', $this->admin);
+
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai', [
         'global_enabled' => '1',
         'image_analysis_enabled' => '1',
         'embeddings_enabled' => '1',
         'local_provider_enabled' => '1',
-        'external_provider_enabled' => '1',
         'external_processing_allowed' => '1',
         'local_endpoint' => 'http://10.0.0.5:8080',
-        'external_endpoint' => 'https://ai-provider.example.test/v1',
-        'provider_region' => 'EU',
-        'retention_notice' => 'No training; 30 day abuse log retention.',
         'max_assets_per_batch' => 12,
         'derivative_max_pixels' => 768,
         'request_timeout_seconds' => 30,
-        'monthly_external_budget_cents' => 5000,
     ]);
 
     $response->assertSessionHasNoErrors()->assertRedirect('/admin/operations/ai');
@@ -92,7 +98,21 @@ it('stores explicit local and external opt-ins without storing credentials', fun
     expect($settings['active'])->toBeTrue()
         ->and($settings['local_ready'])->toBeTrue()
         ->and($settings['external_ready'])->toBeTrue()
-        ->and(json_encode($settings, JSON_THROW_ON_ERROR))->not->toContain('secret12345');
+        ->and(json_encode($settings, JSON_THROW_ON_ERROR))->not->toContain('external-secret');
+});
+
+it('requires explicit confirmation before deleting a provider API key', function (): void {
+    app(AiProviderConfigService::class)->setApiKey('openai', 'keep-until-confirmed', $this->admin);
+
+    $this->actingAs($this->admin)
+        ->delete('/admin/operations/ai/providers/openai/key')
+        ->assertSessionHasErrors(['confirm_delete']);
+    expect(app(AiProviderConfigService::class)->status('openai')['has_api_key'])->toBeTrue();
+
+    $this->actingAs($this->admin)
+        ->delete('/admin/operations/ai/providers/openai/key', ['confirm_delete' => '1'])
+        ->assertSessionHasNoErrors();
+    expect(app(AiProviderConfigService::class)->status('openai')['has_api_key'])->toBeFalse();
 });
 
 it('lets the emergency stop override otherwise ready AI settings', function (): void {
@@ -117,12 +137,9 @@ it('lets the emergency stop override otherwise ready AI settings', function (): 
 });
 
 it('runs a cheap, non-billable OpenAI connection test and reports whether the configured model is visible', function (): void {
-    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
-        'api_key' => 'sk-test',
-        'base_url' => 'https://api.openai.test/v1',
-    ])]);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test');
     Http::fake([
-        'https://api.openai.test/v1/models' => Http::response([
+        'https://api.openai.com/v1/models' => Http::response([
             'data' => [['id' => 'gpt-4.1-mini'], ['id' => 'gpt-4.1']],
         ]),
     ]);
@@ -142,12 +159,9 @@ it('runs a cheap, non-billable OpenAI connection test and reports whether the co
 });
 
 it('reports a connection-test failure without ever leaking the raw response into the flashed message', function (): void {
-    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
-        'api_key' => 'sk-test',
-        'base_url' => 'https://api.openai.test/v1',
-    ])]);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test');
     Http::fake([
-        'https://api.openai.test/v1/models' => Http::response('geheime-inhoud', 401),
+        'https://api.openai.com/v1/models' => Http::response('geheime-inhoud', 401),
     ]);
 
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai/test-connection', [

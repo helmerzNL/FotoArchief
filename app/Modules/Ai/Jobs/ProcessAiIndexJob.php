@@ -8,6 +8,7 @@ use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
@@ -34,8 +35,9 @@ class ProcessAiIndexJob extends OperationJob
         $failed = 0;
         $resolver = app(AiProviderResolver::class);
         $ledgerService = app(AiBudgetLedgerService::class);
+        $providerConfigs = app(AiProviderConfigService::class);
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
-        $costCents = $isNative ? (int) config("ai.native_providers.{$provider}.cost_cents_per_embedding", 0) : 0;
+        $costCents = $isNative ? $providerConfigs->cost($provider, 'embeddings') : 0;
 
         foreach ($slice as $assetId) {
             $asset = Asset::query()->with('files')->find($assetId);

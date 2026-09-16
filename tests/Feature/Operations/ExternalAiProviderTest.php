@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\Ai\Exceptions\AiProviderException;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\ExternalAiProvider;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,19 +27,23 @@ beforeEach(function (): void {
 
 function enableExternalAi(User $user): void
 {
+    app(AiProviderConfigService::class)->update('external', [
+        'enabled' => true,
+        'endpoint' => 'https://external-ai.example.test',
+        'provider_region' => 'EU',
+        'retention_notice' => 'No training; thirty day abuse logs.',
+        'vision_model' => 'external-vision',
+        'embedding_model' => 'external-embedding',
+        'monthly_budget_cents' => 2500,
+    ], $user);
     app(AiConfigurationService::class)->update([
         'global_enabled' => '1',
         'image_analysis_enabled' => '1',
         'embeddings_enabled' => '1',
-        'external_provider_enabled' => '1',
         'external_processing_allowed' => '1',
-        'external_endpoint' => 'https://external-ai.example.test',
-        'provider_region' => 'EU',
-        'retention_notice' => 'No training; thirty day abuse logs.',
         'max_assets_per_batch' => 10,
         'derivative_max_pixels' => 512,
         'request_timeout_seconds' => 15,
-        'monthly_external_budget_cents' => 2500,
     ], $user);
 }
 
@@ -47,9 +52,9 @@ it('refuses external AI until endpoint consent and budget are explicit', functio
         ->toThrow(AiProviderException::class, 'External AI provider is not explicitly enabled');
 });
 
-it('probes external AI capabilities with runtime-only bearer token', function (): void {
+it('probes external AI capabilities with the database-owned bearer token', function (): void {
     enableExternalAi($this->user);
-    config(['ai.external_api_key' => 'runtime-secret-token']);
+    app(AiProviderConfigService::class)->setApiKey('external', 'database-secret-token', $this->user);
     Http::fake([
         'https://external-ai.example.test/v1/capabilities' => Http::response([
             'provider_kind' => 'external',
@@ -65,12 +70,13 @@ it('probes external AI capabilities with runtime-only bearer token', function ()
     $capabilities = app(ExternalAiProvider::class)->probe();
 
     expect($capabilities['provider_kind'])->toBe('external');
-    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer runtime-secret-token')
+    Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer database-secret-token')
         && $request->url() === 'https://external-ai.example.test/v1/capabilities');
 });
 
 it('sends external privacy context and validates embeddings', function (): void {
     enableExternalAi($this->user);
+    app(AiProviderConfigService::class)->setApiKey('external', 'database-secret-token', $this->user);
     Http::fake([
         'https://external-ai.example.test/v1/analyze-image' => Http::response([
             'description' => 'Een marktplein met historische bebouwing.',

@@ -41,7 +41,55 @@
             <dt>Embeddings gereed (provider + model + toestemming)</dt>
             <dd>{{ $settings['embeddings_ready'] ? 'ja' : 'nee' }}</dd>
         </dl>
-        <p>"Geconfigureerd" betekent dat er een API-sleutel, base-URL en maandbudget in de private omgeving staan; dit formulier kan dat nooit instellen. "Klaar" vereist bovendien dat de provider hieronder is ingeschakeld.</p>
+        <p>"Geconfigureerd" betekent dat de database een versleutelde API-sleutel en een positief budget bevat. De sleutel wordt nooit getoond, teruggegeven, gelogd of geserialiseerd.</p>
+    </section>
+
+    <section class="card">
+        <h2>Providers / Providers</h2>
+        <p>Stel modellen, kosten en maandbudgetten per provider in. Native endpoints zijn vast; alleen de custom externe provider gebruikt een door de beheerder ingesteld publiek HTTPS-endpoint.</p>
+        @foreach($providerStatuses as $provider)
+            <article class="card">
+                <h3>{{ ucfirst($provider['provider']) }}</h3>
+                <dl>
+                    <dt>Status sleutel</dt><dd>{{ $provider['has_api_key'] ? 'ingesteld' : 'niet ingesteld' }}</dd>
+                    <dt>{{ $provider['provider'] === 'external' ? 'Endpoint' : 'Vaste base-URL' }}</dt><dd><code>{{ $provider['base_url'] ?: 'niet ingesteld' }}</code></dd>
+                    @if($provider['api_version'])
+                        <dt>Vaste API-versie</dt><dd>{{ $provider['api_version'] }}</dd>
+                    @endif
+                    @if($provider['embedding_model_allowlist'])
+                        <dt>Vaste OpenRouter-allowlist</dt><dd>{{ implode(', ', $provider['embedding_model_allowlist']) }}</dd>
+                    @endif
+                </dl>
+                <form method="POST" action="{{ route('admin.operations.ai.provider.update', $provider['provider']) }}">
+                    @csrf
+                    <label><input type="checkbox" name="enabled" value="1" @checked($provider['enabled'])> Provider toestaan</label>
+                    <label>Visionmodel <input type="text" name="vision_model" value="{{ $provider['vision_model'] }}"></label>
+                    <label>Embeddingmodel <input type="text" name="embedding_model" value="{{ $provider['embedding_model'] }}"></label>
+                    @if($provider['provider'] === 'external')
+                        <label>Publiek HTTPS-endpoint <input type="url" name="endpoint" value="{{ $provider['endpoint'] }}" required></label>
+                        <label>Providerregio <input type="text" name="provider_region" value="{{ $provider['provider_region'] }}" required></label>
+                        <label>Retentie/training-notitie <textarea name="retention_notice" rows="3" required>{{ $provider['retention_notice'] }}</textarea></label>
+                    @endif
+                    <label>Kosten beeldanalyse (centen) <input type="number" min="0" name="cost_cents_per_image" value="{{ $provider['cost_cents_per_image'] }}"></label>
+                    <label>Kosten embedding (centen) <input type="number" min="0" name="cost_cents_per_embedding" value="{{ $provider['cost_cents_per_embedding'] }}"></label>
+                    <label>Maandbudget (centen) <input type="number" min="0" name="monthly_budget_cents" value="{{ $provider['monthly_budget_cents'] }}"></label>
+                    <button type="submit">Providerinstellingen opslaan</button>
+                </form>
+                <form method="POST" action="{{ route('admin.operations.ai.provider.key.set', $provider['provider']) }}">
+                    @csrf
+                    <label>API-sleutel instellen/vervangen <input type="password" name="api_key" autocomplete="new-password" required></label>
+                    <button type="submit">Sleutel opslaan</button>
+                </form>
+                @if($provider['has_api_key'])
+                    <form method="POST" action="{{ route('admin.operations.ai.provider.key.delete', $provider['provider']) }}">
+                        @csrf
+                        @method('DELETE')
+                        <label><input type="checkbox" name="confirm_delete" value="1" required> Ik bevestig dat deze API-sleutel definitief moet worden verwijderd.</label>
+                        <button type="submit">API-sleutel expliciet verwijderen</button>
+                    </form>
+                @endif
+            </article>
+        @endforeach
     </section>
 
     @if(session('connection_test'))
@@ -86,12 +134,7 @@
             'image_analysis_enabled' => 'Beeldanalyse toestaan',
             'embeddings_enabled' => 'Multimodale embeddings toestaan',
             'local_provider_enabled' => 'Lokale/eigen provider toestaan',
-            'external_provider_enabled' => 'Externe provider toestaan',
             'external_processing_allowed' => 'Externe doorgifte expliciet toegestaan',
-            'openai_provider_enabled' => 'OpenAI native provider toestaan',
-            'anthropic_provider_enabled' => 'Anthropic (Claude) native provider toestaan',
-            'gemini_provider_enabled' => 'Gemini native provider toestaan',
-            'openrouter_provider_enabled' => 'OpenRouter native provider toestaan',
         ] as $field => $label)
             <label style="display:block;margin:0.5rem 0;">
                 <input type="checkbox" name="{{ $field }}" value="1" @checked(old($field, $settings[$field]) === true || old($field, $settings[$field]) === '1')>
@@ -109,9 +152,8 @@
                 @endforeach
             </select>
         </label>
-        <label>Modelnaam/-versie voor beeldanalyse
-            <input type="text" name="image_analysis_model" value="{{ old('image_analysis_model', $settings['image_analysis_model']) }}" placeholder="bijv. gpt-4.1-mini, claude-sonnet-5, gemini-2.5-flash">
-        </label>
+        <p>Voor databaseproviders wordt het beeldanalysemodel uit de providersectie gebruikt. Alleen de lokale/eigen provider gebruikt hier nog zijn capabilitymodel.</p>
+        <label>Lokaal model voor beeldanalyse <input type="text" name="image_analysis_model" value="{{ old('image_analysis_model', $settings['image_analysis_model']) }}"></label>
         <label style="display:block;margin:0.5rem 0;">
             <input type="checkbox" name="image_analysis_native_consent" value="1" @checked(old('image_analysis_native_consent', $settings['image_analysis_native_consent']) === true || old('image_analysis_native_consent', $settings['image_analysis_native_consent']) === '1')>
             Ik geef expliciet toestemming dat de geselecteerde afgeleide (max 1024px, metadata verwijderd) naar de gekozen native provider wordt verstuurd voor beeldanalyse.
@@ -127,9 +169,8 @@
                 @endforeach
             </select>
         </label>
-        <label>Modelnaam/-versie voor embeddings
-            <input type="text" name="embeddings_model" value="{{ old('embeddings_model', $settings['embeddings_model']) }}" placeholder="bijv. gemini-embedding-2">
-        </label>
+        <p>Voor databaseproviders wordt het embeddingmodel uit de providersectie gebruikt.</p>
+        <label>Lokaal embeddingmodel <input type="text" name="embeddings_model" value="{{ old('embeddings_model', $settings['embeddings_model']) }}"></label>
         <label style="display:block;margin:0.5rem 0;">
             <input type="checkbox" name="embeddings_native_consent" value="1" @checked(old('embeddings_native_consent', $settings['embeddings_native_consent']) === true || old('embeddings_native_consent', $settings['embeddings_native_consent']) === '1')>
             Ik geef expliciet toestemming dat afgeleiden en zoektekst naar de gekozen native embeddingsprovider worden verstuurd. Bij OpenRouter routeert de zoektekst via een door mij gekozen upstream-model met diens eigen privacy-/retentiebeleid, dat deze app niet kan afdwingen.
@@ -139,15 +180,6 @@
         <h2>Endpoints en privacy</h2>
         <label>Lokale/eigen endpoint
             <input type="url" name="local_endpoint" value="{{ old('local_endpoint', $settings['local_endpoint']) }}" placeholder="http://ai-service:8080 of https://ai.example.org">
-        </label>
-        <label>Externe endpoint
-            <input type="url" name="external_endpoint" value="{{ old('external_endpoint', $settings['external_endpoint']) }}" placeholder="https://provider.example.org">
-        </label>
-        <label>Providerregio
-            <input type="text" name="provider_region" value="{{ old('provider_region', $settings['provider_region']) }}" placeholder="EU/NL of contractuele regio">
-        </label>
-        <label>Retentie/training-notitie
-            <textarea name="retention_notice" rows="3" placeholder="Beschrijf retentie, training opt-out en gegevensscope">{{ old('retention_notice', $settings['retention_notice']) }}</textarea>
         </label>
 
         <h2>Numerieke limieten</h2>
@@ -160,11 +192,7 @@
         <label>Provider timeout seconden
             <input type="number" min="5" max="60" name="request_timeout_seconds" value="{{ old('request_timeout_seconds', $settings['request_timeout_seconds']) }}">
         </label>
-        <label>Maandelijks extern budget in centen
-            <input type="number" min="0" name="monthly_external_budget_cents" value="{{ old('monthly_external_budget_cents', $settings['monthly_external_budget_cents']) }}">
-        </label>
-
-        <p>Secrets worden hier niet opgeslagen. Zet provider API-sleutels alleen in de private runtimeomgeving.</p>
+        <p>API-sleutels worden hierboven ingesteld/vervangen of expliciet verwijderd; ze worden versleuteld opgeslagen en nooit ingevuld in een formulier.</p>
         <button type="submit">AI-instellingen opslaan</button>
     </form>
 

@@ -25,6 +25,9 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
     Route::post('/ai/index', [AiSettingsController::class, 'dispatchIndex'])->name('ai.index');
     Route::post('/ai/test-connection', [AiSettingsController::class, 'testConnection'])->name('ai.test-connection');
+    Route::post('/ai/providers/{provider}', [AiSettingsController::class, 'updateProvider'])->name('ai.provider.update');
+    Route::post('/ai/providers/{provider}/key', [AiSettingsController::class, 'setProviderKey'])->name('ai.provider.key.set');
+    Route::delete('/ai/providers/{provider}/key', [AiSettingsController::class, 'deleteProviderKey'])->name('ai.provider.key.delete');
     Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
     Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');

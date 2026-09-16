@@ -1,99 +1,113 @@
-# Native AI-providerinstellingen
+# AI-providerconfiguratie / AI provider configuration
 
-FotoArchief houdt AI standaard uit. Deze handleiding activeert uitsluitend
-native externe providers: OpenAI, Anthropic (Claude), Google Gemini en
-OpenRouter. Een lokale/eigen HTTP-AI-service blijft als afzonderlijke optie
-bestaan.
+## Nederlands
 
-## Kies per capability
+FotoArchief houdt AI standaard uit. Beheerders configureren de custom externe
+provider, OpenAI, Anthropic, Gemini en OpenRouter in **Beheer > Operations >
+AI-instellingen**. De database is de exclusieve runtimebron voor providerstatus,
+API-sleutels, modellen, kosten en maandbudgetten.
 
-Een installatie kiest afzonderlijk:
+### Capabilities
 
-- **beeldanalyse:** maakt een Nederlandse conceptbeschrijving en tags;
-- **embeddings:** maakt compatibele beeld- en tekstvectoren voor semantisch
-  zoeken.
+- OpenAI, Anthropic, Gemini en OpenRouter ondersteunen beeldanalyse.
+- Alleen Gemini en een door FotoArchief toegelaten multimodaal
+  OpenRouter-model ondersteunen beeld- en tekstembeddings in dezelfde ruimte.
+- De custom externe provider moet via zijn capabilityprobe aantonen dat beeld-
+  en tekstembeddings dezelfde modelruimte gebruiken.
+- Er is nooit automatische provider- of modelfailover.
 
-OpenAI, Anthropic, Gemini en OpenRouter zijn beschikbaar voor beeldanalyse.
-Voor embeddings kiest u alleen Gemini of een expliciet toegelaten OpenRouter
-multimodaal model. OpenAI's gedocumenteerde embeddings zijn tekst-only en
-Anthropic biedt geen eigen embedding-API; FotoArchief gebruikt ze daarom nooit
-voor beeldzoekresultaten. Er is geen automatische provider- of model-failover.
+### Veilige configuratie
 
-## Private runtimeconfiguratie
+1. Open de AI-instellingen als beheerder.
+2. Configureer per provider enabledstatus, modellen, kosten en een positieve
+   maandlimiet. Stel voor de custom externe provider ook een publiek
+   HTTPS-endpoint, regio en retentie-/trainingnotitie in.
+3. Stel de API-sleutel in via de afzonderlijke sleutelactie. De sleutel wordt
+   versleuteld met `APP_KEY`, nooit opnieuw getoond en niet opgenomen in HTML,
+   redirects, logs, auditdetails of queuepayloads.
+4. Verwijder een sleutel alleen via de afzonderlijke verwijderactie met
+   expliciete bevestiging.
+5. Kies daarna per capability een provider en geef expliciete toestemming voor
+   externe doorgifte. Het gebruikte model komt uit het providerrecord.
+6. Gebruik **Verbinding testen** voordat u betaalde verwerking start.
 
-Kopieer [`.env.example`](../.env.example) naar de private runtimeomgeving of
-vul dezelfde variabelen in uw Compose- of manager-configuratie in. Compose
-geeft elke `AI_OPENAI_*`, `AI_ANTHROPIC_*`, `AI_GEMINI_*` en
-`AI_OPENROUTER_*` variabele ongewijzigd door aan `app`, `worker` en
-`scheduler`; standaard is elke provider uit en elk budget 0. Zet nooit een
-API-sleutel in de beheerinterface, git, een export of een logbestand.
+AI-verwerking gebruikt alleen gevalideerde afgeleiden van maximaal 1024 pixels
+zonder ingebedde metadata. Beeldanalyse maakt uitsluitend suggesties; metadata
+wijzigt pas na menselijke acceptatie. Publieke semantische zoekopdrachten blijven
+achter de actuele publicatie- en rechtencontroles.
 
-Voorbeeld voor Gemini:
+### Eenmalige upgrade-import
 
-```dotenv
-AI_GEMINI_ENABLED=true
-AI_GEMINI_API_KEY=plaats-dit-alleen-in-de-private-runtime
-AI_GEMINI_VISION_MODEL=uw-goedgekeurde-beeldmodel
-AI_GEMINI_EMBEDDING_MODEL=gemini-embedding-2
-AI_GEMINI_COST_CENTS_PER_IMAGE=<actuele-kosten-in-centen>
-AI_GEMINI_COST_CENTS_PER_EMBEDDING=<actuele-kosten-in-centen>
-AI_GEMINI_MONTHLY_BUDGET_CENTS=<positieve-maandlimiet>
-```
+De migratie importeert bestaande `AI_EXTERNAL_*`, `AI_OPENAI_*`,
+`AI_ANTHROPIC_*`, `AI_GEMINI_*` en `AI_OPENROUTER_*` waarden éénmalig wanneer
+nog geen providerrecord bestaat. De waarden in `.env` en Compose zijn alleen
+upgrade-input; na een geslaagde migratie worden ze niet meer gelezen door web,
+worker of scheduler.
 
-Configureer voor iedere andere provider alleen de bijbehorende
-`AI_OPENAI_*`, `AI_ANTHROPIC_*` of `AI_OPENROUTER_*` groep. Een provider
-wordt pas als geconfigureerd beschouwd wanneer sleutel, vaste officiële
-base-URL en een positieve maandlimiet aanwezig zijn. Stel de kosten per
-request in als een conservatieve bovengrens in eurocenten: FotoArchief
-reserveert dit bedrag vooraf en weigert werk boven de maandlimiet. Onjuiste of
-niet-actuele prijswaarden zijn geen bescherming tegen kosten; controleer de
-actuele providerprijs vóór activering.
+Controleer na deployment in de beheerinterface alle providerrecords en voer de
+verbindingstest uit. Daarna mogen de legacy providerwaarden uit de private
+runtimeomgeving worden verwijderd. `AI_LOCAL_ENDPOINT` blijft staan wanneer de
+lokale/eigen provider wordt gebruikt. Behoud `APP_KEY`: zonder dezelfde sleutel
+kunnen bestaande credentials niet worden ontsleuteld. Herstel bij verlies de
+oorspronkelijke `APP_KEY` uit de beveiligde back-up of vervang elke
+providercredential via de beheerinterface.
 
-Bij OpenRouter moet `AI_OPENROUTER_EMBEDDING_MODEL` ook exact voorkomen in
-`AI_OPENROUTER_EMBEDDING_MODEL_ALLOWLIST`. Laat de allowlist beperkt tot
-modellen waarvoor u zelf de compatibele beeld- én tekstembeddingruimte heeft
-geverifieerd. OpenRouter kan naar een externe upstream routeren; diens
-gegevensverwerking is een afzonderlijke keuze en wordt niet door FotoArchief
-geverifieerd.
+De officiële native base-URL's, de Anthropic API-versie en de multimodale
+OpenRouter-allowlist zijn vaste applicatiegegevens en niet wijzigbaar via
+runtimevariabelen of de UI.
 
-Herstart na een wijziging van runtimevariabelen de `app`, `worker` en
-`scheduler` containers. Een PHP-webhost moet de variabelen ook beschikbaar
-maken voor de queue-worker; alleen de webprocessen configureren is
-onvoldoende.
+## English
 
-## Activeren in FotoArchief
+FotoArchief keeps AI disabled by default. Administrators configure the custom
+external provider, OpenAI, Anthropic, Gemini, and OpenRouter in
+**Administration > Operations > AI settings**. The database is the exclusive
+runtime source for provider state, API keys, models, costs, and monthly budgets.
 
-1. Meld u als beheerder aan en open **Beheer > Operations > AI-instellingen**.
-2. Schakel **AI globaal**, de gekozen capability en precies de gewenste
-   provider in. Laat de noodstop uit.
-3. Kies voor beeldanalyse en/of embeddings de provider en het model.
-4. Geef voor elke capability expliciete toestemming voor de doorgifte.
-   Beeldanalyse verstuurt alleen een gevalideerde afgeleide van maximaal
-   1024 pixels zonder ingebedde metadata. Embeddings sturen zulke afgeleiden
-   en/of zoektekst naar de gekozen provider.
-5. Gebruik eerst **Verbinding testen**. Dit controleert alleen sleutel- en
-   modelzichtbaarheid; het verwerkt geen archiefbeeld en is geen bewijs van
-   modelkwaliteit.
-6. Start met maximaal 25 expliciet geselecteerde assets. Beeldanalyse maakt
-   alleen te beoordelen suggesties; metadata en publicatie wijzigen pas na
-   menselijke acceptatie.
-7. Bouw daarna een nieuwe embeddinggeneratie voor dezelfde selectie. Bij een
-   provider-, model- of dimensiewijziging is altijd een nieuwe indexgeneratie
-   nodig; vectorruimtes worden nooit gemengd.
+### Capabilities
 
-Voor publieke semantische zoekopdrachten met een externe provider toont
-FotoArchief een expliciete opt-in per bezoeker. Zonder toestemming blijft de
-gewone zoekfunctie beschikbaar en wordt geen zoektekst naar de provider
-verstuurd.
+- OpenAI, Anthropic, Gemini, and OpenRouter support image analysis.
+- Only Gemini and a multimodal OpenRouter model allowed by FotoArchief support
+  image and text embeddings in the same space.
+- The custom external provider must prove through its capability probe that
+  image and text embeddings share one model space.
+- Automatic provider or model failover never occurs.
 
-## Voor productie
+### Secure configuration
 
-Voer voor elke provider en elk model eerst de kleine, toegestane proof-set uit
-uit [AI_CAPABILITY_DECISION.md](AI_CAPABILITY_DECISION.md). Leg modelversie,
-licentie/voorwaarden, regio, retentie/traininginstellingen, prijs, latency,
-foutpercentage en Nederlandse relevantie vast. Gebruik geen privéarchiefbeelden
-voor die proef zonder passende rechten en toestemming.
+1. Open AI settings as an administrator.
+2. Configure each provider's enabled state, models, costs, and positive monthly
+   limit. For the custom external provider, also configure a public HTTPS
+   endpoint, region, and retention/training notice.
+3. Set the API key through the separate key action. The key is encrypted with
+   `APP_KEY`, is never displayed again, and is excluded from HTML, redirects,
+   logs, audit details, and queue payloads.
+4. Delete a key only through the separate delete action with explicit
+   confirmation.
+5. Select a provider per capability and explicitly consent to external data
+   transfer. The provider record supplies the model.
+6. Use **Test connection** before starting billable processing.
 
-Live providerbereikbaarheid, facturering en modelkwaliteit kunnen niet worden
-bewezen met de meegeleverde testdubbelingen. De applicatie blokkeert AI-fouten
-expliciet; upload, onboarding en de gewone zoekfunctie blijven beschikbaar.
+AI processing uses only validated derivatives up to 1024 pixels with embedded
+metadata removed. Image analysis creates suggestions only; metadata changes
+only after human acceptance. Public semantic queries remain subject to current
+publication and rights checks.
+
+### One-time upgrade import
+
+The migration imports existing `AI_EXTERNAL_*`, `AI_OPENAI_*`,
+`AI_ANTHROPIC_*`, `AI_GEMINI_*`, and `AI_OPENROUTER_*` values once when no
+provider record exists. Values in `.env` and Compose are upgrade input only;
+after a successful migration they are no longer read by the web app, worker, or
+scheduler.
+
+After deployment, verify every provider record in the administration UI and run
+the connection test. You may then remove the legacy provider values from the
+private runtime environment. Keep `AI_LOCAL_ENDPOINT` when using the
+local/organisation-owned provider. Preserve `APP_KEY`: existing credentials cannot
+be decrypted without the same key. If it is lost, restore the original
+`APP_KEY` from secure backup or replace every provider credential through the
+administration UI.
+
+Official native base URLs, the Anthropic API version, and the multimodal
+OpenRouter allowlist are fixed application data and cannot be changed through
+runtime variables or the UI.

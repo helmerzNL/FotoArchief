@@ -6,23 +6,19 @@ namespace App\Modules\Ai\Services;
 
 use App\Models\User;
 use App\Modules\Ai\Models\AiSetting;
-use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 class AiConfigurationService
 {
+    public function __construct(private readonly AiProviderConfigService $providerConfigs) {}
+
     private const BOOL_KEYS = [
         'global_enabled',
         'emergency_stop',
         'image_analysis_enabled',
         'embeddings_enabled',
         'local_provider_enabled',
-        'external_provider_enabled',
         'external_processing_allowed',
-        'openai_provider_enabled',
-        'anthropic_provider_enabled',
-        'gemini_provider_enabled',
-        'openrouter_provider_enabled',
         'image_analysis_native_consent',
         'embeddings_native_consent',
     ];
@@ -31,14 +27,10 @@ class AiConfigurationService
         'max_assets_per_batch',
         'derivative_max_pixels',
         'request_timeout_seconds',
-        'monthly_external_budget_cents',
     ];
 
     private const TEXT_KEYS = [
         'local_endpoint',
-        'external_endpoint',
-        'provider_region',
-        'retention_notice',
         'image_analysis_provider',
         'image_analysis_model',
         'embeddings_provider',
@@ -74,18 +66,34 @@ class AiConfigurationService
             && (bool) ($settings['local_provider_enabled'] ?? false)
             && is_string($settings['local_endpoint'] ?? null)
             && $settings['local_endpoint'] !== '';
+        $external = $this->providerConfigs->status('external');
+        $settings['external_provider_enabled'] = $external['enabled'];
+        $settings['external_endpoint'] = $external['endpoint'];
+        $settings['provider_region'] = $external['provider_region'];
+        $settings['retention_notice'] = $external['retention_notice'];
+        $settings['monthly_external_budget_cents'] = $external['monthly_budget_cents'];
+        $settings['external_configured'] = $this->providerConfigured($external, true);
         $settings['external_ready'] = (bool) ($settings['active'] ?? false)
-            && (bool) ($settings['external_provider_enabled'] ?? false)
+            && $external['enabled']
             && (bool) ($settings['external_processing_allowed'] ?? false)
-            && (int) ($settings['monthly_external_budget_cents'] ?? 0) > 0
-            && is_string($settings['external_endpoint'] ?? null)
-            && $settings['external_endpoint'] !== '';
+            && $settings['external_configured'];
 
         foreach (self::NATIVE_PROVIDERS as $provider) {
-            $settings["{$provider}_configured"] = $this->nativeProviderConfigured($provider);
+            $providerStatus = $this->providerConfigs->status($provider);
+            $settings["{$provider}_provider_enabled"] = $providerStatus['enabled'];
+            $settings["{$provider}_configured"] = $this->providerConfigured($providerStatus);
             $settings["{$provider}_ready"] = (bool) ($settings['active'] ?? false)
-                && (bool) ($settings["{$provider}_provider_enabled"] ?? false)
+                && $providerStatus['enabled']
                 && $settings["{$provider}_configured"];
+        }
+
+        $imageProvider = (string) ($settings['image_analysis_provider'] ?? '');
+        if (in_array($imageProvider, AiProviderConfigService::PROVIDERS, true)) {
+            $settings['image_analysis_model'] = $this->providerConfigs->status($imageProvider)['vision_model'];
+        }
+        $embeddingProvider = (string) ($settings['embeddings_provider'] ?? '');
+        if (in_array($embeddingProvider, AiProviderConfigService::PROVIDERS, true)) {
+            $settings['embeddings_model'] = $this->providerConfigs->status($embeddingProvider)['embedding_model'];
         }
 
         $settings['image_analysis_ready'] = $this->capabilityReady(
@@ -125,14 +133,12 @@ class AiConfigurationService
         return $nativeConsent && $model !== '' && (bool) ($settings["{$provider}_ready"] ?? false);
     }
 
-    private function nativeProviderConfigured(string $provider): bool
+    /** @param array<string, mixed> $config */
+    private function providerConfigured(array $config, bool $requiresEndpoint = false): bool
     {
-        $config = config("ai.native_providers.{$provider}", []);
-
-        return is_array($config)
-            && is_string($config['api_key'] ?? null) && $config['api_key'] !== ''
-            && is_string($config['base_url'] ?? null) && $config['base_url'] !== ''
-            && (int) ($config['monthly_budget_cents'] ?? 0) > 0;
+        return ($config['has_api_key'] ?? false) === true
+            && (int) ($config['monthly_budget_cents'] ?? 0) > 0
+            && (! $requiresEndpoint || (is_string($config['endpoint'] ?? null) && $config['endpoint'] !== ''));
     }
 
     /**
@@ -194,28 +200,11 @@ class AiConfigurationService
         if ((int) $values['request_timeout_seconds'] < 5 || (int) $values['request_timeout_seconds'] > 60) {
             $errors['request_timeout_seconds'] = 'AI-provider timeouts moeten tussen 5 en 60 seconden blijven.';
         }
-        if ((int) $values['monthly_external_budget_cents'] < 0) {
-            $errors['monthly_external_budget_cents'] = 'Extern AI-budget kan niet negatief zijn.';
-        }
-
         if ((bool) $values['local_provider_enabled'] && ! $this->isTrustedLocalEndpoint($values['local_endpoint'])) {
             $errors['local_endpoint'] = 'Lokale AI moet een HTTPS-endpoint of localhost/private netwerkendpoint zijn.';
         }
-        if ((bool) $values['external_provider_enabled']) {
-            if (! $this->isTrustedExternalEndpoint($values['external_endpoint'])) {
-                $errors['external_endpoint'] = 'Externe AI vereist een publiek HTTPS-endpoint; localhost en private IP-ranges zijn geblokkeerd.';
-            }
-            if (! (bool) $values['external_processing_allowed']) {
-                $errors['external_processing_allowed'] = 'Externe verwerking vereist expliciete toestemming voor gegevensscope, regio/retentie en kosten.';
-            }
-            if ((int) $values['monthly_external_budget_cents'] < 1) {
-                $errors['monthly_external_budget_cents'] = 'Externe AI vereist een expliciet budget boven nul.';
-            }
-            foreach (['provider_region', 'retention_notice'] as $key) {
-                if (! is_string(Arr::get($values, $key)) || trim((string) $values[$key]) === '') {
-                    $errors[$key] = 'Externe AI vereist providerregio en retentie/training-notitie.';
-                }
-            }
+        if ((bool) $values['external_processing_allowed'] && ! $this->providerConfigs->status('external')['enabled']) {
+            $errors['external_processing_allowed'] = 'Schakel eerst de externe provider in de providersectie in.';
         }
 
         if ($errors !== []) {
@@ -276,19 +265,6 @@ class AiConfigurationService
         }
 
         return $this->isLocalOrPrivateHost((string) $parts['host']);
-    }
-
-    private function isTrustedExternalEndpoint(mixed $endpoint): bool
-    {
-        if (! is_string($endpoint) || $endpoint === '') {
-            return false;
-        }
-        $parts = parse_url($endpoint);
-        if (! is_array($parts) || ($parts['scheme'] ?? null) !== 'https' || ! isset($parts['host'])) {
-            return false;
-        }
-
-        return ! $this->isLocalOrPrivateHost((string) $parts['host']);
     }
 
     private function isLocalOrPrivateHost(string $host): bool

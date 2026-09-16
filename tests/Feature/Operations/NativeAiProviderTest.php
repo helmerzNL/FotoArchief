@@ -3,12 +3,17 @@
 declare(strict_types=1);
 
 use App\Modules\Ai\Exceptions\AiProviderException;
+use App\Modules\Ai\Models\AiProviderConfig;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\Native\AnthropicProvider;
 use App\Modules\Ai\Services\Native\GeminiProvider;
 use App\Modules\Ai\Services\Native\OpenAiProvider;
 use App\Modules\Ai\Services\Native\OpenRouterProvider;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+
+uses(RefreshDatabase::class);
 
 /**
  * Contract tests for the four native provider adapters, exercised entirely
@@ -20,19 +25,26 @@ use Illuminate\Support\Facades\Http;
  */
 function configureNativeProvider(string $provider, array $overrides = []): void
 {
-    config([
-        "ai.native_providers.{$provider}" => array_merge(config("ai.native_providers.{$provider}", []), [
-            'api_key' => 'test-key-'.$provider,
-            'base_url' => "https://native-{$provider}.test",
-        ], $overrides),
-    ]);
+    $defaultEmbeddingModel = $provider === 'openrouter'
+        ? 'nvidia/llama-nemotron-embed-vl-1b-v2'
+        : 'test-embedding-model';
+    $values = array_merge([
+        'enabled' => true,
+        'vision_model' => 'test-vision-model',
+        'embedding_model' => $defaultEmbeddingModel,
+        'cost_cents_per_image' => 1,
+        'cost_cents_per_embedding' => 1,
+        'monthly_budget_cents' => 100,
+    ], $overrides);
+    app(AiProviderConfigService::class)->update($provider, $values);
+    app(AiProviderConfigService::class)->setApiKey($provider, 'test-key-'.$provider);
 }
 
 // --- OpenAI --------------------------------------------------------------
 
 it('parses a successful OpenAI vision analysis response', function (): void {
     configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
-    Http::fake(['https://native-openai.test/chat/completions' => Http::response([
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
         'model' => 'gpt-4.1-mini-2026-01-01',
         'choices' => [['message' => ['content' => '{"description":"Een dorpsplein met fietsen.","tags":["dorpsplein","fietsen"],"confidence":0.82}']]],
     ])]);
@@ -48,7 +60,7 @@ it('parses a successful OpenAI vision analysis response', function (): void {
 
 it('maps OpenAI 401/403/429/5xx and malformed JSON to redacted AiProviderException', function (int $status, ?string $expected, array $headers = []): void {
     configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
-    Http::fake(['https://native-openai.test/chat/completions' => Http::response('geheime-header-inhoud', $status, $headers)]);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response('geheime-header-inhoud', $status, $headers)]);
 
     expect(fn () => app(OpenAiProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'gpt-4.1-mini']))
         ->toThrow(AiProviderException::class, $expected);
@@ -61,7 +73,7 @@ it('maps OpenAI 401/403/429/5xx and malformed JSON to redacted AiProviderExcepti
 
 it('never leaks the raw OpenAI response body into the exception message', function (): void {
     configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
-    Http::fake(['https://native-openai.test/chat/completions' => Http::response('geheime-header-inhoud', 500)]);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response('geheime-header-inhoud', 500)]);
 
     try {
         app(OpenAiProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'gpt-4.1-mini']);
@@ -73,7 +85,7 @@ it('never leaks the raw OpenAI response body into the exception message', functi
 
 it('rejects a malformed (non-JSON) OpenAI analysis body', function (): void {
     configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
-    Http::fake(['https://native-openai.test/chat/completions' => Http::response([
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
         'choices' => [['message' => ['content' => 'dit is geen json']]],
     ])]);
 
@@ -100,7 +112,7 @@ it('refuses to call OpenAI without a configured model', function (): void {
 
 it('parses a successful Anthropic vision analysis response', function (): void {
     configureNativeProvider('anthropic', ['vision_model' => 'claude-sonnet-5']);
-    Http::fake(['https://native-anthropic.test/v1/messages' => Http::response([
+    Http::fake(['https://api.anthropic.com/v1/messages' => Http::response([
         'model' => 'claude-sonnet-5-20260101',
         'content' => [['type' => 'text', 'text' => '{"description":"Een groepsfoto.","tags":["groep"],"confidence":0.6}']],
     ])]);
@@ -113,7 +125,7 @@ it('parses a successful Anthropic vision analysis response', function (): void {
 
 it('maps Anthropic error statuses to a redacted AiProviderException', function (int $status, string $expected): void {
     configureNativeProvider('anthropic', ['vision_model' => 'claude-sonnet-5']);
-    Http::fake(['https://native-anthropic.test/v1/messages' => Http::response(['type' => 'error'], $status)]);
+    Http::fake(['https://api.anthropic.com/v1/messages' => Http::response(['type' => 'error'], $status)]);
 
     expect(fn () => app(AnthropicProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'claude-sonnet-5']))
         ->toThrow(AiProviderException::class, $expected);
@@ -127,7 +139,7 @@ it('maps Anthropic error statuses to a redacted AiProviderException', function (
 
 it('parses a successful Gemini vision analysis response', function (): void {
     configureNativeProvider('gemini', ['vision_model' => 'gemini-2.5-flash']);
-    Http::fake(['https://native-gemini.test/v1beta/models/gemini-2.5-flash:generateContent' => Http::response([
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent' => Http::response([
         'candidates' => [['content' => ['parts' => [['text' => '{"description":"Een molen.","tags":["molen"],"confidence":0.9}']]]]],
     ])]);
 
@@ -138,7 +150,7 @@ it('parses a successful Gemini vision analysis response', function (): void {
 
 it('embeds an image into the documented multimodal gemini-embedding-2 shared space', function (): void {
     configureNativeProvider('gemini', ['embedding_model' => 'gemini-embedding-2']);
-    Http::fake(['https://native-gemini.test/v1beta/models/gemini-embedding-2:embedContent' => Http::response([
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent' => Http::response([
         'embedding' => ['values' => [0.1, 0.2, 0.3]],
     ])]);
 
@@ -151,7 +163,7 @@ it('embeds an image into the documented multimodal gemini-embedding-2 shared spa
 
 it('embeds text into the same gemini-embedding-2 shared space as images', function (): void {
     configureNativeProvider('gemini', ['embedding_model' => 'gemini-embedding-2']);
-    Http::fake(['https://native-gemini.test/v1beta/models/gemini-embedding-2:embedContent' => Http::response([
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent' => Http::response([
         'embedding' => ['values' => [0.1, 0.2, 0.3]],
     ])]);
 
@@ -162,7 +174,7 @@ it('embeds text into the same gemini-embedding-2 shared space as images', functi
 
 it('maps a Gemini rate limit to a redacted AiProviderException with retry-after', function (): void {
     configureNativeProvider('gemini', ['vision_model' => 'gemini-2.5-flash']);
-    Http::fake(['https://native-gemini.test/v1beta/models/gemini-2.5-flash:generateContent' => Http::response(['error' => 'rate limited'], 429, ['Retry-After' => '5'])]);
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent' => Http::response(['error' => 'rate limited'], 429, ['Retry-After' => '5'])]);
 
     expect(fn () => app(GeminiProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'gemini-2.5-flash']))
         ->toThrow(AiProviderException::class, 'retry-after 5s');
@@ -170,7 +182,7 @@ it('maps a Gemini rate limit to a redacted AiProviderException with retry-after'
 
 it('rejects a Gemini embedding response missing embedding.values', function (): void {
     configureNativeProvider('gemini', ['embedding_model' => 'gemini-embedding-2']);
-    Http::fake(['https://native-gemini.test/v1beta/models/gemini-embedding-2:embedContent' => Http::response(['embedding' => []])]);
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent' => Http::response(['embedding' => []])]);
 
     expect(fn () => app(GeminiProvider::class)->embedImage('jpeg-bytes', ['model' => 'gemini-embedding-2']))
         ->toThrow(AiProviderException::class, 'miste embedding.values');
@@ -180,7 +192,7 @@ it('rejects a Gemini embedding response missing embedding.values', function (): 
 
 it('parses a successful OpenRouter vision analysis response', function (): void {
     configureNativeProvider('openrouter', ['vision_model' => 'openai/gpt-4.1-mini']);
-    Http::fake(['https://native-openrouter.test/chat/completions' => Http::response([
+    Http::fake(['https://openrouter.ai/api/v1/chat/completions' => Http::response([
         'model' => 'openai/gpt-4.1-mini',
         'choices' => [['message' => ['content' => '{"description":"Een kerktoren.","tags":["kerk"],"confidence":0.5}']]],
     ])]);
@@ -195,7 +207,7 @@ it('embeds an image with an allowlisted OpenRouter multimodal model', function (
         'embedding_model' => 'nvidia/llama-nemotron-embed-vl-1b-v2',
         'embedding_model_allowlist' => ['nvidia/llama-nemotron-embed-vl-1b-v2'],
     ]);
-    Http::fake(['https://native-openrouter.test/embeddings' => Http::response([
+    Http::fake(['https://openrouter.ai/api/v1/embeddings' => Http::response([
         'data' => [['embedding' => [0.4, 0.5]]],
     ])]);
 
@@ -205,10 +217,9 @@ it('embeds an image with an allowlisted OpenRouter multimodal model', function (
 });
 
 it('refuses an OpenRouter embedding model that is not on the multimodal allowlist', function (): void {
-    configureNativeProvider('openrouter', [
-        'embedding_model' => 'text-only/some-model',
-        'embedding_model_allowlist' => ['nvidia/llama-nemotron-embed-vl-1b-v2'],
-    ]);
+    configureNativeProvider('openrouter');
+    AiProviderConfig::query()->where('provider', 'openrouter')
+        ->update(['embedding_model' => 'text-only/some-model']);
 
     expect(fn () => app(OpenRouterProvider::class)->embedImage('jpeg-bytes', ['model' => 'text-only/some-model']))
         ->toThrow(AiProviderException::class, 'staat niet op de toegestane multimodale modellenlijst');
@@ -216,7 +227,7 @@ it('refuses an OpenRouter embedding model that is not on the multimodal allowlis
 
 it('maps OpenRouter error statuses to a redacted AiProviderException', function (int $status, string $expected): void {
     configureNativeProvider('openrouter', ['vision_model' => 'openai/gpt-4.1-mini']);
-    Http::fake(['https://native-openrouter.test/chat/completions' => Http::response(['error' => 'nope'], $status)]);
+    Http::fake(['https://openrouter.ai/api/v1/chat/completions' => Http::response(['error' => 'nope'], $status)]);
 
     expect(fn () => app(OpenRouterProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'openai/gpt-4.1-mini']))
         ->toThrow(AiProviderException::class, $expected);
@@ -229,7 +240,7 @@ it('maps OpenRouter error statuses to a redacted AiProviderException', function 
 
 it('lists visible OpenAI models via the cheap probe endpoint', function (): void {
     configureNativeProvider('openai');
-    Http::fake(['https://native-openai.test/models' => Http::response([
+    Http::fake(['https://api.openai.com/v1/models' => Http::response([
         'data' => [['id' => 'gpt-4.1-mini'], ['id' => 'gpt-4.1']],
     ])]);
 
@@ -238,7 +249,7 @@ it('lists visible OpenAI models via the cheap probe endpoint', function (): void
 
 it('maps an OpenAI probe 401 to a redacted AiProviderException', function (): void {
     configureNativeProvider('openai');
-    Http::fake(['https://native-openai.test/models' => Http::response('geheim', 401)]);
+    Http::fake(['https://api.openai.com/v1/models' => Http::response('geheim', 401)]);
 
     expect(fn () => app(OpenAiProvider::class)->probe())
         ->toThrow(AiProviderException::class, 'ongeldige of ontbrekende API-sleutel');
@@ -246,7 +257,7 @@ it('maps an OpenAI probe 401 to a redacted AiProviderException', function (): vo
 
 it('lists visible Anthropic models via the cheap probe endpoint', function (): void {
     configureNativeProvider('anthropic');
-    Http::fake(['https://native-anthropic.test/v1/models' => Http::response([
+    Http::fake(['https://api.anthropic.com/v1/models' => Http::response([
         'data' => [['id' => 'claude-sonnet-5'], ['id' => 'claude-opus-5']],
     ])]);
 
@@ -255,7 +266,7 @@ it('lists visible Anthropic models via the cheap probe endpoint', function (): v
 
 it('lists visible Gemini models via the cheap probe endpoint, stripping the models/ prefix', function (): void {
     configureNativeProvider('gemini');
-    Http::fake(['https://native-gemini.test/v1beta/models' => Http::response([
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models' => Http::response([
         'models' => [['name' => 'models/gemini-embedding-2'], ['name' => 'models/gemini-2.5-flash']],
     ])]);
 
@@ -264,7 +275,7 @@ it('lists visible Gemini models via the cheap probe endpoint, stripping the mode
 
 it('maps a Gemini probe 403 to a redacted AiProviderException', function (): void {
     configureNativeProvider('gemini');
-    Http::fake(['https://native-gemini.test/v1beta/models' => Http::response('geheim', 403)]);
+    Http::fake(['https://generativelanguage.googleapis.com/v1beta/models' => Http::response('geheim', 403)]);
 
     expect(fn () => app(GeminiProvider::class)->probe())
         ->toThrow(AiProviderException::class, 'modelrechten');
@@ -272,7 +283,7 @@ it('maps a Gemini probe 403 to a redacted AiProviderException', function (): voi
 
 it('lists visible OpenRouter models via the cheap probe endpoint', function (): void {
     configureNativeProvider('openrouter');
-    Http::fake(['https://native-openrouter.test/models' => Http::response([
+    Http::fake(['https://openrouter.ai/api/v1/models' => Http::response([
         'data' => [['id' => 'google/gemini-embedding-2']],
     ])]);
 
@@ -281,7 +292,7 @@ it('lists visible OpenRouter models via the cheap probe endpoint', function (): 
 
 it('maps an OpenRouter probe 429 with retry-after to a redacted AiProviderException', function (): void {
     configureNativeProvider('openrouter');
-    Http::fake(['https://native-openrouter.test/models' => Http::response('geheim', 429, ['Retry-After' => '5'])]);
+    Http::fake(['https://openrouter.ai/api/v1/models' => Http::response('geheim', 429, ['Retry-After' => '5'])]);
 
     expect(fn () => app(OpenRouterProvider::class)->probe())
         ->toThrow(AiProviderException::class, 'ratelimiet bereikt (429); retry-after 5s');

@@ -673,7 +673,28 @@
         },
         {
             "file": "app/Modules/Ai/Controllers/AiSettingsController.php",
-            "line": 72,
+            "line": 57,
+            "kind": "php_string",
+            "text": "AI-providerinstellingen opgeslagen; vaste endpoints en versies zijn niet wijzigbaar.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Controllers/AiSettingsController.php",
+            "line": 68,
+            "kind": "php_string",
+            "text": "API-sleutel opgeslagen. De sleutel wordt niet getoond of teruggegeven.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Controllers/AiSettingsController.php",
+            "line": 79,
+            "kind": "php_string",
+            "text": "API-sleutel verwijderd.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Controllers/AiSettingsController.php",
+            "line": 110,
             "kind": "php_string",
             "text": "AI-instellingen opgeslagen. Wijzigingen activeren nooit automatisch externe fallback.",
             "batch": "ai"
@@ -694,84 +715,56 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 189,
+            "line": 195,
             "kind": "php_string",
             "text": "AI-batches zijn begrensd op 1 tot 25 assets.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 192,
+            "line": 198,
             "kind": "php_string",
             "text": "AI-afgeleiden moeten tussen 256 en 1024 pixels blijven.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 195,
+            "line": 201,
             "kind": "php_string",
             "text": "AI-provider timeouts moeten tussen 5 en 60 seconden blijven.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 198,
-            "kind": "php_string",
-            "text": "Extern AI-budget kan niet negatief zijn.",
-            "batch": "ai"
-        },
-        {
-            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 202,
+            "line": 204,
             "kind": "php_string",
             "text": "Lokale AI moet een HTTPS-endpoint of localhost/private netwerkendpoint zijn.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 206,
+            "line": 207,
             "kind": "php_string",
-            "text": "Externe AI vereist een publiek HTTPS-endpoint; localhost en private IP-ranges zijn geblokkeerd.",
+            "text": "Schakel eerst de externe provider in de providersectie in.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 209,
-            "kind": "php_string",
-            "text": "Externe verwerking vereist expliciete toestemming voor gegevensscope, regio/retentie en kosten.",
-            "batch": "ai"
-        },
-        {
-            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 212,
-            "kind": "php_string",
-            "text": "Externe AI vereist een expliciet budget boven nul.",
-            "batch": "ai"
-        },
-        {
-            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 216,
-            "kind": "php_string",
-            "text": "Externe AI vereist providerregio en retentie/training-notitie.",
-            "batch": "ai"
-        },
-        {
-            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 251,
+            "line": 240,
             "kind": "php_string",
             "text": "Kies een model voor de gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 254,
+            "line": 243,
             "kind": "php_string",
             "text": "Native provider gebruik vereist expliciete toestemming per functie.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 257,
+            "line": 246,
             "kind": "php_string",
             "text": "Schakel de provider eerst in voordat je hem selecteert.",
             "batch": "ai"
@@ -830,6 +823,48 @@
             "line": 75,
             "kind": "php_string",
             "text": "De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 66,
+            "kind": "php_string",
+            "text": "Het externe AI-endpoint is geen publiek HTTPS-endpoint.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 105,
+            "kind": "php_string",
+            "text": "OpenRouter-embeddings moeten op de vaste multimodale allowlist staan.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 110,
+            "kind": "php_string",
+            "text": "Externe AI vereist een publiek HTTPS-endpoint.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 114,
+            "kind": "php_string",
+            "text": "Externe AI vereist regio- en retentieinformatie.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 130,
+            "kind": "php_string",
+            "text": "Geef een niet-lege API-sleutel op.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiProviderConfigService.php",
+            "line": 176,
+            "kind": "php_string",
+            "text": "Unknown AI provider configuration requested",
             "batch": "ai"
         },
         {
@@ -918,63 +953,63 @@
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 31,
+            "line": 32,
             "kind": "php_string",
             "text": "External AI capability probe failed with status",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 35,
+            "line": 36,
             "kind": "php_string",
             "text": "External AI capability probe returned invalid JSON.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 62,
+            "line": 63,
             "kind": "php_string",
             "text": "External AI image analysis response misses description or tags.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 105,
+            "line": 106,
             "kind": "php_string",
             "text": "External AI provider is not explicitly enabled, consented and budgeted.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 153,
+            "line": 154,
             "kind": "php_string",
             "text": "External AI provider must report provider_kind=external.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 156,
+            "line": 157,
             "kind": "php_string",
             "text": "External AI provider must report image analysis plus text/image embeddings.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 159,
+            "line": 160,
             "kind": "php_string",
             "text": "External AI provider must prove text and image embeddings share one model space.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 173,
+            "line": 174,
             "kind": "php_string",
             "text": "External AI embedding response misses embedding, model_space or dimensions.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/ExternalAiProvider.php",
-            "line": 176,
+            "line": 177,
             "kind": "php_string",
             "text": "External AI embedding dimensions do not match the vector length.",
             "batch": "ai"
@@ -1051,42 +1086,42 @@
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 49,
+            "line": 73,
             "kind": "php_string",
             "text": ": geen API-sleutel geconfigureerd in de private omgeving.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 79,
+            "line": 103,
             "kind": "php_string",
             "text": ": verzoek verliep (timeout of verbindingsfout).",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 86,
+            "line": 110,
             "kind": "php_string",
             "text": ": antwoord was geen geldige JSON.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 100,
+            "line": 124,
             "kind": "php_string",
             "text": ": verzoek verliep (timeout of verbindingsfout).",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 107,
+            "line": 131,
             "kind": "php_string",
             "text": ": antwoord was geen geldige JSON.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/Native/AbstractNativeProvider.php",
-            "line": 182,
+            "line": 206,
             "kind": "php_string",
             "text": ": leverde geen geldige JSON-analyse (description/tags verwacht).",
             "batch": "ai"
@@ -4588,390 +4623,432 @@
             "file": "resources/views/ai/settings.blade.php",
             "line": 44,
             "kind": "blade_text",
-            "text": "\"Geconfigureerd\" betekent dat er een API-sleutel, base-URL en maandbudget in de private omgeving staan; dit formulier kan dat nooit instellen. \"Klaar\" vereist bovendien dat de provider hieronder is ingeschakeld.",
+            "text": "\"Geconfigureerd\" betekent dat de database een versleutelde API-sleutel en een positief budget bevat. De sleutel wordt nooit getoond, teruggegeven, gelogd of geserialiseerd.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 50,
+            "line": 48,
             "kind": "blade_text",
-            "text": "Verbindingstest resultaat: /",
+            "text": "Providers / Providers",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 53,
+            "line": 49,
             "kind": "blade_text",
-            "text": "Zichtbare modellen voor deze sleutel: . Geconfigureerd model \" \" gevonden: .",
+            "text": "Stel modellen, kosten en maandbudgetten per provider in. Native endpoints zijn vast; alleen de custom externe provider gebruikt een door de beheerder ingesteld publiek HTTPS-endpoint.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 59,
+            "line": 54,
             "kind": "blade_text",
-            "text": "Verbindingstest (kosteloos)",
+            "text": "Status sleutel",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 57,
+            "kind": "blade_text",
+            "text": "Vaste API-versie",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 60,
             "kind": "blade_text",
-            "text": "Test alleen of de sleutel geldig is en welke modellen zichtbaar zijn. Dit voert nooit een betaalde beeldanalyse of embedding uit. Een echte beeldanalyse-proof gebeurt uitsluitend via de \"Beeldanalyse starten\" actie hieronder, met een echte budgetreservering.",
+            "text": "Vaste OpenRouter-allowlist",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 65,
+            "kind": "blade_text",
+            "text": "Provider toestaan",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 69,
+            "kind": "blade_text",
+            "text": "Publiek HTTPS-endpoint",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 73,
+            "kind": "blade_text",
+            "text": "Kosten beeldanalyse (centen)",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 74,
+            "kind": "blade_text",
+            "text": "Kosten embedding (centen)",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 75,
+            "kind": "blade_text",
+            "text": "Maandbudget (centen)",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 76,
             "kind": "blade_text",
-            "text": "Verbinding testen",
+            "text": "Providerinstellingen opslaan",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 82,
+            "line": 80,
             "kind": "blade_text",
-            "text": "Capabilities en noodstop",
+            "text": "API-sleutel instellen/vervangen",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 84,
+            "line": 81,
             "kind": "blade_text",
-            "text": "'global_enabled' => 'AI globaal inschakelen',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 85,
-            "kind": "blade_text",
-            "text": "'emergency_stop' => 'Noodstop actief houden',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 86,
-            "kind": "blade_text",
-            "text": "'image_analysis_enabled' => 'Beeldanalyse toestaan',",
+            "text": "Sleutel opslaan",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 87,
             "kind": "blade_text",
-            "text": "'embeddings_enabled' => 'Multimodale embeddings toestaan',",
+            "text": "Ik bevestig dat deze API-sleutel definitief moet worden verwijderd.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 88,
             "kind": "blade_text",
-            "text": "'local_provider_enabled' => 'Lokale/eigen provider toestaan',",
+            "text": "API-sleutel expliciet verwijderen",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 89,
+            "line": 98,
             "kind": "blade_text",
-            "text": "'external_provider_enabled' => 'Externe provider toestaan',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 90,
-            "kind": "blade_text",
-            "text": "'external_processing_allowed' => 'Externe doorgifte expliciet toegestaan',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 91,
-            "kind": "blade_text",
-            "text": "'openai_provider_enabled' => 'OpenAI native provider toestaan',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 92,
-            "kind": "blade_text",
-            "text": "'anthropic_provider_enabled' => 'Anthropic (Claude) native provider toestaan',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 93,
-            "kind": "blade_text",
-            "text": "'gemini_provider_enabled' => 'Gemini native provider toestaan',",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 94,
-            "kind": "blade_text",
-            "text": "'openrouter_provider_enabled' => 'OpenRouter native provider toestaan',",
+            "text": "Verbindingstest resultaat: /",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 101,
             "kind": "blade_text",
-            "text": "Native providers sturen de geselecteerde afgeleide (beeldanalyse) of zoektekst (embeddings) rechtstreeks naar de eigen API van OpenAI, Anthropic, Google Gemini of OpenRouter. Er vindt nooit automatische failover tussen providers plaats: elke capability gebruikt precies de hieronder gekozen provider.",
+            "text": "Zichtbare modellen voor deze sleutel: . Geconfigureerd model \" \" gevonden: .",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 103,
+            "line": 107,
             "kind": "blade_text",
-            "text": "Beeldanalyse: provider, model en toestemming",
+            "text": "Verbindingstest (kosteloos)",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 104,
+            "line": 108,
             "kind": "blade_text",
-            "text": "Provider voor beeldanalyse",
+            "text": "Test alleen of de sleutel geldig is en welke modellen zichtbaar zijn. Dit voert nooit een betaalde beeldanalyse of embedding uit. Een echte beeldanalyse-proof gebeurt uitsluitend via de \"Beeldanalyse starten\" actie hieronder, met een echte budgetreservering.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 112,
+            "line": 124,
             "kind": "blade_text",
-            "text": "Modelnaam/-versie voor beeldanalyse",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 113,
-            "kind": "blade_attribute",
-            "text": "bijv. gpt-4.1-mini, claude-sonnet-5, gemini-2.5-flash",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 117,
-            "kind": "blade_text",
-            "text": "Ik geef expliciet toestemming dat de geselecteerde afgeleide (max 1024px, metadata verwijderd) naar de gekozen native provider wordt verstuurd voor beeldanalyse.",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 120,
-            "kind": "blade_text",
-            "text": "Embeddings: provider, model en toestemming",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 121,
-            "kind": "blade_text",
-            "text": "Alleen aantoonbaar multimodale, gedeelde tekst/beeld-vectorruimtes worden aangeboden: OpenAI-tekstembeddings en Anthropic bieden dat niet native, dus die staan hier niet in de lijst.",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 122,
-            "kind": "blade_text",
-            "text": "Provider voor embeddings",
+            "text": "Verbinding testen",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 130,
             "kind": "blade_text",
-            "text": "Modelnaam/-versie voor embeddings",
+            "text": "Capabilities en noodstop",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 131,
-            "kind": "blade_attribute",
-            "text": "bijv. gemini-embedding-2",
+            "line": 132,
+            "kind": "blade_text",
+            "text": "'global_enabled' => 'AI globaal inschakelen',",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 133,
+            "kind": "blade_text",
+            "text": "'emergency_stop' => 'Noodstop actief houden',",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 134,
+            "kind": "blade_text",
+            "text": "'image_analysis_enabled' => 'Beeldanalyse toestaan',",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 135,
             "kind": "blade_text",
-            "text": "Ik geef expliciet toestemming dat afgeleiden en zoektekst naar de gekozen native embeddingsprovider worden verstuurd. Bij OpenRouter routeert de zoektekst via een door mij gekozen upstream-model met diens eigen privacy-/retentiebeleid, dat deze app niet kan afdwingen.",
+            "text": "'embeddings_enabled' => 'Multimodale embeddings toestaan',",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 136,
+            "kind": "blade_text",
+            "text": "'local_provider_enabled' => 'Lokale/eigen provider toestaan',",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 137,
             "kind": "blade_text",
-            "text": "Een modelwissel (andere provider, model of dimensies) vereist een nieuwe indexgeneratie. Bestaande en nieuwe embeddings worden nooit in dezelfde vectorruimte gemengd.",
+            "text": "'external_processing_allowed' => 'Externe doorgifte expliciet toegestaan',",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 139,
+            "line": 144,
             "kind": "blade_text",
-            "text": "Endpoints en privacy",
+            "text": "Native providers sturen de geselecteerde afgeleide (beeldanalyse) of zoektekst (embeddings) rechtstreeks naar de eigen API van OpenAI, Anthropic, Google Gemini of OpenRouter. Er vindt nooit automatische failover tussen providers plaats: elke capability gebruikt precies de hieronder gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 140,
+            "line": 146,
             "kind": "blade_text",
-            "text": "Lokale/eigen endpoint",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 141,
-            "kind": "blade_attribute",
-            "text": "http://ai-service:8080 of https://ai.example.org",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 143,
-            "kind": "blade_text",
-            "text": "Externe endpoint",
+            "text": "Beeldanalyse: provider, model en toestemming",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 147,
-            "kind": "blade_attribute",
-            "text": "EU/NL of contractuele regio",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 150,
-            "kind": "blade_attribute",
-            "text": "Beschrijf retentie, training opt-out en gegevensscope",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 153,
             "kind": "blade_text",
-            "text": "Numerieke limieten",
+            "text": "Provider voor beeldanalyse",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 154,
+            "line": 155,
             "kind": "blade_text",
-            "text": "Max assets per AI-batch",
+            "text": "Voor databaseproviders wordt het beeldanalysemodel uit de providersectie gebruikt. Alleen de lokale/eigen provider gebruikt hier nog zijn capabilitymodel.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 157,
+            "line": 156,
             "kind": "blade_text",
-            "text": "Max afbeeldingsrand voor AI-afgeleide",
+            "text": "Lokaal model voor beeldanalyse",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 160,
+            "line": 159,
             "kind": "blade_text",
-            "text": "Provider timeout seconden",
+            "text": "Ik geef expliciet toestemming dat de geselecteerde afgeleide (max 1024px, metadata verwijderd) naar de gekozen native provider wordt verstuurd voor beeldanalyse.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 162,
+            "kind": "blade_text",
+            "text": "Embeddings: provider, model en toestemming",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 163,
             "kind": "blade_text",
-            "text": "Maandelijks extern budget in centen",
+            "text": "Alleen aantoonbaar multimodale, gedeelde tekst/beeld-vectorruimtes worden aangeboden: OpenAI-tekstembeddings en Anthropic bieden dat niet native, dus die staan hier niet in de lijst.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 167,
+            "line": 164,
             "kind": "blade_text",
-            "text": "Secrets worden hier niet opgeslagen. Zet provider API-sleutels alleen in de private runtimeomgeving.",
+            "text": "Provider voor embeddings",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 168,
+            "line": 172,
             "kind": "blade_text",
-            "text": "AI-instellingen opslaan",
+            "text": "Voor databaseproviders wordt het embeddingmodel uit de providersectie gebruikt.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 173,
             "kind": "blade_text",
-            "text": "Beeldanalyse starten",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 174,
-            "kind": "blade_text",
-            "text": "Analyseert de geselecteerde, gescande primaire bestanden. Elke run levert menselijk te beoordelen suggesties op (accepteren/afwijzen) en wijzigt nooit rechtstreeks een asset. Volg de voortgang, en stop of herstart indien nodig, op de",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 175,
-            "kind": "blade_text",
-            "text": "Asset-id's",
+            "text": "Lokaal embeddingmodel",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 176,
+            "kind": "blade_text",
+            "text": "Ik geef expliciet toestemming dat afgeleiden en zoektekst naar de gekozen native embeddingsprovider worden verstuurd. Bij OpenRouter routeert de zoektekst via een door mij gekozen upstream-model met diens eigen privacy-/retentiebeleid, dat deze app niet kan afdwingen.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 178,
+            "kind": "blade_text",
+            "text": "Een modelwissel (andere provider, model of dimensies) vereist een nieuwe indexgeneratie. Bestaande en nieuwe embeddings worden nooit in dezelfde vectorruimte gemengd.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 180,
+            "kind": "blade_text",
+            "text": "Endpoints en privacy",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 181,
+            "kind": "blade_text",
+            "text": "Lokale/eigen endpoint",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 182,
             "kind": "blade_attribute",
-            "text": "ULID's gescheiden door komma's of regels",
+            "text": "http://ai-service:8080 of https://ai.example.org",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 185,
+            "kind": "blade_text",
+            "text": "Numerieke limieten",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 186,
             "kind": "blade_text",
-            "text": "Beeldanalyse is nog niet gereed: kies hierboven een provider/model en geef toestemming.",
+            "text": "Max assets per AI-batch",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 188,
+            "line": 189,
             "kind": "blade_text",
-            "text": "Beeldanalyse starten",
+            "text": "Max afbeeldingsrand voor AI-afgeleide",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 193,
+            "line": 192,
             "kind": "blade_text",
-            "text": "Embeddingindex bouwen",
-            "batch": "ai"
-        },
-        {
-            "file": "resources/views/ai/settings.blade.php",
-            "line": 194,
-            "kind": "blade_text",
-            "text": "Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.",
+            "text": "Provider timeout seconden",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 195,
             "kind": "blade_text",
-            "text": "Asset-id's",
+            "text": "API-sleutels worden hierboven ingesteld/vervangen of expliciet verwijderd; ze worden versleuteld opgeslagen en nooit ingevuld in een formulier.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
             "line": 196,
+            "kind": "blade_text",
+            "text": "AI-instellingen opslaan",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 201,
+            "kind": "blade_text",
+            "text": "Beeldanalyse starten",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 202,
+            "kind": "blade_text",
+            "text": "Analyseert de geselecteerde, gescande primaire bestanden. Elke run levert menselijk te beoordelen suggesties op (accepteren/afwijzen) en wijzigt nooit rechtstreeks een asset. Volg de voortgang, en stop of herstart indien nodig, op de",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 203,
+            "kind": "blade_text",
+            "text": "Asset-id's",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 204,
             "kind": "blade_attribute",
             "text": "ULID's gescheiden door komma's of regels",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 206,
+            "line": 214,
+            "kind": "blade_text",
+            "text": "Beeldanalyse is nog niet gereed: kies hierboven een provider/model en geef toestemming.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 216,
+            "kind": "blade_text",
+            "text": "Beeldanalyse starten",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 221,
+            "kind": "blade_text",
+            "text": "Embeddingindex bouwen",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 222,
+            "kind": "blade_text",
+            "text": "Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 223,
+            "kind": "blade_text",
+            "text": "Asset-id's",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 224,
+            "kind": "blade_attribute",
+            "text": "ULID's gescheiden door komma's of regels",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/settings.blade.php",
+            "line": 234,
             "kind": "blade_text",
             "text": "Embeddings zijn nog niet gereed: kies hierboven een provider/model en geef toestemming.",
             "batch": "ai"
         },
         {
             "file": "resources/views/ai/settings.blade.php",
-            "line": 208,
+            "line": 236,
             "kind": "blade_text",
             "text": "Embeddingindex starten",
             "batch": "ai"
