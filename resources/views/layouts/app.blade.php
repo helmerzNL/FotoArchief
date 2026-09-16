@@ -7,10 +7,17 @@
     <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-    <header><a href="/">FotoArchief</a><span>Jouw geschiedenis, zorgvuldig bewaard</span>@auth<a href="{{ route('admin.assets.index') }}">Foto’s</a><form method="post" action="/logout">@csrf<button class="secondary">Uitloggen</button></form>@endauth</header>
+    <header><a href="/">FotoArchief</a><span>Jouw geschiedenis, zorgvuldig bewaard</span>@auth<a href="{{ route('admin.assets.index') }}">Foto’s</a>@can('users.manage')<a href="{{ route('identity.users.index') }}">Identiteit</a>@endcan<form method="post" action="/logout">@csrf<button class="secondary">Uitloggen</button></form>@endauth</header>
     <main id="main">
         @if(session('status'))
             <div class="notice" role="status">{{ session('status') }}</div>
+        @endif
+        @if(session('invitation_url'))
+            <div class="notice" role="status">
+                <strong>Eenmalige uitnodigingslink</strong>
+                <p>Kopieer deze link nu en deel hem via een kanaal dat je vertrouwt. FotoArchief toont hem niet opnieuw.</p>
+                <p><code>{{ session('invitation_url') }}</code></p>
+            </div>
         @endif
         @if($errors->any())
             <div class="errors" role="alert">

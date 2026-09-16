@@ -29,6 +29,7 @@ class SessionController extends Controller
         }
         RateLimiter::clear($key);
         $request->session()->regenerate();
+        $request->session()->put('identity.session_revoked_at', Auth::user()?->session_revoked_at?->getTimestamp());
 
         return redirect()->intended(Auth::user()?->hasPermission('users.manage') ? '/admin' : '/admin/assets');
     }

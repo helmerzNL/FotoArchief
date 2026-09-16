@@ -16,6 +16,7 @@ Route::view('/login', 'auth.login')->name('login');
 Route::post('/login', [SessionController::class, 'store']);
 Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth');
 Route::view('/admin', 'admin.dashboard')->middleware(['auth', 'can:users.manage']);
+require __DIR__.'/identity.php';
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/assets')->name('admin.assets.')->group(function (): void {
     Route::get('/', [AdminAssetController::class, 'index'])->name('index');
     Route::post('/', [AdminAssetController::class, 'store'])->name('store');

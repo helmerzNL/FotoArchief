@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Middleware\EnsureActiveUserSession;
 use App\Modules\Installation\InstallationBootstrap;
 use App\Modules\Installation\InstallationGate;
 use Illuminate\Foundation\Application;
@@ -18,6 +19,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(InstallationGate::class);
+        $middleware->web(append: [EnsureActiveUserSession::class]);
         $middleware->redirectGuestsTo('/login');
     })
     ->withExceptions(function (Exceptions $exceptions): void {

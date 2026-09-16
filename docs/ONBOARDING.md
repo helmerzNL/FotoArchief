@@ -64,9 +64,13 @@ fields are never flashed into validation redirects or re-rendered as input.
 The initial authentication method is an explicitly limited local account:
 minimum 14-character password, framework password hashing, server-side sessions
 and throttled login. This makes installation and administrator login testable
-without external providers. Passkeys, recovery email and user-management UI
-are not implemented; this is not a claim that the final authentication design
-has been completed.
+without external providers. Administrators can invite users from
+`/admin/identiteit`; FotoArchief has no mail provider, so it shows a
+single-use invitation URL only once to the administrator who created it. Share
+that URL through a trusted out-of-band channel. Role changes and deactivations
+immediately invalidate existing sessions on their next request, and concurrent
+updates are guarded so at least one active administrator remains. Passkeys and
+recovery codes are documented separately after enrollment is enabled.
 
 `state.json` contains a generated application encryption key, the installation
 code hash, status, and the submitted database/storage configuration. Database
