@@ -44,6 +44,10 @@ final class OperationsPostgresAcceptance
 
     public static function bootDatabase(string $database): void
     {
+        if (! str_ends_with($database, '_final_test')) {
+            throw new \RuntimeException('Explicit isolated database ending _final_test is required.');
+        }
+
         config([
             'database.default' => 'pgsql',
             'database.connections.pgsql.host' => getenv('FOTOARCHIEF_TEST_PG_HOST') ?: '127.0.0.1',
@@ -136,6 +140,16 @@ $requiresPostgres = fn (): bool => getenv('FOTOARCHIEF_TEST_PG_OPERATIONS_DATABA
 
 afterEach(function (): void {
     OperationsPostgresAcceptance::cleanup();
+});
+
+it('refuses a non-disposable operations database before changing its connection', function (): void {
+    $connection = config('database.connections.pgsql');
+    $default = config('database.default');
+
+    expect(fn () => OperationsPostgresAcceptance::bootDatabase('fotoarchief'))
+        ->toThrow(\RuntimeException::class, 'Explicit isolated database ending _final_test is required.');
+    expect(config('database.connections.pgsql'))->toBe($connection)
+        ->and(config('database.default'))->toBe($default);
 });
 
 it('enforces the real asset_files immutability trigger and rebuilds JPEG derivatives from the preserved original', function (): void {
