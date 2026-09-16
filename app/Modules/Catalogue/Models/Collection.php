@@ -67,4 +67,13 @@ class Collection extends CatalogueModel
 
         return $descendants;
     }
+
+    /**
+     * Public collection routes bind by slug, matching the archive-facing
+     * permalink style used for published photos.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
 }

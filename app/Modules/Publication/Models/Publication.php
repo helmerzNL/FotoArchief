@@ -96,4 +96,23 @@ class Publication extends CatalogueModel
 
         return $this->asset?->lock_version !== $this->published_lock_version;
     }
+
+    /**
+     * Public routes bind by the stable permalink slug, never by the internal
+     * ULID, and every such binding is resolved through the same eligibility
+     * scope so a private, embargoed or revoked publication 404s instead of
+     * leaking through route-model binding.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'permalink_slug';
+    }
+
+    /**
+     * @param  mixed  $value
+     */
+    public function resolveRouteBinding($value, $field = null): ?self
+    {
+        return $this->publiclyVisible()->where($field ?? $this->getRouteKeyName(), $value)->first();
+    }
 }
