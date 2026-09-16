@@ -6,6 +6,7 @@ namespace App\Modules\Ai\Services\Native;
 
 use App\Modules\Ai\Contracts\ConnectionProbe;
 use App\Modules\Ai\Exceptions\AiProviderException;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Client\PendingRequest;
@@ -26,6 +27,7 @@ abstract class AbstractNativeProvider implements ConnectionProbe
 {
     public function __construct(
         protected readonly HttpFactory $http,
+        private readonly AiProviderConfigService $providerConfigs,
     ) {}
 
     abstract protected function providerLabel(): string;
@@ -35,12 +37,34 @@ abstract class AbstractNativeProvider implements ConnectionProbe
      */
     protected function nativeConfig(): array
     {
-        $config = config('ai.native_providers.'.$this->providerKey());
-
-        return is_array($config) ? $config : [];
+        return $this->providerConfigs->runtime($this->providerKey());
     }
 
     abstract protected function providerKey(): string;
+
+    public static function officialBaseUrl(string $provider): string
+    {
+        return match ($provider) {
+            'openai' => 'https://api.openai.com/v1',
+            'anthropic' => 'https://api.anthropic.com',
+            'gemini' => 'https://generativelanguage.googleapis.com',
+            'openrouter' => 'https://openrouter.ai/api/v1',
+            default => throw new \InvalidArgumentException("Onbekende native AI-provider: {$provider}."),
+        };
+    }
+
+    public static function officialApiVersion(string $provider): ?string
+    {
+        return $provider === 'anthropic' ? '2023-06-01' : null;
+    }
+
+    /** @return list<string> */
+    public static function embeddingModelAllowlist(string $provider): array
+    {
+        return $provider === 'openrouter'
+            ? ['nvidia/llama-nemotron-embed-vl-1b-v2']
+            : [];
+    }
 
     protected function apiKey(): string
     {

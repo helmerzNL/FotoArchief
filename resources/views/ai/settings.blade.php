@@ -41,7 +41,49 @@
             <dt>Embeddings gereed (provider + model + toestemming)</dt>
             <dd>{{ $settings['embeddings_ready'] ? 'ja' : 'nee' }}</dd>
         </dl>
-        <p>"Geconfigureerd" betekent dat er een API-sleutel, base-URL en maandbudget in de private omgeving staan; dit formulier kan dat nooit instellen. "Klaar" vereist bovendien dat de provider hieronder is ingeschakeld.</p>
+        <p>"Geconfigureerd" betekent dat de database een versleutelde API-sleutel en een positief budget bevat. De sleutel wordt nooit getoond, teruggegeven, gelogd of geserialiseerd.</p>
+    </section>
+
+    <section class="card">
+        <h2>Native providers / Native providers</h2>
+        <p>Stel modellen, kosten en maandbudgetten per provider in. De officiële base-URL en API-versie zijn vast en alleen-lezen. De OpenRouter-allowlist voor multimodale embeddings is vast en alleen-lezen.</p>
+        @foreach($providerStatuses as $provider)
+            <article class="card">
+                <h3>{{ ucfirst($provider['provider']) }}</h3>
+                <dl>
+                    <dt>Status sleutel</dt><dd>{{ $provider['has_api_key'] ? 'ingesteld' : 'niet ingesteld' }}</dd>
+                    <dt>Vaste base-URL</dt><dd><code>{{ $provider['base_url'] }}</code></dd>
+                    @if($provider['api_version'])
+                        <dt>Vaste API-versie</dt><dd>{{ $provider['api_version'] }}</dd>
+                    @endif
+                    @if($provider['embedding_model_allowlist'])
+                        <dt>Vaste OpenRouter-allowlist</dt><dd>{{ implode(', ', $provider['embedding_model_allowlist']) }}</dd>
+                    @endif
+                </dl>
+                <form method="POST" action="{{ route('admin.operations.ai.provider.update', $provider['provider']) }}">
+                    @csrf
+                    <label><input type="checkbox" name="enabled" value="1" @checked($provider['enabled'])> Provider toestaan</label>
+                    <label>Visionmodel <input type="text" name="vision_model" value="{{ $provider['vision_model'] }}"></label>
+                    <label>Embeddingmodel <input type="text" name="embedding_model" value="{{ $provider['embedding_model'] }}"></label>
+                    <label>Kosten beeldanalyse (centen) <input type="number" min="0" name="cost_cents_per_image" value="{{ $provider['cost_cents_per_image'] }}"></label>
+                    <label>Kosten embedding (centen) <input type="number" min="0" name="cost_cents_per_embedding" value="{{ $provider['cost_cents_per_embedding'] }}"></label>
+                    <label>Maandbudget (centen) <input type="number" min="0" name="monthly_budget_cents" value="{{ $provider['monthly_budget_cents'] }}"></label>
+                    <button type="submit">Providerinstellingen opslaan</button>
+                </form>
+                <form method="POST" action="{{ route('admin.operations.ai.provider.key.set', $provider['provider']) }}">
+                    @csrf
+                    <label>API-sleutel instellen/vervangen <input type="password" name="api_key" autocomplete="new-password" required></label>
+                    <button type="submit">Sleutel opslaan</button>
+                </form>
+                @if($provider['has_api_key'])
+                    <form method="POST" action="{{ route('admin.operations.ai.provider.key.delete', $provider['provider']) }}">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit">API-sleutel expliciet verwijderen</button>
+                    </form>
+                @endif
+            </article>
+        @endforeach
     </section>
 
     @if(session('connection_test'))
@@ -164,7 +206,7 @@
             <input type="number" min="0" name="monthly_external_budget_cents" value="{{ old('monthly_external_budget_cents', $settings['monthly_external_budget_cents']) }}">
         </label>
 
-        <p>Secrets worden hier niet opgeslagen. Zet provider API-sleutels alleen in de private runtimeomgeving.</p>
+        <p>API-sleutels worden hierboven ingesteld/vervangen of expliciet verwijderd; ze worden versleuteld opgeslagen en nooit ingevuld in een formulier.</p>
         <button type="submit">AI-instellingen opslaan</button>
     </form>
 

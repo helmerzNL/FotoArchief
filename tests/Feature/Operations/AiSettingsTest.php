@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\Role;
 use App\Models\User;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -117,12 +118,9 @@ it('lets the emergency stop override otherwise ready AI settings', function (): 
 });
 
 it('runs a cheap, non-billable OpenAI connection test and reports whether the configured model is visible', function (): void {
-    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
-        'api_key' => 'sk-test',
-        'base_url' => 'https://api.openai.test/v1',
-    ])]);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test');
     Http::fake([
-        'https://api.openai.test/v1/models' => Http::response([
+        'https://api.openai.com/v1/models' => Http::response([
             'data' => [['id' => 'gpt-4.1-mini'], ['id' => 'gpt-4.1']],
         ]),
     ]);
@@ -142,12 +140,9 @@ it('runs a cheap, non-billable OpenAI connection test and reports whether the co
 });
 
 it('reports a connection-test failure without ever leaking the raw response into the flashed message', function (): void {
-    config(['ai.native_providers.openai' => array_merge(config('ai.native_providers.openai', []), [
-        'api_key' => 'sk-test',
-        'base_url' => 'https://api.openai.test/v1',
-    ])]);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'sk-test');
     Http::fake([
-        'https://api.openai.test/v1/models' => Http::response('geheime-inhoud', 401),
+        'https://api.openai.com/v1/models' => Http::response('geheime-inhoud', 401),
     ]);
 
     $response = $this->actingAs($this->admin)->post('/admin/operations/ai/test-connection', [

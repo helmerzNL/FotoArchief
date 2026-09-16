@@ -97,3 +97,31 @@ voor die proef zonder passende rechten en toestemming.
 Live providerbereikbaarheid, facturering en modelkwaliteit kunnen niet worden
 bewezen met de meegeleverde testdubbelingen. De applicatie blokkeert AI-fouten
 expliciet; upload, onboarding en de gewone zoekfunctie blijven beschikbaar.
+
+## Databasebeheer en migratie
+
+Na de provider-migratie is de database de enige runtimebron voor native
+providerstatus, API-sleutels, modellen, kosten en maandbudgetten. Bestaande
+`AI_*`-waarden worden tijdens die migratie eenmalig geïmporteerd wanneer de
+provider nog geen databaseconfiguratie heeft; een herhaalde migratie overschrijft
+geen bestaande rij. Sleutels worden versleuteld opgeslagen en nooit getoond,
+geretourneerd, gelogd of geserialiseerd. Gebruik in **Beheer > Operations >
+AI-instellingen** alleen instellen/vervangen of expliciet verwijderen.
+
+De officiële base-URL's, de Anthropic API-versie en de multimodale OpenRouter
+allowlist zijn vaste, alleen-lezen applicatiegegevens. Er is geen failover
+tussen providers. AI en gegevensdoorgifte blijven opt-in.
+
+## Database administration and migration
+
+After the provider migration, the database is the only runtime source for
+native provider status, API keys, models, costs and monthly budgets. Existing
+`AI_*` values are imported once during that migration when the provider has no
+database configuration; rerunning the migration does not overwrite an existing
+row. Keys are encrypted at rest and are never shown, returned, logged or
+serialized. In **Administration > Operations > AI settings**, use only set/replace
+or explicit delete.
+
+Official base URLs, the Anthropic API version and the multimodal OpenRouter
+allowlist are fixed, read-only application data. There is no provider failover.
+AI and data transfer remain opt-in.

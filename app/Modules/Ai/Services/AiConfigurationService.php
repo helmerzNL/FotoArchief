@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class AiConfigurationService
 {
+    public function __construct(private readonly AiProviderConfigService $providerConfigs) {}
+
     private const BOOL_KEYS = [
         'global_enabled',
         'emergency_stop',
@@ -82,9 +84,11 @@ class AiConfigurationService
             && $settings['external_endpoint'] !== '';
 
         foreach (self::NATIVE_PROVIDERS as $provider) {
-            $settings["{$provider}_configured"] = $this->nativeProviderConfigured($provider);
+            $providerStatus = $this->providerConfigs->status($provider);
+            $settings["{$provider}_provider_enabled"] = $providerStatus['enabled'];
+            $settings["{$provider}_configured"] = $this->nativeProviderConfigured($providerStatus);
             $settings["{$provider}_ready"] = (bool) ($settings['active'] ?? false)
-                && (bool) ($settings["{$provider}_provider_enabled"] ?? false)
+                && $providerStatus['enabled']
                 && $settings["{$provider}_configured"];
         }
 
@@ -125,13 +129,10 @@ class AiConfigurationService
         return $nativeConsent && $model !== '' && (bool) ($settings["{$provider}_ready"] ?? false);
     }
 
-    private function nativeProviderConfigured(string $provider): bool
+    /** @param array<string, mixed> $config */
+    private function nativeProviderConfigured(array $config): bool
     {
-        $config = config("ai.native_providers.{$provider}", []);
-
-        return is_array($config)
-            && is_string($config['api_key'] ?? null) && $config['api_key'] !== ''
-            && is_string($config['base_url'] ?? null) && $config['base_url'] !== ''
+        return ($config['has_api_key'] ?? false) === true
             && (int) ($config['monthly_budget_cents'] ?? 0) > 0;
     }
 
@@ -144,7 +145,17 @@ class AiConfigurationService
         $values = $this->normalize($input);
         $this->validatePrivacy($values);
 
+        foreach (self::NATIVE_PROVIDERS as $provider) {
+            $key = "{$provider}_provider_enabled";
+            if (array_key_exists($key, $input)) {
+                $this->providerConfigs->update($provider, ['enabled' => $values[$key]]);
+            }
+        }
+
         foreach ($values as $key => $value) {
+            if (str_ends_with($key, '_provider_enabled') && in_array(substr($key, 0, -strlen('_provider_enabled')), self::NATIVE_PROVIDERS, true)) {
+                continue;
+            }
             AiSetting::query()->updateOrCreate(
                 ['key' => $key],
                 [

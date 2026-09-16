@@ -17,12 +17,14 @@ use Illuminate\Support\Facades\DB;
  */
 class AiBudgetLedgerService
 {
+    public function __construct(private readonly AiProviderConfigService $providerConfigs) {}
+
     /**
      * @throws AiProviderException when the reservation would exceed the configured monthly cap.
      */
     public function reserve(string $providerKind, string $capability, int $cents): AiBudgetLedger
     {
-        $limitCents = (int) config("ai.native_providers.{$providerKind}.monthly_budget_cents", 0);
+        $limitCents = $this->providerConfigs->monthlyBudget($providerKind);
         $periodKey = now('UTC')->format('Y-m');
 
         return DB::transaction(function () use ($providerKind, $capability, $cents, $limitCents, $periodKey): AiBudgetLedger {

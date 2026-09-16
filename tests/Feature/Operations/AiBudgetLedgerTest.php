@@ -5,12 +5,16 @@ declare(strict_types=1);
 use App\Modules\Ai\Exceptions\AiProviderException;
 use App\Modules\Ai\Models\AiBudgetLedger;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
-    config(['ai.native_providers.gemini.monthly_budget_cents' => 100]);
+    app(AiProviderConfigService::class)->update('gemini', [
+        'enabled' => true,
+        'monthly_budget_cents' => 100,
+    ]);
 });
 
 it('reserves budget for a new period/provider/capability ledger row', function (): void {
@@ -31,7 +35,9 @@ it('refuses a reservation that would exceed the configured monthly cap', functio
 });
 
 it('refuses any reservation when the provider has no configured monthly budget', function (): void {
-    config(['ai.native_providers.openai.monthly_budget_cents' => 0]);
+    app(AiProviderConfigService::class)->update('openai', [
+        'monthly_budget_cents' => 0,
+    ]);
 
     expect(fn () => app(AiBudgetLedgerService::class)->reserve('openai', 'image_analysis', 1))
         ->toThrow(AiProviderException::class, 'niet geconfigureerd');
@@ -70,7 +76,9 @@ it('frees a released reservation so a later reservation can use the same budget'
 });
 
 it('keeps separate ledgers per capability so image analysis budget cannot spend embeddings budget', function (): void {
-    config(['ai.native_providers.gemini.monthly_budget_cents' => 100]);
+    app(AiProviderConfigService::class)->update('gemini', [
+        'monthly_budget_cents' => 100,
+    ]);
     $service = app(AiBudgetLedgerService::class);
 
     $service->reserve('gemini', 'image_analysis', 90);
