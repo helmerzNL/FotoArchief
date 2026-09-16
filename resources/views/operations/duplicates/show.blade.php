@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Duplicaat Vergelijken & Koppelen - FotoArchief')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow"><a href="{{ route('admin.operations.duplicates.index') }}">&larr; Terug naar duplicaten</a></p>
     <h1>Duplicaat Dossier Vergelijken</h1>
     <p class="intro">Vergelijk de upload met het bestaande archiefbestand en koppel eventuele nieuwe herkomstinformatie aan het bestaande dossier.</p>

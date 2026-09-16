@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Taak Details - ' . $upload->original_filename)
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow"><a href="{{ route('admin.operations.processing.index') }}">&larr; Terug naar Verwerkingscentrum</a></p>
     <h1>Verwerkingstaak Details</h1>
     <p class="intro">Gedetailleerde diagnostische gegevens voor uploadtaak <code>{{ $upload->id }}</code>.</p>

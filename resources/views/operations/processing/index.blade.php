@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Verwerkingscentrum - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Operaties &middot; Achtergrondverwerking</p>
     <h1>Verwerkingscentrum</h1>
     <p class="intro">Realtime overzicht van alle achtergrondtaken, wachtrijen, mislukte opnames en herstelmogelijkheden.</p>
@@ -59,7 +60,8 @@
             <p>Geen verwerkingstaken gevonden voor de geselecteerde filter status.</p>
         </div>
     @else
-        <table style="width: 100%; border-collapse: collapse;">
+        {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                     <th style="padding: 0.75rem;">Taak ID / Bestand</th>
@@ -121,7 +123,7 @@
                     </tr>
                 @endforeach
             </tbody>
-        </table>
+        </table></div>
 
         <div style="margin-top: 1.5rem;">
             {{ $uploads->links() }}

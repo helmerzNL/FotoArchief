@@ -23,7 +23,10 @@ class FileVersionController extends Controller
     public function index(Request $request, Asset $asset): View
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('assets.view')), 403);
+        abort_unless($user instanceof User, 403);
+        // Versions expose the same private dossier as the detail page they are linked
+        // from, so they follow the same ownership policy rather than a bare permission.
+        $this->authorize('view', $asset);
 
         $versions = $this->fileVersionService->getAssetVersions($asset);
 
@@ -33,7 +36,8 @@ class FileVersionController extends Controller
     public function store(Request $request, Asset $asset): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('assets.create') || $user->hasPermission('assets.update')), 403);
+        abort_unless($user instanceof User, 403);
+        $this->authorize('upload', $asset);
 
         $validated = $request->validate([
             'file' => ['required', 'file'],
@@ -52,7 +56,8 @@ class FileVersionController extends Controller
     public function reprocess(Request $request, Asset $asset, AssetFile $file): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('assets.update')), 403);
+        abort_unless($user instanceof User, 403);
+        $this->authorize('update', $asset);
         abort_unless($file->asset_id === $asset->id, 404);
 
         $this->fileVersionService->reprocessDerivatives($file, $user);
@@ -65,7 +70,8 @@ class FileVersionController extends Controller
     public function setActive(Request $request, Asset $asset, AssetFile $file): RedirectResponse
     {
         $user = $request->user();
-        abort_unless($user instanceof User && ($user->hasPermission('assets.update')), 403);
+        abort_unless($user instanceof User, 403);
+        $this->authorize('update', $asset);
         abort_unless($file->asset_id === $asset->id, 404);
 
         $this->fileVersionService->setActiveVersion($asset, $file, $user);

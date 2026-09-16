@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Systeemdiagnose - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Systeembeheer &middot; Diagnose</p>
     <h1>Systeemdiagnose & Status</h1>
     <p class="intro">Overzicht van runtime-omgeving, extensies, opslag, database, limieten en achtergrondverwerking.</p>

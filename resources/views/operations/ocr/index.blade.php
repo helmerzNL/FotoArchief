@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'OCR Tekstherkenning - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Operaties &middot; Tekstverwerking</p>
     <h1>Tesseract OCR Tekstherkenning</h1>
     <p class="intro">Achtergrondtekstherkenning voor archiefscans met machine-tekstlabels, archivarissencorrectie en doorzoekbaarheid.</p>
@@ -59,7 +60,8 @@
         @if($ocrRecords->isEmpty())
             <p>Geen OCR-resultaten gevonden.</p>
         @else
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
@@ -102,7 +104,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
 
             <div style="margin-top: 1rem;">
                 {{ $ocrRecords->links() }}

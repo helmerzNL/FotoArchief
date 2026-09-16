@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'OCR Tekst Detail - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Operaties &middot; Tekstverwerking</p>
     <h1>OCR Tekst Dossier: {{ $ocr->asset?->accession_number }}</h1>
     <p class="intro">Inspecteer de ruwe machine-gegenereerde tekst en sla handmatige transcriptiecorrecties op.</p>

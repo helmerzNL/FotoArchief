@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Opslagmigratie - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Operaties &middot; Opslagbeheer</p>
     <h1>Veilige Opslagmigratie</h1>
     <p class="intro">Verhuis archiefbestanden tussen lokale opslag en S3-buckets met 100% SHA-256 integriteitsverificatie vóór omschakeling (cutover).</p>
@@ -53,7 +54,8 @@
         @if($migrations->isEmpty())
             <p>Nog geen opslagmigraties uitgevoerd.</p>
         @else
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Migratie ID</th>
@@ -107,7 +109,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
         @endif
     </section>
     @include('operations.runs._panel', ['runs' => $runs])

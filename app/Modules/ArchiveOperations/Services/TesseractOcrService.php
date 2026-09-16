@@ -239,7 +239,13 @@ class TesseractOcrService
             $searchTerm = '%'.trim($query).'%';
             $builder->where(function ($q) use ($searchTerm): void {
                 $q->where('extracted_text', 'like', $searchTerm)
-                    ->orWhere('edited_text', 'like', $searchTerm);
+                    ->orWhere('edited_text', 'like', $searchTerm)
+                    // Also match the dossier itself, so an operator can reach the OCR
+                    // result for one photo from its detail page by accession number.
+                    ->orWhereHas('asset', function ($assetQuery) use ($searchTerm): void {
+                        $assetQuery->where('accession_number', 'like', $searchTerm)
+                            ->orWhere('title', 'like', $searchTerm);
+                    });
             });
         }
 

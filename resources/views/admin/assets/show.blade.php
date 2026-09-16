@@ -14,6 +14,7 @@
     @foreach($asset->uploads as $upload)
         <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} poging(en)</p>
         @if($upload->failure_reason)<p role="alert">{{ $upload->failure_reason }}</p>@endif
+        @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">Verwerkingsdetails en logboek van {{ $upload->original_filename }}</a></p>@endcanany
         @can('update', $asset)
             @if($upload->status === 'failed' || ($upload->status === 'running' && $upload->started_at?->lt(now()->subMinutes(4))))
                 <form method="post" action="{{ route('admin.assets.retry', [$asset, $upload]) }}">@csrf<button>Verwerking opnieuw proberen</button></form>
@@ -67,7 +68,34 @@
     </form>
 </section>
 @endcan
-<section class="card"><h2>Wijzigings- en verwerkingshistorie</h2>
+<section class="card"><h2>Archiefbewerkingen</h2>
+    <p>Bewerkingen op dit dossier. Zware taken draaien op de achtergrond; volg ze via Achtergrondtaken.</p>
+    <ul class="actions" style="list-style: none; padding: 0;">
+        @can('assets.view')
+            <li><a class="button secondary" href="{{ route('admin.operations.versions.index', $asset) }}">Bestandsversies en herverwerking</a></li>
+        @endcan
+        @canany(['catalogue.manage', 'users.manage', 'assets.view'])
+            <li><a class="button secondary" href="{{ route('admin.operations.ocr.index', ['q' => $asset->accession_number]) }}">Herkende tekst (OCR)</a></li>
+        @endcanany
+        @canany(['assets.update', 'catalogue.manage', 'users.manage'])
+            <li><a class="button secondary" href="{{ route('admin.operations.runs.index') }}">Achtergrondtaken</a></li>
+        @endcanany
+    </ul>
+    @canany(['catalogue.manage', 'users.manage'])
+        <form method="post" action="{{ route('admin.operations.ocr.dispatch', $asset) }}">
+            @csrf
+            <button class="secondary">Tekstherkenning starten voor deze foto</button>
+        </form>
+        <p>De tekstherkenning draait op de ingest-wachtrij en vereist een ingeschakelde, beschikbare Tesseract-installatie. Zonder worker blijft de taak in de wachtrij staan.</p>
+        <form method="post" action="{{ route('admin.operations.trash.trash', $asset) }}" onsubmit="return confirm('Deze foto naar de prullenbak verplaatsen? Herstellen kan via Operaties · Prullenbak.');">
+            @csrf
+            <label for="trash-reason">Reden voor verwijdering</label>
+            <input id="trash-reason" name="reason" maxlength="1000" required placeholder="Bijvoorbeeld: dubbel ingevoerd dossier">
+            <button class="secondary">Naar prullenbak verplaatsen</button>
+        </form>
+        <p>Verplaatsen naar de prullenbak verwijdert niets onherroepelijk: het dossier verdwijnt uit alle overzichten en blijft herstelbaar tot een beheerder het definitief vernietigt.</p>
+    @endcanany
+</section><section class="card"><h2>Wijzigings- en verwerkingshistorie</h2>
     <p>Laatste 50 gebeurtenissen, nieuwste eerst. Alle revisies blijven in de database bewaard.</p>
     <ol>@forelse($events as $event)
         <li>{{ $event->created_at }} · {{ $event->event_type }} · {{ $event->actor_user_id ? 'Medewerker '.$event->actor_user_id : 'Worker' }}

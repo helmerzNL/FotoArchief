@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Bestandsversies - ' . $asset->title)
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow"><a href="{{ route('admin.assets.show', $asset) }}">&larr; Terug naar {{ $asset->accession_number }}</a></p>
     <h1>Bestandsversies &amp; Scans</h1>
     <p class="intro">Historisch versieverloop van scans voor dossier <strong>{{ $asset->accession_number }} &ndash; {{ $asset->title }}</strong>. Eerdere originelen en checksums blijven ongewijzigd bewaard.</p>
@@ -32,7 +33,8 @@
         @if($versions->isEmpty())
             <p>Nog geen geregistreerde bestandsversies.</p>
         @else
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Versie</th>
@@ -77,7 +79,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
         @endif
     </section>
 @endsection

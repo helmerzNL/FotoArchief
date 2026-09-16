@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Prullenbak & Bewaartermijn - FotoArchief Operaties')
 @section('content')
+    @include('operations._nav')
     <p class="eyebrow">Operaties &middot; Archiefbeheer</p>
     <h1>Prullenbak &amp; Bewaartermijn</h1>
     <p class="intro">Beheer herstelbare verwijderingen, bewaartermijnen en definitieve opschoning van archief- en weesbestanden.</p>
@@ -50,7 +51,8 @@
         @if($trashedAssets->isEmpty())
             <p>De prullenbak is leeg.</p>
         @else
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
@@ -88,7 +90,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
 
             <div style="margin-top: 1rem;">
                 {{ $trashedAssets->links() }}
@@ -102,7 +104,8 @@
         @if($recentPurges->isEmpty())
             <p>Geen definitieve verwijderingen geregistreerd.</p>
         @else
-            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+            {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
+<div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Datum</th>
@@ -125,7 +128,7 @@
                         </tr>
                     @endforeach
                 </tbody>
-            </table>
+            </table></div>
         @endif
     </section>
     @include('operations.runs._panel', ['runs' => $runs])

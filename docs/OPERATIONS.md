@@ -80,6 +80,27 @@ an `operation_runs` row and pushes a job; the worker performs the work.
 
 Without a running worker these operations stay queued and nothing happens. Check
 `docker compose logs --tail=100 worker` and `/admin/operations/runs` together.
+## Reaching the operations pages
+
+The global header carries one `Operaties` link, into system diagnostics, shown to
+users holding `users.manage`. Every operations page then renders the same
+`Archiefbewerkingen` menu, so duplicates, processing, integrity, storage
+migration, trash, OCR, background runs and the photo overview are all one tap
+apart. Menu entries are rendered only when the signed-in user may open them.
+
+Two operations belong to a single photo and live on its detail page under
+`Archiefbewerkingen`: starting text recognition (OCR) and moving the photo to the
+trash. File versions and the processing log for each upload are linked from the
+same page. File-version pages follow the asset ownership policy, exactly like the
+photo detail page they are reached from.
+
+Operator note: a user with `catalogue.manage` or `assets.update` but without
+`users.manage` sees no `Operaties` link in the header and reaches the module only
+through a photo detail page. Grant `users.manage`, or add a header entry, if
+archivists should reach the module directly.
+
+The interface is checked at a 390 px viewport. Wide tables scroll inside their own
+container so the page itself never scrolls sideways.
 ## Security and storage posture
 
 - Keep originals, quarantine and private derivatives out of public buckets.
