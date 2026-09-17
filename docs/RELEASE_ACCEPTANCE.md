@@ -499,3 +499,119 @@ IP/CIDR, secure-cookie setting, two real authenticators, a disposable
 previous-version stack, verified backup destination, and permission to perform
 an empty-target restore and rollback. These are acceptance prerequisites, not
 claims that the blocked checks ran.
+
+## Batch 3 acceptance evidence for items 11-15
+
+### Nederlands
+
+Deze batch is lokaal voorbereid zonder productie-installatie, providergeheimen,
+Docker, externe workflow of kosten. De versie blijft `0.9.51`; Dockhand- en
+webhosting-archivechecks die een gebouwde package of Docker daemon vereisen
+blijven pending tot de parent Quality-run.
+
+11. **ZIP/webhosting veilige upgrade**: `tests/Smoke/release-archive.php`
+weigert nu ook `.env.*` naast `.env` en blijft installatiepad,
+private storage en logstate uit release-ZIP's weigeren.
+`tests/Feature/ReleaseArchiveSafetyTest.php` bouwt fixture-ZIP's en bewijst
+acceptatie van een productiepackage plus weigering van
+`storage/app/installation/state.json` en `.env.production`.
+`tests/Smoke/webhosting-upgrade.php` is een opt-in disposable harness; CI voert
+het uit tegen de echte webhosting-ZIP en bewijst dat APP_KEY, wizardsettings,
+installer lock en private archiefbytes bij een package-overlay behouden blijven.
+Het harness weigert buiten `FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE=1` en
+werkt nooit op een gebruikersinstallatie.
+12. **Komodo import + upgrade**: de bestaande placeholder blijft bewust een
+template/protocol omdat er geen disposable Komodo Core/Periphery beschikbaar is.
+Er is geen private of onbekende Komodo API gefabriceerd. De operatorprocedure in
+`DEPLOYMENT_STACKS.md` noemt de exacte schema-/veldcontrole, importstappen,
+upgradechecks en te bewaren bewijzen. Live Komodo-acceptatie blijft
+**GEBLOKKEERD** tot een disposable Komodo-doel met versie, server/Periphery,
+private stackomgeving en toestemming om te deployen beschikbaar is.
+13. **Dockhand upgrade**: `quality.yml` blijft Dockhand v1.0.48 digest-pinned
+op een disposable GitHub-runner starten en importeert de echte Compose/template
+via de gedocumenteerde API. De nieuwe stap maakt daarna een geverifieerde
+backup van de manager-stack, draait `scripts/upgrade-compose.sh` op diezelfde
+stack, vergelijkt de hash van `storage/app/installation/state.json` en de
+geladen APP_KEY, controleert dat `/setup` gesloten blijft en herhaalt de
+account/fotopreview/anonieme-denial smoke. Lokaal niet uitgevoerd omdat Docker
+niet beschikbaar is; bewijs blijft **pending CI**.
+14. **S3/Hetzner live provision**: de opt-in real-provider test blijft
+environment-gated en vraagt geen geheimen. Wanneer `FOTOARCHIEF_TEST_S3_*`
+aanwezig is, controleert de test installatieprobe, ingest, originele en
+derivative objecten met private visibility, anonieme HTTP HEAD denial
+(`401/403/404`), applicatie-publicatie via de eigen route en directe 404 na
+revocation. Echte S3/Hetzner-acceptatie is **GEBLOKKEERD** tot een lege private
+bucket, testcredentials, endpoint/region/path-style en opruimtoestemming
+beschikbaar zijn.
+15. **Storage migration interruption**:
+`tests/Feature/Operations/StorageMigrationTest.php` bevat nu een deterministische
+onderbrekingscase: een bestand kopieert en verifieert, een tweede ontbreekt,
+cutover wordt geweigerd, daarna wordt de bron hersteld en dezelfde
+operation-run herstart zonder bronverlies, zonder dubbele telling en met
+checksumbehoud. `OperationRunService::retryRun()` reset alleen storage-copy
+cursor/fouttelling en laat reeds geverifieerde relocaties intact; succesvolle
+retry wist de per-file foutmelding. Een echte S3-outage blijft
+**GEBLOKKEERD** zonder provideromgeving en toestemming.
+
+Lokaal geverifieerd: `vendor/bin/pest
+tests/Feature/ReleaseArchiveSafetyTest.php
+tests/Feature/Operations/StorageMigrationTest.php
+tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` met
+**5 passing / 106 assertions** en **2 environment-gated skips** voor live S3.
+
+### English
+
+This batch was prepared locally without a production installation, provider
+secrets, Docker, external workflow execution, or spend. The version remains
+`0.9.51`; Dockhand and webhosting archive checks that need a built package or a
+Docker daemon remain pending until the parent Quality run.
+
+11. **ZIP/webhosting safe upgrade**: `tests/Smoke/release-archive.php` now
+rejects `.env.*` as well as `.env` and continues to refuse installation paths,
+private storage and log state in release ZIPs.
+`tests/Feature/ReleaseArchiveSafetyTest.php` builds fixture ZIPs and proves
+acceptance of a production package plus refusal of
+`storage/app/installation/state.json` and `.env.production`.
+`tests/Smoke/webhosting-upgrade.php` is an opt-in disposable harness; CI runs it
+against the real webhosting ZIP and proves that APP_KEY, wizard settings,
+installer lock and private archive bytes survive a package overlay. The harness
+refuses to run without `FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE=1` and never
+operates on a user installation.
+12. **Komodo import + upgrade**: the existing placeholder intentionally remains
+a template/protocol because no disposable Komodo Core/Periphery is available.
+No private or unknown Komodo API was fabricated. The operator procedure in
+`DEPLOYMENT_STACKS.md` lists the exact schema/field check, import steps,
+upgrade checks and evidence to keep. Live Komodo acceptance remains
+**BLOCKED** until a disposable Komodo target with version, server/Periphery,
+private stack environment and permission to deploy is available.
+13. **Dockhand upgrade**: `quality.yml` still starts digest-pinned Dockhand
+v1.0.48 on a disposable GitHub runner and imports the real Compose/template
+through the documented API. The new step then creates a verified backup of that
+managed stack, runs `scripts/upgrade-compose.sh` against the same stack,
+compares the hash of `storage/app/installation/state.json` and the loaded
+APP_KEY, checks `/setup` remains closed and repeats the account/photo preview/
+anonymous-denial smoke. Not run locally because Docker is unavailable; evidence
+remains **pending CI**.
+14. **S3/Hetzner live provision**: the opt-in real-provider test remains
+environment-gated and requests no secrets. When `FOTOARCHIEF_TEST_S3_*` is
+present, the test checks the installation probe, ingest, original and derivative
+objects with private visibility, anonymous HTTP HEAD denial (`401/403/404`),
+application publication through FotoArchief's own route and immediate 404 after
+revocation. Real S3/Hetzner acceptance is **BLOCKED** until an empty private
+bucket, test credentials, endpoint/region/path-style and cleanup permission are
+available.
+15. **Storage migration interruption**:
+`tests/Feature/Operations/StorageMigrationTest.php` now has a deterministic
+interruption case: one file copies and verifies, a second is missing, cutover is
+refused, then the source is restored and the same operation run restarts
+without source loss, double counting or checksum drift.
+`OperationRunService::retryRun()` resets only storage-copy cursor/error counts
+and keeps already verified relocations intact; a successful retry clears the
+per-file error. A real S3 outage remains **BLOCKED** without a provider
+environment and permission.
+
+Locally verified: `vendor/bin/pest
+tests/Feature/ReleaseArchiveSafetyTest.php
+tests/Feature/Operations/StorageMigrationTest.php
+tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` with
+**5 passing / 106 assertions** and **2 environment-gated skips** for live S3.

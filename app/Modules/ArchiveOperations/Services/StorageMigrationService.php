@@ -191,6 +191,7 @@ class StorageMigrationService
                 'sha256' => $targetSha256,
                 'is_verified' => true,
                 'cutover_completed_at' => null,
+                'error_message' => null,
             ]);
 
             $migration->increment('copied_files');

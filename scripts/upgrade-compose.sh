@@ -46,7 +46,11 @@ if [ -n "$running" ]; then
     docker compose -f "$compose_file" stop $running
 fi
 
-docker compose -f "$compose_file" pull app worker scheduler
+if [ "${FOTOARCHIEF_SKIP_IMAGE_PULL:-0}" = "1" ]; then
+    printf '%s\n' "Skipping image pull because FOTOARCHIEF_SKIP_IMAGE_PULL=1; APP_IMAGE must already exist on this Docker host."
+else
+    docker compose -f "$compose_file" pull app worker scheduler
+fi
 docker compose -f "$compose_file" up -d --no-deps app
 docker compose -f "$compose_file" exec -T app php artisan installation:ready
 docker compose -f "$compose_file" exec -T app php artisan installation:migrate-ready

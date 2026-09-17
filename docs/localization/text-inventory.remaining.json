@@ -677,14 +677,14 @@
         },
         {
             "file": "app/Modules/Ai/Controllers/AiSuggestionReviewController.php",
-            "line": 51,
+            "line": 54,
             "kind": "php_string",
             "text": "AI-suggestie geaccepteerd en als metadatawijziging opgeslagen.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Controllers/AiSuggestionReviewController.php",
-            "line": 69,
+            "line": 72,
             "kind": "php_string",
             "text": "AI-suggestie afgewezen zonder metadata te wijzigen.",
             "batch": "ai"
@@ -705,63 +705,70 @@
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 195,
+            "line": 134,
+            "kind": "php_string",
+            "text": "AI-taak geannuleerd: toestemming, providerconfiguratie, budget of de algemene AI-stop is ingetrokken voordat de wachtrij deze taak uitvoerde.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/AiConfigurationService.php",
+            "line": 220,
             "kind": "php_string",
             "text": "AI-batches zijn begrensd op 1 tot 25 assets.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 198,
+            "line": 223,
             "kind": "php_string",
             "text": "AI-afgeleiden moeten tussen 256 en 1024 pixels blijven.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 201,
+            "line": 226,
             "kind": "php_string",
             "text": "AI-provider timeouts moeten tussen 5 en 60 seconden blijven.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 204,
+            "line": 229,
             "kind": "php_string",
             "text": "Lokale AI moet een HTTPS-endpoint of localhost/private netwerkendpoint zijn.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 240,
+            "line": 265,
             "kind": "php_string",
             "text": "Geef expliciet toestemming voor doorgifte naar de custom externe provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 243,
+            "line": 268,
             "kind": "php_string",
             "text": "Schakel eerst de custom externe provider in de providersectie in.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 251,
+            "line": 276,
             "kind": "php_string",
             "text": "Kies een model voor de gekozen provider.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 254,
+            "line": 279,
             "kind": "php_string",
             "text": "Native provider gebruik vereist expliciete toestemming per functie.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/AiConfigurationService.php",
-            "line": 257,
+            "line": 282,
             "kind": "php_string",
             "text": "Schakel de provider eerst in voordat je hem selecteert.",
             "batch": "ai"
@@ -1370,35 +1377,35 @@
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 140,
+            "line": 144,
             "kind": "php_string",
             "text": "Geen enkel item kon worden verwerkt. Bekijk het auditlog voor de concrete oorzaak.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 178,
+            "line": 182,
             "kind": "php_string",
             "text": "De bewerking maakte geen voortgang meer en is gestopt. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 179,
+            "line": 183,
             "kind": "php_string",
             "text": "De bewerking bereikte de maximale omvang van",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 179,
+            "line": 183,
             "kind": "php_string",
             "text": "items en is niet afgerond. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Jobs/OperationJob.php",
-            "line": 216,
+            "line": 220,
             "kind": "php_string",
             "text": "De bewerking is mislukt. Controleer worker, opslag en rechten en probeer opnieuw.",
             "batch": "shared_remaining"
@@ -1601,21 +1608,28 @@
         },
         {
             "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
-            "line": 71,
+            "line": 72,
             "kind": "php_string",
             "text": "De aanvrager van deze AI-taak bestaat niet meer. Start een nieuwe taak.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
-            "line": 77,
+            "line": 78,
             "kind": "php_string",
             "text": "Deze AI-taak bevat ongeldige fotoreferenties. Start een nieuwe taak.",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
-            "line": 101,
+            "line": 100,
+            "kind": "php_string",
+            "text": "De opslagmigratie bestaat niet meer. Start een nieuwe migratie.",
+            "batch": "shared_remaining"
+        },
+        {
+            "file": "app/Modules/ArchiveOperations/Services/OperationRunService.php",
+            "line": 121,
             "kind": "php_string",
             "text": "Fotoreferenties gecontroleerd en omgezet naar interne IDs voor een herpoging.",
             "batch": "shared_remaining"
@@ -1755,14 +1769,14 @@
         },
         {
             "file": "app/Modules/ArchiveOperations/Services/StorageMigrationService.php",
-            "line": 257,
+            "line": 258,
             "kind": "php_string",
             "text": "Alleen volledig geverifieerde migraties kunnen omgezet worden (cutover).",
             "batch": "shared_remaining"
         },
         {
             "file": "app/Modules/ArchiveOperations/Services/StorageMigrationService.php",
-            "line": 275,
+            "line": 276,
             "kind": "php_string",
             "text": "Bronbestanden mogen pas worden opgeruimd na succesvolle cutover.",
             "batch": "shared_remaining"

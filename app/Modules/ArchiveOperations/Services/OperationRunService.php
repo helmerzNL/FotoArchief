@@ -16,6 +16,7 @@ use App\Modules\ArchiveOperations\Jobs\StorageCleanupJob;
 use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
 use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
+use App\Modules\ArchiveOperations\Models\StorageMigration;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -87,6 +88,25 @@ class OperationRunService
                     'cursor' => 0,
                 ]),
                 'total_items' => count($batch['asset_ids']),
+                'processed_items' => 0,
+                'failed_items' => 0,
+                'result' => null,
+            ]);
+        } elseif ($run->operation_type === StorageCopyJob::TYPE) {
+            $payload = $run->payload ?? [];
+            $migrationId = is_string($payload['migration_id'] ?? null) ? $payload['migration_id'] : null;
+            $migration = $migrationId !== null ? StorageMigration::query()->find($migrationId) : null;
+            if (! $migration instanceof StorageMigration) {
+                throw ValidationException::withMessages(['operation' => 'De opslagmigratie bestaat niet meer. Start een nieuwe migratie.']);
+            }
+            $migration->relocations()->where('is_verified', false)->update(['error_message' => null]);
+            $migration->forceFill([
+                'status' => 'verifying',
+                'failed_files' => 0,
+            ])->save();
+            $changes = array_merge($changes, [
+                'payload' => array_merge($payload, ['cursor' => null]),
+                'total_items' => $migration->total_files,
                 'processed_items' => 0,
                 'failed_items' => 0,
                 'result' => null,
