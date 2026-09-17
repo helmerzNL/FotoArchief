@@ -92,7 +92,7 @@ try {
     }
     $package = $temporary.'/webhosting';
     mkdir($package, 0700);
-    $allowed = ['app', 'bootstrap', 'config', 'database', 'public', 'resources', 'routes', 'storage', 'docs'];
+    $allowed = ['app', 'bootstrap', 'config', 'database', 'lang', 'public', 'resources', 'routes', 'storage', 'docs'];
     $allowedFiles = ['artisan', 'composer.json', 'composer.lock', 'VERSION', 'README.md', '.env.example', 'LICENSE', 'scripts/upgrade-compose.sh'];
     $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS));
     foreach ($iterator as $entry) {
@@ -128,8 +128,9 @@ try {
     copy($source.'/docs/DEPLOYMENT_STACKS.md', $deploy.'/DEPLOYMENT_STACKS.md');
     copy($package.'/BUILD.json', $deploy.'/BUILD.json');
     mkdir($deploy.'/scripts', 0700);
-    copy($source.'/scripts/backup-compose.sh', $deploy.'/scripts/backup-compose.sh');
-    copy($source.'/scripts/restore-compose.sh', $deploy.'/scripts/restore-compose.sh');
+    foreach (['backup-compose.sh', 'restore-compose.sh', 'upgrade-compose.sh', 'backup-copy-encrypted.sh', 'backup-restore-encrypted-copy.sh'] as $helper) {
+        copy($source.'/scripts/'.$helper, $deploy.'/scripts/'.$helper);
+    }
     copy($source.'/docs/BACKUP_RESTORE.md', $deploy.'/BACKUP_RESTORE.md');
     $names = ["fotoarchief-v{$version}-webhosting.zip", "fotoarchief-v{$version}-deploy.zip"];
     foreach ($names as $name) {

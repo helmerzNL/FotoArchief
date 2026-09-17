@@ -51,11 +51,11 @@ if [ "${FOTOARCHIEF_SKIP_IMAGE_PULL:-0}" = "1" ]; then
 else
     docker compose -f "$compose_file" pull app worker scheduler
 fi
-docker compose -f "$compose_file" up -d --no-deps app
+docker compose -f "$compose_file" up -d --wait --no-deps app
 docker compose -f "$compose_file" exec -T app php artisan installation:ready
 docker compose -f "$compose_file" exec -T app php artisan installation:migrate-ready
 docker compose -f "$compose_file" exec -T app php artisan about --only=environment
-docker compose -f "$compose_file" up -d worker scheduler
+docker compose -f "$compose_file" up -d --wait worker scheduler
 docker compose -f "$compose_file" exec -T app php artisan installation:ready
 
 trap - EXIT

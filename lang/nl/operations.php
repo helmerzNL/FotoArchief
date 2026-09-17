@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'storage' => [
+        'cleanup_failed' => 'Een bronbestand kon niet worden verwijderd. De bronopruiming is niet voltooid en kan opnieuw worden geprobeerd.',
+        'source_changed' => 'De bronopslag is gewijzigd. Start een nieuwe opslagmigratie voordat u omschakelt.',
+        'target_invalid' => 'Het doelorigineel ontbreekt of de SHA-256-controle is mislukt. Bronbestanden blijven behouden.',
+        'incomplete_derivative' => 'Een geregistreerde afgeleide ontbreekt, kan niet worden gekopieerd of heeft een afwijkende checksum. De migratie is niet veilig voltooid.',
+    ],
     'navigation' => [
         'label' => 'Archiefbewerkingen',
         'diagnostics' => 'Diagnose',

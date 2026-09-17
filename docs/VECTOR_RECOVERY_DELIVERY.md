@@ -16,9 +16,17 @@ is geen productieacceptatie.
 | 3. Queue-indexering | Gebouwd | Vector, succesreceipt, audit, cursor en telling worden per item samen gecommit; herpogingen hergebruiken duurzaam opgeslagen resultaten. |
 | 4. Admin/publiek semantisch zoeken | Gebouwd | Echte routes getest tegen PostgreSQL; bron-, ownership- en publicatiefilters vóór de resultaatlimiet, met laatste autorisatiehercontrole. |
 | 5. Generaties/modelwissel | Gebouwd | Afzonderlijke run-generaties, transactionele head-wissel, blokkeren van verouderde parallelle builds, modelwissel, bronhercontrole, generatie-audit en herstel na een daadwerkelijk afgebroken workerproces. |
-| 6–20 | Niet gestart | Geen claim op basis van bestaande stubs of fixtures. |
+| 6. Vorige Dockerrelease upgraden | Gebouwd, CI nog te draaien | Gepinde v0.9.52-image naar huidige build; behoud van account, installatie, sleutel en private bestanden. |
+| 7. Vorige ZIPrelease upgraden | Lokaal uitgevoerd | Gepubliceerde v0.9.52-ZIP naar v0.9.53-productiepakket, PostgreSQL, HTTP-onboarding/login/upload, echte worker en tweemaal migreren. |
+| 8. Versleutelde volledige restore | Gebouwd, CI nog te draaien | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
+| 9. S3-restore | Lokaal uitgevoerd | Afzonderlijke echte PostgreSQL- en SeaweedFS-diensten; bron gestopt en hersteld naar nieuwe lege diensten, inclusief private installatiestatus en objectchecksums. |
+| 10. Opslagmigratie hervatten | Lokaal getest | Echte workeronderbreking na receipt/cursor; duurzame tellingen, werkelijke disk-omschakeling, afgeleide-checksums en hervatbare bronopruiming. |
+| 11–20 | Nog te bouwen | Geen claim op basis van bestaande stubs of fixtures. |
 
 ### Uitgevoerde lokale controles
+
+Onderstaande volledige suite betreft de eerste batchcommit `4720821`, niet
+automatisch de latere herstelwijzigingen.
 
 - `vendor/bin/pint --test`: geslaagd.
 - Echte PostgreSQL 16.14 / pgvector 0.8.1: `PgvectorApplicationAdapterTest`, inclusief afzonderlijk queue-workerproces en transactionele rollback.
@@ -68,6 +76,45 @@ wel pgvector bevatten wanneer semantisch zoeken gewenst is.
 Docker-, S3-, live-provider-, fysieke-apparaat- en representatieve-datasetacceptatie
 blijven afzonderlijke, nog uit te voeren bewijzen.
 
+### Herstelvoorzieningen 6-10
+
+De productie-ZIP miste taalcatalogi. De builder neemt nu de volledige
+`lang`-map op; de archieftest vergelijkt iedere Nederlandse catalogus met
+dezelfde bronrevision. De deploy-ZIP bevat ook de upgrade- en encryptiehelpers.
+
+De onderbrekingsproef reproduceerde achterlopende tellers na een opgeslagen
+receipt en een opgeslagen cursor zonder bijbehorende taaktelling. Bovendien
+wijzigde omschakelen de geregistreerde bestandsdisk niet. Deze paden zijn
+hersteld. OCR en definitieve verwijdering volgen nu de geregistreerde disk,
+inclusief legacy `null` als `local`.
+
+Geverifieerde afgeleide-checksums worden duurzaam opgeslagen. Bronopruiming
+kan daardoor na een gedeeltelijke verwijdering hervatten zonder ontbrekende
+bronbytes als bewijs te gebruiken. Beschadigde doelen blokkeren opruiming;
+een mislukte delete levert een fout op, geen afgeronde migratie. Oude receipts
+krijgen bij omschakelen/opruimen checksums zolang bron en doel verifieerbaar
+zijn. Ontbrekende legacy-bronbytes worden niet automatisch goedgekeurd.
+
+De gerichte regressiecontrole van opslagmigratie, echte workeronderbrekingen,
+OCR-diskkeuze en achtergrondtaaktellingen: **28 geslaagd, 200 assertions**.
+Aanvullende eindcontrole van opslagmigratie en workerherstel, inclusief
+buiten de toepassing gewijzigde disk/key/checksumbindingen:
+**14 geslaagd, 161 assertions**; PHPStan en vertaalcontrole geslaagd.
+De ZIP-upgradeproef gebruikte een tussentijdse packagefixture; de uiteindelijke
+release moet opnieuw uit de definitieve commit worden gebouwd en getest.
+De volledige S3-proef is geslaagd met PostgreSQL 16.14 en SeaweedFS 4.47:
+afzonderlijke lege diensten, behoud van originele/afgeleide SHA-256,
+installatiesleutel en account, gesloten installer en werkende private preview.
+Een beschadigde snapshot, anonieme objecttoegang en een niet-leeg doel werden
+geweigerd. Na een eerste initialisatietimeout slaagde de herhaling met zichtbare
+diagnostiek en maximaal 300 seconden per databasebeheercommando.
+
+Voor bestaande installaties volstaat de normale forward-migratie. Er zijn
+geen nieuwe Compose-mappings of `.env`-variabelen en geen verhoogde
+applicatielimieten. De upgradehelper wacht expliciet op gezonde diensten.
+De S3-proef is een begrensde testharness, geen algemene productiebackup-tool
+en geen Hetzner/offsite-acceptatie.
+
 ## English
 
 ### Progress
@@ -83,9 +130,17 @@ skipped environment check is not production acceptance.
 | 3. Queue indexing | Built | Vector, success receipt, audit, cursor and count commit together per item; retries reuse durably stored results. |
 | 4. Admin/public semantic search | Built | Real routes tested against PostgreSQL; source, ownership and publication filters before the result limit, with final authorization rechecks. |
 | 5. Generations/model switching | Built | Separate per-run generations, transactional head switching, outdated concurrent-build rejection, model switching, source rechecks, generation audit and recovery from an actually interrupted worker process. |
-| 6–20 | Not started | No claim is made from existing stubs or fixtures. |
+| 6. Previous Docker release upgrade | Built, CI pending | Pinned v0.9.52 image to current build; preserve account, installation, key and private files. |
+| 7. Previous ZIP release upgrade | Run locally | Published v0.9.52 ZIP to v0.9.53 production package, PostgreSQL, HTTP onboarding/login/upload, real worker and two migration runs. |
+| 8. Encrypted full restore | Built, CI pending | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
+| 9. S3 restore | Run locally | Separate real PostgreSQL and SeaweedFS services; source stopped and restored into new empty services, including private installation state and object checksums. |
+| 10. Resumable storage migration | Tested locally | Actual worker interruption after receipt/cursor; durable counts, actual disk cutover, derivative checksums and resumable source cleanup. |
+| 11–20 | Still to build | No claim is made from existing stubs or fixtures. |
 
 ### Local checks performed
+
+The full suite below covers first-batch commit `4720821`, not automatically
+the subsequent recovery changes.
 
 - `vendor/bin/pint --test`: passed.
 - Real PostgreSQL 16.14 / pgvector 0.8.1: `PgvectorApplicationAdapterTest`, including a separate queue-worker process and transactional rollback.
@@ -133,3 +188,42 @@ raises no upload, rate or timeout limit. Operator-owned database images must
 include pgvector when semantic search is required.
 Docker, S3, live-provider, physical-device and representative-dataset acceptance
 remain separate evidence that has not yet been executed.
+
+### Recovery features 6-10
+
+The production ZIP omitted translation catalogs. The builder now includes
+the entire `lang` directory; the archive test compares every Dutch catalog
+with the same source revision. The deploy ZIP includes upgrade and encryption
+helpers as well.
+
+Interruption tests reproduced stale counts after a committed receipt and a
+saved cursor without matching operation counts. Cutover also failed to change
+the registered file disk. These paths are fixed. OCR and permanent deletion
+now follow the registered disk, including legacy `null` as `local`.
+
+Verified derivative checksums are stored durably. Source cleanup can resume
+after partial deletion without treating missing source bytes as evidence.
+Damaged targets block cleanup; a failed delete reports an error rather than
+a completed migration. Legacy receipts receive checksums during cutover or
+cleanup while source and target remain verifiable. Missing legacy source
+bytes are never approved automatically.
+
+Targeted storage migration, real worker interruption, OCR disk selection and
+operation-count regression checks: **28 passed, 200 assertions**.
+Final storage migration and worker recovery checks, including out-of-band
+disk/key/checksum binding changes: **14 passed, 161 assertions**; PHPStan
+and translation checks passed.
+The ZIP upgrade used an intermediate package fixture; the final release
+must be rebuilt and tested from its final commit. Full S3 recovery passed with
+PostgreSQL 16.14 and SeaweedFS 4.47: separate empty services, matching
+original/derivative SHA-256, preserved installation key/account, locked
+installer and working private preview. A damaged snapshot, anonymous object
+access and a nonempty target were refused. After an initial initialization
+timeout, the retry passed with visible diagnostics and a maximum of 300
+seconds per database administration command.
+
+Existing installations require the normal forward migration. No new Compose
+mappings or `.env` variables, and no higher application limits. The upgrade
+helper explicitly waits for healthy services. The S3 scenario is a bounded
+test harness, not a general production backup tool or Hetzner/offsite
+acceptance.

@@ -197,6 +197,10 @@ Required behavior:
 - include derivatives only when retention policy says they are not disposable;
 - never make quarantine or originals public;
 - record the source endpoint, bucket, prefixes and backup timestamp.
+- record and verify a SHA-256 checksum for each retained object; an S3 ETag
+  alone is not a portable checksum, particularly for multipart uploads;
+- freeze application and external writers for the matching database,
+  installation-state and object snapshot.
 
 ## Restore test steps
 
@@ -212,8 +216,9 @@ Run a restore drill into an empty test environment:
    `docker compose up -d postgres valkey`.
 4. Copy the dump into the database container:
    `docker compose cp .\fotoarchief.dump postgres:/backups/fotoarchief.dump`.
-5. Restore into an empty database:
-   `docker compose exec postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists "/backups/fotoarchief.dump"'`.
+5. Confirm the destination database contains no application tables, then
+   restore without destructive cleanup:
+   `docker compose exec postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --single-transaction --no-owner --no-acl "/backups/fotoarchief.dump"'`.
 6. Restore or sync object storage into the configured private bucket/prefixes
    when the installation uses S3-compatible storage. For private local storage,
    restore the relevant `storage/app/private` contents with the same storage
@@ -226,6 +231,51 @@ Run a restore drill into an empty test environment:
    detail pages, signed downloads and derivative rebuild behavior.
 10. Document restore duration, missing objects, failed jobs and corrective
    actions.
+
+## Resumable storage migration / Hervatbare opslagmigratie
+
+### Nederlands
+
+De kopieerfase slaat per bestand een receipt en bijbehorende tellingen
+transactioneel op. Een herpoging verwerkt ontbrekende receipts verder;
+eerder geverifieerde originelen worden niet blind opnieuw gekopieerd.
+Omschakelen controleert bronbinding, originele checksum en alle afgeleiden
+opnieuw, en wijzigt vervolgens de geregistreerde bestandsdisk. Pas daarna
+mag bronopruiming worden gestart.
+
+De migratie `2026_10_02_000000_add_storage_relocation_derivative_checksums`
+bewaart afgeleide-checksums in de receipts. Opruimen controleert eerst alle
+doelen en daarna ieder bestand nogmaals vóór verwijderen. Een failed delete
+laat de migratie onafgerond; hervatten mag reeds ontbrekende bronbestanden
+overslaan, maar alleen met nog steeds geldige doelchecksums. Oude receipts
+krijgen checksums zolang bron én doel nog leesbaar zijn. Zonder die gegevens
+weigert de toepassing opruiming; herstel de bron uit backup of onderzoek
+het afwijkende doel in plaats van de controle te omzeilen.
+
+Voer de normale forward-migraties uit. Geen nieuwe omgevingsvariabelen of
+Compose-mappings zijn nodig. Houd een onafhankelijke backup buiten zowel
+bron- als doelopslag; opslagmigratie is geen backup.
+
+### English
+
+Copying saves each file receipt and matching counts transactionally. Retry
+continues missing receipts without blindly recopying previously verified
+originals. Cutover rechecks the source binding, original checksum and all
+derivatives, then changes the registered file disk. Only then may source
+cleanup begin.
+
+Migration `2026_10_02_000000_add_storage_relocation_derivative_checksums`
+stores derivative checksums in receipts. Cleanup verifies all targets first
+and rechecks each file before deleting. A failed delete leaves the migration
+unfinished; retry may skip already absent source files only while target
+checksums still match. Legacy receipts receive checksums while both source
+and target remain readable. Without that evidence cleanup is refused:
+recover the source from backup or investigate the changed target rather than
+bypassing verification.
+
+Run the normal forward migrations. No new environment variables or Compose
+mappings are required. Keep an independent backup outside both source and
+target storage; storage migration is not a backup.
 
 ## Configuration precedence and cache
 

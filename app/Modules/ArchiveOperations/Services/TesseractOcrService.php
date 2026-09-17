@@ -142,7 +142,7 @@ class TesseractOcrService
         $ocrRecord->save();
 
         // Read image file from storage to temporary local file
-        $storage = Storage::disk('local');
+        $storage = Storage::disk($file->storage_disk ?? 'local');
         if (! $storage->exists($file->storage_key)) {
             $ocrRecord->fill([
                 'status' => 'failed',

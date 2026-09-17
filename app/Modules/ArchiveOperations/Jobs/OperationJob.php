@@ -81,7 +81,7 @@ abstract class OperationJob implements ShouldQueue
     /**
      * Process at most CHUNK_SIZE items.
      *
-     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, result?: array<string, mixed>}
+     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, failed_total?: int, result?: array<string, mixed>}
      */
     abstract protected function executeChunk(OperationRun $run): array;
 
@@ -129,7 +129,7 @@ abstract class OperationJob implements ShouldQueue
                 // itself must not be overwritten by this job.
                 $run->forceFill([
                     'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
-                    'failed_items' => $run->failed_items + $outcome['failed'],
+                    'failed_items' => $outcome['failed_total'] ?? ($run->failed_items + $outcome['failed']),
                 ])->save();
 
                 return;
@@ -137,7 +137,7 @@ abstract class OperationJob implements ShouldQueue
 
             $run->forceFill([
                 'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
-                'failed_items' => $run->failed_items + $outcome['failed'],
+                'failed_items' => $outcome['failed_total'] ?? ($run->failed_items + $outcome['failed']),
             ])->save();
 
             if ($outcome['finished']) {

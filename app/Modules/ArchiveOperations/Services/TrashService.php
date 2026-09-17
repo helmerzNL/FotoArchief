@@ -108,7 +108,7 @@ class TrashService
 
             foreach ($files as $file) {
                 // Delete physical files
-                $storage = Storage::disk('local');
+                $storage = Storage::disk($file->storage_disk ?? 'local');
                 if ($storage->exists($file->storage_key)) {
                     $storage->delete($file->storage_key);
                     $deletedFilesCount++;

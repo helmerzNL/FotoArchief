@@ -7,10 +7,20 @@ $zip = new ZipArchive;
 if ($file === '' || $zip->open($file) !== true) {
     throw new RuntimeException('Supply an existing webhosting release ZIP.');
 }
-$required = ['artisan', 'public/index.php', 'public/app.css', 'public/uploads.js', 'vendor/autoload.php', 'BUILD.json', 'DEPENDENCY-LICENSES.json', 'VERSION', 'scripts/upgrade-compose.sh'];
+$required = ['artisan', 'public/index.php', 'public/app.css', 'public/uploads.js', 'vendor/autoload.php', 'BUILD.json', 'DEPENDENCY-LICENSES.json', 'VERSION', 'scripts/upgrade-compose.sh', 'lang/nl/ai.php', 'lang/nl/operations.php'];
 foreach ($required as $name) {
     if ($zip->locateName($name) === false) {
         throw new RuntimeException('Missing release file: '.$name);
+    }
+    $catalogues = glob(dirname(__DIR__, 2).'/lang/nl/*.php');
+    if ($catalogues === false || $catalogues === []) {
+        throw new RuntimeException('No source translation catalogues found.');
+    }
+    foreach ($catalogues as $catalogue) {
+        $name = 'lang/nl/'.basename($catalogue);
+        if ($zip->getFromName($name) !== file_get_contents($catalogue)) {
+            throw new RuntimeException('Missing or stale release catalogue: '.$name);
+        }
     }
 }
 for ($index = 0; $index < $zip->numFiles; $index++) {
