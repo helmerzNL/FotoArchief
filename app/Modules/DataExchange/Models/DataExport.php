@@ -60,9 +60,9 @@ class DataExport extends Model
     public function typeLabel(): string
     {
         return match ($this->export_type) {
-            'metadata_json' => 'Metadata (JSON)',
-            'metadata_csv' => 'Metadata (CSV)',
-            'package_zip' => 'Volledig pakket (ZIP met originelen)',
+            'metadata_json' => __('exchange.generated.t_e3d4087cf8e47603'),
+            'metadata_csv' => __('exchange.generated.t_64388ab124349776'),
+            'package_zip' => __('exchange.generated.t_3cc628c35a3d66de'),
             default => $this->export_type,
         };
     }
@@ -70,12 +70,12 @@ class DataExport extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            'queued' => 'In wachtrij',
-            'running' => 'Bezig met samenstellen',
-            'ready' => 'Klaar om te downloaden',
+            'queued' => __('exchange.generated.t_9b88bb032d925e75'),
+            'running' => __('exchange.generated.t_06b990a47248198c'),
+            'ready' => __('exchange.generated.t_66334e296995884b'),
             'failed' => 'Mislukt',
-            'expired' => 'Verlopen en opgeruimd',
-            'revoked' => 'Ingetrokken: toegang is gewijzigd',
+            'expired' => __('exchange.generated.t_467c15013f892cae'),
+            'revoked' => __('exchange.generated.t_9e2fb48acaa1deef'),
             default => $this->status,
         };
     }

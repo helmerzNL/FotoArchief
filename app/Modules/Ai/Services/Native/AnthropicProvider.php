@@ -38,7 +38,7 @@ class AnthropicProvider extends AbstractNativeProvider implements ImageAnalysisP
             ? $context['model']
             : (string) ($this->nativeConfig()['vision_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('Anthropic: geen visionmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_vision_model', ['provider' => 'Anthropic']));
         }
 
         $request = $this->http->withHeaders([
@@ -59,7 +59,7 @@ class AnthropicProvider extends AbstractNativeProvider implements ImageAnalysisP
 
         $text = Arr::get($payload, 'content.0.text');
         if (! is_string($text) || trim($text) === '') {
-            throw new AiProviderException('Anthropic: geen tekstinhoud in het antwoord.');
+            throw new AiProviderException(__('ai.provider_errors.missing_text', ['provider' => 'Anthropic']));
         }
 
         $analysis = $this->parseAnalysisJson($text);

@@ -37,7 +37,7 @@ class IdentityInvitationController extends Controller
         ]);
         $email = strtolower($data['email']);
         if (User::query()->where('email', $email)->exists()) {
-            throw ValidationException::withMessages(['email' => 'Er bestaat al een gebruiker met dit e-mailadres.']);
+            throw ValidationException::withMessages(['email' => __('identity.generated.t_ddad49dc7440e5bf')]);
         }
 
         $token = Str::random(48);
@@ -51,7 +51,7 @@ class IdentityInvitationController extends Controller
         ]);
 
         return redirect()->route('identity.users.index')->with([
-            'status' => 'Uitnodiging gemaakt. Kopieer de link nu; hij wordt hierna niet meer getoond.',
+            'status' => __('identity.generated.t_70eb33d89d807ef1'),
             'invitation_url' => route('identity.invitations.accept', ['token' => $token]),
         ]);
     }
@@ -76,10 +76,10 @@ class IdentityInvitationController extends Controller
                 ->first();
 
             if (! $invitation instanceof UserInvitation || ! $invitation->isAcceptable()) {
-                throw ValidationException::withMessages(['token' => 'Deze uitnodiging is ongeldig of verlopen.']);
+                throw ValidationException::withMessages(['token' => __('identity.generated.t_764daa1c66b4c698')]);
             }
             if (User::query()->where('email', $invitation->email)->exists()) {
-                throw ValidationException::withMessages(['token' => 'Deze uitnodiging kan niet meer worden gebruikt.']);
+                throw ValidationException::withMessages(['token' => __('identity.generated.t_98562daa70f652a7')]);
             }
 
             $user = User::query()->create([
@@ -91,7 +91,7 @@ class IdentityInvitationController extends Controller
             $invitation->forceFill(['accepted_at' => now()])->save();
         });
 
-        return redirect('/login')->with('status', 'Account geactiveerd. Je kunt nu inloggen.');
+        return redirect('/login')->with('status', __('identity.generated.t_c10c2de30e1c630c'));
     }
 
     private function findAcceptableInvitation(string $token): UserInvitation

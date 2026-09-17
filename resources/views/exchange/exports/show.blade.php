@@ -4,21 +4,21 @@
 <p class="eyebrow">Uitwisseling</p><h1>Export</h1>
 <p class="intro">{{ $export->typeLabel() }} &middot; {{ $export->statusLabel() }}</p>
 @if($export->status === 'failed' && $export->failure_reason)
-    <div class="errors" role="alert"><strong>Export mislukt</strong><p>{{ $export->failure_reason }}</p></div>
+    <div class="errors" role="alert"><strong>{{ __('exchange.generated.t_64f5bcf170584aba') }}</strong><p>{{ $export->failure_reason }}</p></div>
 @endif
 @if($export->isBusy())
-    <div class="notice" role="status">De export wordt samengesteld door een worker. Vernieuw deze pagina.</div>
+    <div class="notice" role="status">{{ __('exchange.generated.t_35e676d0c367b18d') }}</div>
 @endif
 <section class="card">
     <h2>Gegevens</h2>
     <ul class="asset-list">
-        <li>Aantal foto&rsquo;s: {{ $export->asset_count }}</li>
+        <li>{{ __('exchange.generated.t_f6f44f8931ebabb0') }} {{ $export->asset_count }}</li>
         <li>Grootte: {{ $export->byte_size === null ? 'onbekend' : number_format($export->byte_size / 1024, 1).' KiB' }}</li>
-        <li>Controlegetal (SHA-256): <span class="checksum">{{ $export->sha256 ?? 'nog niet berekend' }}</span></li>
-        <li>Beschikbaar tot: {{ $export->expires_at?->format('d-m-Y H:i') ?? 'niet van toepassing' }}</li>
-        <li>Aantal downloads: {{ $export->download_count }}</li>
+        <li>{{ __('exchange.generated.t_fa25cee5b6c25aa3') }} <span class="checksum">{{ $export->sha256 ?? 'nog niet berekend' }}</span></li>
+        <li>{{ __('exchange.generated.t_ba4efa02a4ac38e8') }} {{ $export->expires_at?->format('d-m-Y H:i') ?? 'niet van toepassing' }}</li>
+        <li>{{ __('exchange.generated.t_5a1567ca4894049a') }} {{ $export->download_count }}</li>
     </ul>
-    <p>Het bestand staat in private opslag. Er bestaat geen publieke of directe opslag-URL; downloaden kan alleen via een persoonlijke, kortlopende link.</p>
+    <p>{{ __('exchange.generated.t_e82a2edb679e5b2d') }}</p>
 </section>
 @if(($export->manifest['skipped'] ?? []) !== [])
 <section class="card">
@@ -34,7 +34,7 @@
 <section class="card">
     <h2>Inhoud</h2>
     <table>
-        <caption>Bestanden in deze export met hun controlegetal</caption>
+        <caption>{{ __('exchange.generated.t_604182d90c8d83f3') }}</caption>
         <thead><tr><th scope="col">Pad</th><th scope="col">Soort</th><th scope="col">Bytes</th><th scope="col">SHA-256</th></tr></thead>
         <tbody>
         @foreach(array_slice($export->manifest['files'], 0, 200) as $file)
@@ -47,21 +47,21 @@
 @if($export->isDownloadable())
 <section class="card">
     <h2>Downloaden</h2>
-    <p>De link is {{ config('exchange.download_ttl_minutes') }} minuten geldig en werkt alleen voor jou. Bij het downloaden wordt opnieuw gecontroleerd of je alle foto&rsquo;s in deze export nog mag inzien.</p>
+    <p>{{ __('exchange.generated.t_c890fb7126fdc21b') }} {{ config('exchange.download_ttl_minutes') }} {{ __('exchange.generated.t_289596075ab81f79') }}</p>
     <form method="post" action="{{ route('exchange.exports.link', $export) }}">
         @csrf
-        <button type="submit">Bestand downloaden</button>
+        <button type="submit">{{ __('exchange.generated.t_dce8cab4e4ca0f1b') }}</button>
     </form>
 </section>
 @endif
 @if($export->status === 'failed')
 <section class="card">
-    <h2>Opnieuw proberen</h2>
+    <h2>{{ __('exchange.generated.t_e05ea9918232c0b5') }}</h2>
     <form method="post" action="{{ route('exchange.exports.retry', $export) }}">
         @csrf
-        <button class="secondary" type="submit">Export opnieuw samenstellen</button>
+        <button class="secondary" type="submit">{{ __('exchange.generated.t_ee32917364b0aad5') }}</button>
     </form>
 </section>
 @endif
-<p><a href="{{ route('exchange.index') }}">Terug naar uitwisseling</a></p>
+<p><a href="{{ route('exchange.index') }}">{{ __('exchange.generated.t_a37b7b9e1dab31cf') }}</a></p>
 @endsection

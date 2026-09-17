@@ -4,35 +4,35 @@
 
 @section('content')
     <h1>Archiefbewerkingen</h1>
-    <p>Kies een bewerking. Je ziet hier alleen de onderdelen waarvoor je rechten hebt.</p>
+    <p>{{ __('operations.generated.t_08230f595b9f9b33') }}</p>
 
     @include('operations._nav')
 
     <section class="card">
-        <h2>Wat hoort waar</h2>
+        <h2>{{ __('operations.generated.t_57b26f887faaa005') }}</h2>
         <dl>
             <dt>Duplicaten</dt>
-            <dd>Een afgewezen dubbele scan koppelen aan het bestaande dossier, zonder een tweede origineel toe te voegen.</dd>
+            <dd>{{ __('operations.generated.t_50893c6bcc9a08c4') }}</dd>
             <dt>Bestandsversies</dt>
-            <dd>Een betere scan toevoegen naast het origineel, en kiezen welke versie het archief toont.</dd>
+            <dd>{{ __('operations.generated.t_c950ec97a6c64744') }}</dd>
             <dt>Verwerking</dt>
-            <dd>Uploads die nog lopen, vastliepen of opnieuw geprobeerd moeten worden.</dd>
+            <dd>{{ __('operations.generated.t_9558583f88a37019') }}</dd>
             <dt>Integriteit</dt>
-            <dd>Controleren of elk bestand er nog is en of de checksum klopt.</dd>
+            <dd>{{ __('operations.generated.t_68f20939229ae2fb') }}</dd>
             <dt>Opslagmigratie</dt>
-            <dd>Bestanden gecontroleerd naar een andere schijf kopiëren; de bron blijft staan tot alles is geverifieerd.</dd>
+            <dd>{{ __('operations.generated.t_b61a008ae277a964') }}</dd>
             <dt>Prullenbak</dt>
-            <dd>Verwijderde dossiers terugzetten of definitief opruimen.</dd>
+            <dd>{{ __('operations.generated.t_368197c395df898a') }}</dd>
             <dt>OCR-tekst</dt>
-            <dd>Machinaal gelezen tekst bekijken, corrigeren en doorzoeken.</dd>
+            <dd>{{ __('operations.generated.t_3bfd83b9e5c9bc53') }}</dd>
             <dt>AI-instellingen</dt>
-            <dd>Optionele beeldanalyse en semantisch zoeken expliciet aanzetten, begrenzen of met de noodstop blokkeren.</dd>
+            <dd>{{ __('operations.generated.t_1eedecb824d9611c') }}</dd>
             <dt>AI-suggesties</dt>
-            <dd>Conceptbeschrijvingen en tags controleren voordat metadata verandert.</dd>
-            <dt>Semantisch zoeken</dt>
-            <dd>Beheer zoekt optioneel op beeldinhoud via dezelfde multimodale embeddingruimte.</dd>
+            <dd>{{ __('operations.generated.t_7b143af60f217a04') }}</dd>
+            <dt>{{ __('operations.generated.t_939ebed93c98ca85') }}</dt>
+            <dd>{{ __('operations.generated.t_66944095a45b9a0a') }}</dd>
             <dt>Achtergrondtaken</dt>
-            <dd>De voortgang, fouten en herstart van zware bewerkingen.</dd>
+            <dd>{{ __('operations.generated.t_368398c0b1b204a4') }}</dd>
         </dl>
     </section>
 @endsection

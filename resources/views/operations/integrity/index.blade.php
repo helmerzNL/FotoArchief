@@ -2,9 +2,9 @@
 @section('title', 'Bestandsintegriteit - FotoArchief Operaties')
 @section('content')
     @include('operations._nav')
-    <p class="eyebrow">Operaties &middot; Behoud &amp; Integriteit</p>
-    <h1>Bestandsintegriteit &amp; Checksums</h1>
-    <p class="intro">Periodieke en on-demand verificatie van bestandsaanwezigheid, SHA-256 integriteit en afgeleide weergaven.</p>
+    <p class="eyebrow">{{ __('operations.generated.t_e160841c8fc79855') }}</p>
+    <h1>{{ __('operations.generated.t_4f0104035d6f7f41') }}</h1>
+    <p class="intro">{{ __('operations.generated.t_ff5a26245a7773ca') }}</p>
 
     {{-- Overzicht kaarten --}}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
@@ -14,19 +14,19 @@
         </div>
         <div class="card" style="text-align: center;">
             <div style="font-size: 1.75rem; font-weight: bold; color: #059669;">{{ $summary['ok'] }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Geverifieerd intact</div>
+            <div style="font-size: 0.875rem; color: #6b7280;">{{ __('operations.generated.t_27025e00d9c3ac84') }}</div>
         </div>
         <div class="card" style="text-align: center;">
             <div style="font-size: 1.75rem; font-weight: bold; color: #dc2626;">{{ $summary['missing_original'] }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Origineel ontbreekt</div>
+            <div style="font-size: 0.875rem; color: #6b7280;">{{ __('operations.generated.t_22f34e9e8956397b') }}</div>
         </div>
         <div class="card" style="text-align: center;">
             <div style="font-size: 1.75rem; font-weight: bold; color: #dc2626;">{{ $summary['corrupt_checksum'] }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Checksum corruptie</div>
+            <div style="font-size: 0.875rem; color: #6b7280;">{{ __('operations.generated.t_8899a19ee5efa9f7') }}</div>
         </div>
         <div class="card" style="text-align: center;">
             <div style="font-size: 1.75rem; font-weight: bold; color: #d97706;">{{ $summary['missing_derivative'] }}</div>
-            <div style="font-size: 0.875rem; color: #6b7280;">Weergave ontbreekt</div>
+            <div style="font-size: 0.875rem; color: #6b7280;">{{ __('operations.generated.t_8651b079cf8241ed') }}</div>
         </div>
     </div>
 
@@ -34,33 +34,33 @@
     <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
         <form method="post" action="{{ route('admin.operations.integrity.run') }}">
             @csrf
-            <button type="submit" class="button">Start Integriteitscontrole</button>
+            <button type="submit" class="button">{{ __('operations.generated.t_e853ca2e0a665210') }}</button>
         </form>
 
         @if($summary['missing_derivative'] > 0)
             <form method="post" action="{{ route('admin.operations.integrity.rebuildAll') }}">
                 @csrf
-                <button type="submit" class="button" style="background-color: #d97706;">Herbouw Alle Ontbrekende Weergaven ({{ $summary['missing_derivative'] }})</button>
+                <button type="submit" class="button" style="background-color: #d97706;">{{ __('operations.generated.t_06d3b6ef409181c1') }}{{ $summary['missing_derivative'] }})</button>
             </form>
         @endif
     </div>
 
     {{-- Aandachtspunten tabel --}}
     <section class="card">
-        <h2>Gedetecteerde Integriteitsproblemen</h2>
+        <h2>{{ __('operations.generated.t_15b7da39c77a3e72') }}</h2>
         @if($issues->isEmpty())
             <div style="padding: 1rem 0; color: #059669;">
-                <strong>Geen openstaande integriteitsproblemen.</strong> Alle gecontroleerde bestanden en weergaven zijn intact.
+                <strong>{{ __('operations.generated.t_b4cc8b4f8beaa982') }}</strong> {{ __('operations.generated.t_2e8dc9859dc7dcea') }}
             </div>
         @else
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
-                        <th style="padding: 0.75rem;">Dossier / Bestand</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_8f85c97ef7481b34') }}</th>
                         <th style="padding: 0.75rem;">Probleemtype</th>
-                        <th style="padding: 0.75rem;">Verwachte Checksum</th>
-                        <th style="padding: 0.75rem;">Gedetecteerde Checksum</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_3ca617c0488da9c0') }}</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_d9221de7754afb07') }}</th>
                         <th style="padding: 0.75rem;">Details</th>
                         <th style="padding: 0.75rem;">Actie</th>
                     </tr>
@@ -76,11 +76,11 @@
                             </td>
                             <td style="padding: 0.75rem;">
                                 @if($issue->status === 'missing_original')
-                                    <span style="color: #dc2626; font-weight: bold;">Origineel ontbreekt</span>
+                                    <span style="color: #dc2626; font-weight: bold;">{{ __('operations.generated.t_22f34e9e8956397b') }}</span>
                                 @elseif($issue->status === 'corrupt_checksum')
-                                    <span style="color: #dc2626; font-weight: bold;">Checksum mismatch</span>
+                                    <span style="color: #dc2626; font-weight: bold;">{{ __('operations.generated.t_a8e33847e8e9ef6c') }}</span>
                                 @elseif($issue->status === 'missing_derivative')
-                                    <span style="color: #d97706; font-weight: bold;">Weergave ontbreekt</span>
+                                    <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_8651b079cf8241ed') }}</span>
                                 @else
                                     <span>{{ $issue->status }}</span>
                                 @endif
@@ -98,7 +98,7 @@
                                 @if($issue->status === 'missing_derivative' && $issue->file)
                                     <form method="post" action="{{ route('admin.operations.integrity.rebuild', $issue->file) }}">
                                         @csrf
-                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem;">Herbouw Weergaven</button>
+                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem;">{{ __('operations.generated.t_09e71fc8ab17eeda') }}</button>
                                     </form>
                                 @endif
                             </td>

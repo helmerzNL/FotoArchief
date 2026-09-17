@@ -28,7 +28,7 @@ class DataExportController extends ExchangeController
         $export = $service->request($user, $data['export_type'], $data['scope'], $data['asset_ids'] ?? []);
 
         return redirect()->route('exchange.exports.show', $export)
-            ->with('status', 'Export ingepland. Een actieve worker stelt het bestand samen.');
+            ->with('status', __('exchange.generated.t_a7722f428c96275b'));
     }
 
     public function show(Request $request, DataExport $export): View
@@ -44,7 +44,7 @@ class DataExportController extends ExchangeController
         $this->owned($request, $export);
         $service->retry($export, $user);
 
-        return redirect()->route('exchange.exports.show', $export)->with('status', 'Export opnieuw ingepland.');
+        return redirect()->route('exchange.exports.show', $export)->with('status', __('exchange.generated.t_c580c423eab6d125'));
     }
 
     public function link(Request $request, DataExport $export, DataExportService $service): RedirectResponse
@@ -62,10 +62,10 @@ class DataExportController extends ExchangeController
         $this->owned($request, $export);
         $target = $service->authorizeDownload($export, $user, $token);
         $stream = Storage::disk($target['disk'])->readStream($target['key']);
-        abort_unless(is_resource($stream), 503, 'Exportbestand tijdelijk niet beschikbaar.');
+        abort_unless(is_resource($stream), 503, __('exchange.generated.t_d26dfbd13d3a0dab'));
         $contentType = match ($export->export_type) {
             'metadata_json' => 'application/json',
-            'metadata_csv' => 'text/csv; charset=UTF-8',
+            'metadata_csv' => __('exchange.generated.t_e1db727f9cc3e542'),
             default => 'application/zip',
         };
 

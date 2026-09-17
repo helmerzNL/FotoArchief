@@ -15,7 +15,7 @@ final class SemanticRelevanceEvaluator
     public function evaluate(array $queries, int $k): array
     {
         if ($queries === [] || $k < 1) {
-            throw new InvalidArgumentException('Corpus must contain queries and k must be at least 1.');
+            throw new InvalidArgumentException(__('ai.relevance.missing_corpus'));
         }
 
         $precision = 0.0;
@@ -25,7 +25,7 @@ final class SemanticRelevanceEvaluator
             $expected = array_values(array_unique($query['expected_ids'] ?? []));
             $ranked = array_values(array_unique(array_slice($query['ranked_ids'] ?? [], 0, $k)));
             if (($query['query'] ?? '') === '' || $expected === []) {
-                throw new InvalidArgumentException('Every query requires text and at least one approved expected ID.');
+                throw new InvalidArgumentException(__('ai.relevance.invalid_query'));
             }
             $hits = count(array_intersect($ranked, $expected));
             $precision += $hits / $k;

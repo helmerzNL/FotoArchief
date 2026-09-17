@@ -114,7 +114,9 @@ These are implementation defaults until a later measured proof tightens them:
   automatic cross-provider fallback. The external adapter refuses use unless
   the admin settings have external provider, external data-processing consent,
   public HTTPS endpoint, region/retention text and non-zero budget configured.
-  API keys come only from private runtime configuration.
+  Provider settings and encrypted API keys are stored in the database and
+  managed through the administrator UI. Keys are never returned, rendered or
+  logged after storage.
 - Step 44 queues AI image analysis through the existing bounded operation-run
   mechanism. HTTP requests record selected asset ids and provider choice only;
   workers read the current clean primary file, call the chosen provider and
@@ -153,9 +155,11 @@ These are implementation defaults until a later measured proof tightens them:
 ## Native external providers
 
 FotoArchief can call the official OpenAI, Anthropic, Gemini and OpenRouter APIs
-directly for image analysis. Each native provider is separately configured by
-private runtime variables and separately enabled by an administrator. The
-image-analysis and embedding provider/model selections are independent.
+directly for image analysis. Each native provider is separately configured in
+the database through the administrator UI and separately enabled by an
+administrator. Provider API keys are encrypted at rest and are never displayed
+again. The image-analysis and embedding provider/model selections are
+independent.
 
 Only Gemini and an explicit OpenRouter multimodal-model allowlist are permitted
 for native semantic embeddings. OpenAI's documented embedding API is

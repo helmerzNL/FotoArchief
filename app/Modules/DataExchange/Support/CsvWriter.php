@@ -19,7 +19,7 @@ class CsvWriter
     {
         $handle = fopen('php://temp', 'r+b');
         if ($handle === false) {
-            throw new RuntimeException('CSV buffer unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_3bef17122f05ca39'));
         }
         try {
             fputcsv($handle, array_map(fn (string $cell): string => $this->guard($cell), $header), ',', '"', '');
@@ -29,7 +29,7 @@ class CsvWriter
             rewind($handle);
             $contents = stream_get_contents($handle);
             if ($contents === false) {
-                throw new RuntimeException('CSV buffer unreadable.');
+                throw new RuntimeException(__('exchange.generated.t_0ce3202afcdf5776'));
             }
 
             return $contents;

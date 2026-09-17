@@ -84,7 +84,7 @@ class StaffSuggestionController extends Controller
             // asset-existence (soft-delete) check and the permission check
             // atomic with the "already moderated" check below.
             $this->authorizedAsset($user, $locked, requirePermission: 'assets.update');
-            abort_unless($locked->status === 'pending', 409, 'Deze suggestie is al beoordeeld.');
+            abort_unless($locked->status === 'pending', 409, __('publication.generated.t_88fd00236231fe63'));
             $locked->update([
                 'status' => $decision,
                 'moderator_user_id' => $user->id,
@@ -99,7 +99,7 @@ class StaffSuggestionController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.suggestions.index')->with('status', 'Suggestie beoordeeld.');
+        return redirect()->route('admin.suggestions.index')->with('status', __('publication.generated.t_95fba2c11f646e1c'));
     }
 
     /**

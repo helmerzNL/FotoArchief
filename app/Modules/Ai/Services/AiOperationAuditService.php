@@ -28,11 +28,11 @@ final class AiOperationAuditService
             'asset_id' => $asset->id,
             'event_type' => $run->operation_type.'.item_succeeded',
             'severity' => 'info',
-            'message' => 'AI-item succesvol verwerkt.',
+            'message' => __('ai.audit.item_succeeded'),
             'context' => $context,
         ]);
 
-        Log::info('AI operation item succeeded.', $context);
+        Log::info(__('ai.audit.log_succeeded'), $context);
     }
 
     public function failed(
@@ -59,7 +59,7 @@ final class AiOperationAuditService
             'context' => $context,
         ]);
 
-        Log::error('AI operation item failed.', array_merge($context, ['error' => $message]));
+        Log::error(__('ai.audit.log_failed'), array_merge($context, ['error' => $message]));
     }
 
     /**

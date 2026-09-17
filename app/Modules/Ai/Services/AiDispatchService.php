@@ -30,16 +30,16 @@ class AiDispatchService
         $errors = [];
 
         if (! (bool) ($settings['active'] ?? false) || ! (bool) ($settings['image_analysis_enabled'] ?? false)) {
-            $errors['ai'] = 'AI-beeldanalyse is niet actief.';
+            $errors['ai'] = __('ai.errors.analysis_inactive');
         }
         if ($assetIds === [] || count($assetIds) > $limit) {
-            $errors['asset_ids'] = "Selecteer 1 tot {$limit} assets voor een AI-batch.";
+            $errors['asset_ids'] = __('ai.errors.asset_batch_count', ['limit' => $limit]);
         }
         $configuredProvider = (string) ($settings['image_analysis_provider'] ?? '');
         if ($provider === '' || $provider !== $configuredProvider) {
-            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde beeldanalyse-provider.';
+            $errors['provider'] = __('ai.errors.analysis_provider_mismatch');
         } elseif (! (bool) ($settings['image_analysis_ready'] ?? false)) {
-            $errors['provider'] = 'De geconfigureerde beeldanalyse-provider is niet gereed (toestemming, model of budget ontbreekt).';
+            $errors['provider'] = __('ai.errors.analysis_provider_not_ready');
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -67,16 +67,16 @@ class AiDispatchService
         $errors = [];
 
         if (! (bool) ($settings['active'] ?? false) || ! (bool) ($settings['embeddings_enabled'] ?? false)) {
-            $errors['ai'] = 'AI-embeddings zijn niet actief.';
+            $errors['ai'] = __('ai.errors.embeddings_inactive');
         }
         if ($assetIds === [] || count($assetIds) > $limit) {
-            $errors['asset_ids'] = "Selecteer 1 tot {$limit} assets voor een AI-indexbatch.";
+            $errors['asset_ids'] = __('ai.errors.index_batch_count', ['limit' => $limit]);
         }
         $configuredProvider = (string) ($settings['embeddings_provider'] ?? '');
         if ($provider === '' || $provider !== $configuredProvider) {
-            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde embeddings-provider.';
+            $errors['provider'] = __('ai.errors.embeddings_provider_mismatch');
         } elseif (! (bool) ($settings['embeddings_ready'] ?? false)) {
-            $errors['provider'] = 'De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).';
+            $errors['provider'] = __('ai.errors.embeddings_provider_not_ready');
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);

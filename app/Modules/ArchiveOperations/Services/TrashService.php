@@ -55,7 +55,7 @@ class TrashService
     public function moveToTrash(Asset $asset, string $reason, User $user): void
     {
         if ($asset->trashed()) {
-            throw new RuntimeException('Asset bevindt zich reeds in de prullenbak.');
+            throw new RuntimeException(__('operations.generated.t_702283d87ca2015d'));
         }
 
         DB::transaction(function () use ($asset, $reason, $user): void {
@@ -80,7 +80,7 @@ class TrashService
     public function restoreFromTrash(Asset $asset, User $user): void
     {
         if (! $asset->trashed()) {
-            throw new RuntimeException('Asset bevindt zich niet in de prullenbak.');
+            throw new RuntimeException(__('operations.generated.t_a1fb64918477bcd4'));
         }
 
         DB::transaction(function () use ($asset, $user): void {

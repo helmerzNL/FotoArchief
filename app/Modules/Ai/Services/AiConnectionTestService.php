@@ -37,7 +37,7 @@ class AiConnectionTestService
         };
 
         if ($allowedProviders === [] || ! in_array($provider, $allowedProviders, true)) {
-            return ['status' => 'error', 'message' => "Provider {$provider} ondersteunt capability {$capability} niet."];
+            return ['status' => 'error', 'message' => __('ai.errors.unsupported_capability', ['provider' => $provider, 'capability' => $capability])];
         }
 
         $settings = $this->configuration->effective();
@@ -59,13 +59,13 @@ class AiConnectionTestService
             // held (assertCapabilities() would have thrown otherwise).
             return [
                 'status' => 'ok',
-                'message' => 'Verbinding gelukt. Capability-contract geverifieerd (geen betaalde beeldanalyse uitgevoerd).',
+                'message' => __('ai.errors.connection_contract_ok'),
             ];
         }
 
         return [
             'status' => 'ok',
-            'message' => 'Verbinding gelukt. Dit is een kosteloze capability-check, geen betaalde beeldanalyse.',
+            'message' => __('ai.errors.connection_models_ok'),
             'models_count' => count($models),
             'model_configured' => $configuredModel,
             'model_found' => $configuredModel !== '' && in_array($configuredModel, $models, true),

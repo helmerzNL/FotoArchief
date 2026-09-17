@@ -42,7 +42,7 @@ class AdministratorProtection
 
         if ($remaining->isEmpty()) {
             throw ValidationException::withMessages([
-                'roles' => 'Minstens één actieve beheerder moet overblijven.',
+                'roles' => __('identity.generated.t_693c6bffb1f2fc20'),
             ]);
         }
     }

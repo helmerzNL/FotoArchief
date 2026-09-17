@@ -25,19 +25,19 @@ class BulkAssetController extends Controller
         $user = $this->user($request);
         $assetIds = $request->input('asset_ids');
         if (! is_array($assetIds) || empty($assetIds)) {
-            return redirect()->route('admin.assets.index')->with('error', 'Selecteer eerst minimaal één foto.');
+            return redirect()->route('admin.assets.index')->with('error', __('catalogue.generated.t_0992c1e4077ff819'));
         }
 
         $assets = Asset::query()->whereIn('id', $assetIds)->with(['tags', 'collections', 'rights'])->get();
 
         if ($assets->isEmpty()) {
-            return redirect()->route('admin.assets.index')->with('error', 'Geen geldige foto’s geselecteerd.');
+            return redirect()->route('admin.assets.index')->with('error', __('catalogue.generated.t_5d9870a5d7db0594'));
         }
 
         // Per-photo ownership & permission check
         foreach ($assets as $asset) {
             if ($user->cannot('update', $asset)) {
-                abort(403, 'Geen toestemming om foto '.$asset->accession_number.' te bewerken.');
+                abort(403, __('catalogue.generated.t_b8d4c7c81cb408eb').$asset->accession_number.__('catalogue.generated.t_e85d7af305cec0e4'));
             }
         }
 
@@ -103,14 +103,14 @@ class BulkAssetController extends Controller
 
                 // Per-photo authorization check
                 if ($user->cannot('update', $asset)) {
-                    abort(403, 'Geen toestemming voor foto '.$asset->accession_number);
+                    abort(403, __('catalogue.generated.t_82a24f16fc0445bb').$asset->accession_number);
                 }
 
                 // Optimistic concurrency check
                 $expectedLockVersion = (int) ($validated['lock_versions'][$assetId] ?? 0);
                 if ($asset->lock_version !== $expectedLockVersion) {
                     throw ValidationException::withMessages([
-                        'lock_versions' => 'Foto '.$asset->accession_number.' is tussentijds gewijzigd door een andere gebruiker. Vernieuw de selectie.',
+                        'lock_versions' => 'Foto '.$asset->accession_number.__('catalogue.generated.t_a6f0335700b36761'),
                     ]);
                 }
 
@@ -215,7 +215,7 @@ class BulkAssetController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.assets.index')->with('status', sprintf('%d foto’s succesvol bijgewerkt in batch.', $updatedCount));
+        return redirect()->route('admin.assets.index')->with('status', sprintf(__('catalogue.generated.t_16b6cad8c9795eb8'), $updatedCount));
     }
 
     private function user(Request $request): User

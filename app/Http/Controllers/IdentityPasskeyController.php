@@ -45,13 +45,13 @@ class IdentityPasskeyController extends Controller
 
         $challengeId = $request->session()->pull('identity.enrollment_challenge_id');
         if (! is_string($challengeId)) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey-aanvraag is verlopen. Probeer opnieuw.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_2b3724b0f713a540')]);
         }
 
         DB::transaction(function () use ($challengeId, $challenges, $ceremony, $data, $user): void {
             $challenge = $challenges->consume($challengeId, 'enrollment');
             if ($challenge->user_id !== $user->id) {
-                throw ValidationException::withMessages(['passkey' => 'De passkey-aanvraag is verlopen. Probeer opnieuw.']);
+                throw ValidationException::withMessages(['passkey' => __('identity.generated.t_2b3724b0f713a540')]);
             }
             $passkey = $ceremony->verifyEnrollment($challenge, $data);
             UserPasskey::query()->create([
@@ -72,7 +72,7 @@ class IdentityPasskeyController extends Controller
         abort_unless($request->user()?->id === $passkey->user_id, 403);
         $passkey->delete();
 
-        return redirect()->route('identity.security.show')->with('status', 'Passkey verwijderd.');
+        return redirect()->route('identity.security.show')->with('status', __('identity.generated.t_cb851ea3faafc8bb'));
     }
 
     public function loginOptions(Request $request, WebAuthnCeremony $ceremony, WebAuthnChallengeRepository $challenges): JsonResponse
@@ -88,7 +88,7 @@ class IdentityPasskeyController extends Controller
     {
         $key = 'passkey-login:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 10)) {
-            abort(429, 'Te veel passkey-pogingen. Wacht een minuut.');
+            abort(429, __('identity.generated.t_6426f54ad4880ff7'));
         }
         RateLimiter::hit($key, 60);
 
@@ -102,7 +102,7 @@ class IdentityPasskeyController extends Controller
 
         $challengeId = $request->session()->pull('identity.login_challenge_id');
         if (! is_string($challengeId)) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey is niet geaccepteerd.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_0352497aa8179233')]);
         }
 
         DB::transaction(function () use ($challengeId, $challenges, $ceremony, $data, $request): void {
@@ -113,12 +113,12 @@ class IdentityPasskeyController extends Controller
                 ->first();
 
             if (! $passkey instanceof UserPasskey) {
-                throw ValidationException::withMessages(['passkey' => 'De passkey is niet geaccepteerd.']);
+                throw ValidationException::withMessages(['passkey' => __('identity.generated.t_0352497aa8179233')]);
             }
 
             $user = $passkey->user()->first();
             if ($user === null || $user->is_active === false || $ceremony->userHandleFromPayload($data) !== $user->id) {
-                throw ValidationException::withMessages(['passkey' => 'De passkey is niet geaccepteerd.']);
+                throw ValidationException::withMessages(['passkey' => __('identity.generated.t_0352497aa8179233')]);
             }
 
             $ceremony->verifyLogin($passkey, $challenge, $data);

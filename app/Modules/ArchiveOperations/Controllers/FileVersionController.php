@@ -50,7 +50,7 @@ class FileVersionController extends Controller
 
         return redirect()
             ->route('admin.operations.versions.index', $asset)
-            ->with('status', 'Nieuwe scanversie geüpload naar quarantaine. De achtergrondverwerking is gestart.');
+            ->with('status', __('operations.generated.t_bdb159735a88ce26'));
     }
 
     public function reprocess(Request $request, Asset $asset, AssetFile $file): RedirectResponse
@@ -64,7 +64,7 @@ class FileVersionController extends Controller
 
         return redirect()
             ->route('admin.operations.versions.index', $asset)
-            ->with('status', 'Afgeleide weergaven (previews) succesvol opnieuw gegenereerd vanuit het ongewijzigde origineel.');
+            ->with('status', __('operations.generated.t_c4d64c0546adf60f'));
     }
 
     public function setActive(Request $request, Asset $asset, AssetFile $file): RedirectResponse
@@ -78,6 +78,6 @@ class FileVersionController extends Controller
 
         return redirect()
             ->route('admin.operations.versions.index', $asset)
-            ->with('status', 'Primaire weergaveversie bijgewerkt.');
+            ->with('status', __('operations.generated.t_275fdd01280f42d5'));
     }
 }

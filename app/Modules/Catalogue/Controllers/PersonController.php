@@ -91,7 +91,7 @@ class PersonController extends Controller
         });
 
         return redirect()->route('catalogue.people.show', $person)
-            ->with('status', ($person->entity_type === 'organisation' ? 'Organisatie' : 'Persoon').' succesvol aangemaakt.');
+            ->with('status', ($person->entity_type === 'organisation' ? 'Organisatie' : 'Persoon').__('catalogue.generated.t_1939139e9a090398'));
     }
 
     public function show(Request $request, Person $person): View
@@ -150,7 +150,7 @@ class PersonController extends Controller
         });
 
         return redirect()->route('catalogue.people.show', $person)
-            ->with('status', 'Gegevens succesvol bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_b0839a2ff05eb9f8'));
     }
 
     public function destroy(Request $request, Person $person): RedirectResponse
@@ -164,7 +164,7 @@ class PersonController extends Controller
         });
 
         return redirect()->route('catalogue.people.index')
-            ->with('status', 'Persoon/organisatie verwijderd.');
+            ->with('status', __('catalogue.generated.t_5ff3537e392e6949'));
     }
 
     public function addAsset(Request $request, Person $person): RedirectResponse
@@ -184,13 +184,13 @@ class PersonController extends Controller
 
         if ($asset === null) {
             throw ValidationException::withMessages([
-                'asset_id' => 'De opgegeven foto kon niet worden gevonden.',
+                'asset_id' => __('catalogue.generated.t_535f3aaae9765ff2'),
             ]);
         }
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te koppelen.');
+            abort(403, __('catalogue.generated.t_2159d6168feb9347'));
         }
 
         // Check if relationship already exists
@@ -218,7 +218,7 @@ class PersonController extends Controller
         }
 
         return redirect()->route('catalogue.people.show', $person)
-            ->with('status', 'Foto succesvol gekoppeld met rol en onzekerheidsstatus.');
+            ->with('status', __('catalogue.generated.t_255d48686deb8b92'));
     }
 
     public function removeAsset(Request $request, Person $person, Asset $asset): RedirectResponse
@@ -227,7 +227,7 @@ class PersonController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te ontkoppelen.');
+            abort(403, __('catalogue.generated.t_01f6c1ce25102b10'));
         }
 
         $relationshipType = $request->query('relationship_type');
@@ -242,7 +242,7 @@ class PersonController extends Controller
         }
 
         return redirect()->route('catalogue.people.show', $person)
-            ->with('status', 'Fotokoppeling verwijderd.');
+            ->with('status', __('catalogue.generated.t_2dfe5d4490877d08'));
     }
 
     private function syncAliases(Person $person, string $rawAliases): void
@@ -269,7 +269,7 @@ class PersonController extends Controller
     {
         $user = $request->user();
         if ($user === null || (! $user->hasPermission('catalogue.manage') && ! $user->hasPermission('assets.update'))) {
-            abort(403, 'Onvoldoende rechten om personen en organisaties te beheren.');
+            abort(403, __('catalogue.generated.t_3e661e37cc623c25'));
         }
     }
 }

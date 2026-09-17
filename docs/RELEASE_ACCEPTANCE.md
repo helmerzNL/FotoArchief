@@ -638,28 +638,45 @@ embargo-, prullenbak- of versie-invalide kandidaten nooit een pagina. De
 featuretest bevestigt elk geval, de telling en dat een bezoeker zonder
 toestemmingsvakje geen request naar een provider veroorzaakt.
 
-23. `tests/Smoke/ai-image-load.php` is een begrensde, expliciet ingeschakelde
-fixture-harness (1--100 labels, 1--8 workers). Hij weigert iedere directory
-zonder markerbestand of met andere inhoud en kan dus geen gebruikershost of
-productie-installatie raken. De huidige meting is uitdrukkelijk alleen een
-metadata/queued-job-regressie; een echt 50k-binaire-corpus en
-concurrentieacceptatie zijn **GEBLOKKEERD** totdat representatieve bestanden en
-runtime zijn gekozen.
+23. `tests/Smoke/ai-image-load.php` is vervangen door een echte, begrensde,
+expliciet ingeschakelde binaire ingest-harness. `--images=1..25` genereert
+deterministische JPEG/PNG-bytes en bepaalt hoeveel bestanden werkelijk door
+`QuarantineUploadService`, `ProcessUpload`, derivativegeneratie en de private
+previewcontroller lopen. De harness weigert zonder markerbestand, gebruikt
+`sqlite::memory:` en een unieke fixture-opslagmap, en rapporteert uploads,
+geslaagde verwerkingen, mislukkingen, geverifieerde private previews, bytes en
+looptijd. De misleidende `--workers` optie is verwijderd: deze smoke is
+single-process en synthetisch. Een echt 50k-binaire-corpus, proxygedrag en
+concurrentieacceptatie blijven **GEBLOKKEERD** totdat representatieve bestanden
+en de gekozen runtime beschikbaar zijn.
 
-24. Er is in deze sessie geen browser-automatiseringstool aan de agent
-beschikbaar gesteld. Daarom zijn geen visuele/WCAG-observaties gefabriceerd en
-blijft desktop, 390px en toetsenbordvalidatie **PENDING** voor een geïsoleerde
-browserfixture of -server.
+24. **Vervangt de eerdere browser-onbeschikbaarverklaring voor alleen de foto-
+en taakresultaatpagina.** De geïntegreerde browser opende echte Laravel
+HTTP-routes met een synthetische `:memory:` fixture en
+`Http::preventStrayRequests`; tijdelijke statische HTML gebruikte lokale inline
+CSS en is na afloop verwijderd. Bij 1280 px was `documentWidth=1265`. Bij
+390 px waren `documentWidth=clientWidth=375` en de fotoresultaatbreedte
+`342.67`, zonder horizontale overflow. De taak-naar-fotolink behield
+`#ai-results`; na activeren stond `resultsTop` ongeveer op 0. Toetsenbordfocus
+ging van de accepteerknop met Tab naar het gelabelde veld `review_note`.
+Screenshots bevestigden de Nederlandse beschrijving, tag, provider/model en
+reviewknoppen; de knoppen waren `53.59px` hoog op desktop en mobiel. Er is in
+de statische kopie geen formulier verzonden; acceptatie/afwijzing blijft door
+de bestaande HTTP-featuretests gedekt. Dit is geïsoleerd routebewijs, geen
+live-siteacceptatie en geen volledige WCAG-audit.
 
-25. De AI-catalogusextractie blijft Nederlands als enige huidige UI-locale;
-cataloguscontroles bewaken letterlijke sleutels. De resterende settings- en
-resultaatoppervlakken worden in de volgende batch volledig naar `lang/nl/ai.php`
-verplaatst; deze batch claimt geen voltooide UI-lokalisatie.
+25. Alle AI-instellingen, zoek-/suggestiepagina's, foto- en taakresultaten,
+AI-statuslabels, provider-/modelconfiguratie en user-facing AI service- en
+controllerfouten zijn nu gecentraliseerd in `lang/nl/ai.php`. De resterende
+raw-text inventory sluit AI-bestanden niet meer uit om ontbrekende extractie te
+verbergen. Nederlands blijft de enige huidige UI-locale; dit is volledige
+AI-lokalisatie binnen die locale, geen meertalige UI.
 
 De Quality PHP-job voert nu fail-fast zowel de versleutelde-backupkopie-smoke
-als de lokale AI HTTP-contractstub uit. Zij gebruiken uitsluitend tijdelijke
-bestanden en loopback; de pgvector-provision blijft geen claim over het
-`database_json`-app-pad.
+als de lokale AI HTTP-contractstub en een kleine `ai-image-load --images=2`
+binaire ingest-smoke uit. Zij gebruiken uitsluitend tijdelijke bestanden,
+loopback of een gemarkeerde fixturemap; de pgvector-provision blijft geen claim
+over het `database_json`-app-pad.
 
 ### English
 
@@ -677,26 +694,117 @@ Revoked, privacy, embargo, trash, and version-invalid candidates therefore
 cannot consume a page. The feature test covers every case, count, and that a
 visitor without consent causes no provider request.
 
-23. `tests/Smoke/ai-image-load.php` is a bounded explicitly enabled fixture
-harness (1--100 labels, 1--8 workers). It refuses any directory without its
-marker or with other content, so it cannot target a user host or production
-installation. The present measurement is explicitly metadata/queued-job
-regression only; real 50k binary corpus and concurrency acceptance remain
-**BLOCKED** until representative files and runtime are selected.
+23. `tests/Smoke/ai-image-load.php` has been replaced with a real, bounded,
+explicitly enabled binary ingest harness. `--images=1..25` generates
+deterministic JPEG/PNG bytes and controls how many files actually pass through
+`QuarantineUploadService`, `ProcessUpload`, derivative generation, and the
+private preview controller. The harness refuses to run without the marker file,
+uses `sqlite::memory:` and a unique fixture storage directory, and reports
+uploads, successful processing, failures, verified private previews, bytes, and
+elapsed time. The misleading `--workers` option has been removed: this smoke is
+single-process and synthetic. A real 50k binary corpus, proxy behavior, and
+concurrency acceptance remain **BLOCKED** until representative files and the
+chosen runtime are available.
 
-24. No browser automation tool was made available to the agent in this session.
-No visual/WCAG observations have therefore been fabricated; desktop, 390px,
-and keyboard validation remain **PENDING** for an isolated browser fixture or
-server.
+24. **Supersedes the earlier browser-unavailable statement for the photo and
+task result pages only.** The integrated browser opened real Laravel HTTP routes
+with a synthetic `:memory:` fixture and `Http::preventStrayRequests`; temporary
+static HTML used local inline CSS and was removed afterward. At 1280px,
+`documentWidth=1265`. At 390px, `documentWidth=clientWidth=375` and the photo
+results width was `342.67`, with no horizontal overflow. Activating the
+task-to-photo link preserved `#ai-results` and placed `resultsTop` at
+approximately 0. Keyboard focus moved from the accept button via Tab to the
+labelled `review_note` field. Screenshots confirmed the Dutch description, tag,
+provider/model, and review controls; buttons were `53.59px` high on desktop and
+mobile. No form was submitted from the static copy; existing HTTP feature tests
+remain the evidence for accept/reject behavior. This is isolated route evidence,
+not live-site acceptance or a complete WCAG audit.
 
-25. AI catalogue extraction remains Dutch as the sole current UI locale;
-catalogue checks guard literal keys. The remaining settings and result surfaces
-will be fully moved to `lang/nl/ai.php` in the next batch; this batch does not
-claim completed UI localisation.
+25. All AI settings, search/suggestion pages, photo and task results, AI status
+labels, provider/model configuration, and user-facing AI service/controller
+errors are now centralized in `lang/nl/ai.php`. The remaining raw-text
+inventory no longer excludes AI files to hide missing extraction. Dutch remains
+the only current UI locale; this is complete AI localization within that locale,
+not a multilingual UI.
+
+## Items 26-30 final localization and documentation acceptance
+
+### Nederlands
+
+26. De operationele UI voor diagnose, verwerking, integriteit, OCR, opslag,
+bestandsversies, prullenbak en achtergrondtaken gebruikt `lang/nl/operations.php`.
+Ook de gedeelde operatienavigatie en compacte teller-/eenheidslabels zijn
+gecentraliseerd.
+
+27. Upload, fotodetail, collecties, personen, locaties, bronnen, bijdragers,
+tags, werklijsten, bulkacties en catalogustabellen gebruiken
+`lang/nl/catalogue.php`. Bestaande formulierbindingen, autorisatieblokken,
+escaping en markup zijn behouden.
+
+28. Publieke zoek-, collectie- en fotopagina's, publicatiebeheer en
+bezoekerssuggesties gebruiken `lang/nl/publication.php`. Stabiele HTTP-headers,
+downloadbestandsnamen, API-velden en provideridentifiers blijven technische
+waarden.
+
+29. Import/export gebruikt `lang/nl/exchange.php`; resterende
+identiteitsberichten gebruiken `lang/nl/identity.php`; gebruikers- en
+operatorberichten uit jobs, services en console-uitvoer gebruiken
+`lang/nl/shared.php`. SQL, query-aliassen, scannerprotocollen en statische
+Artisan-signatures/descriptions zijn expliciet als technische waarden
+geclassificeerd. De opnieuw gegenereerde inventaris bevat **0**
+gebruikerszichtbare regels.
+
+30. `LOCALIZATION.md`, `OPERATIONS.md`, `AI_CAPABILITY_DECISION.md` en dit
+acceptatiedocument zijn bijgewerkt. OCR, AI-indexering en import/export zijn niet
+meer als gepland beschreven; AI-providerinstellingen en versleutelde sleutels
+staan in de database en worden via de beheerinterface beheerd.
+
+**Status:** repositorychecks en volledige Pest-suite zijn lokaal uitgevoerd op
+Windows met de vastgelegde testinstellingen. Linux/Docker/PostgreSQL-CI blijft
+**PENDING** tot de ouder de uiteindelijke branch pusht. Live S3, echte provider-
+en modelproof, live `pgvector`, productie-HTTPS/passkeys, Komodo UI en volledige
+WCAG-acceptatie blijven **GEBLOKKEERD** op externe middelen; lokale fixtures
+worden daarvoor niet als bewijs gebruikt.
+
+### English
+
+26. The operations UI for diagnostics, processing, integrity, OCR, storage,
+file versions, trash, and background jobs uses `lang/nl/operations.php`. Shared
+operations navigation and compact count/unit labels are centralized as well.
+
+27. Upload, photo detail, collections, people, locations, sources,
+contributors, tags, worklists, bulk actions, and catalogue tables use
+`lang/nl/catalogue.php`. Existing form bindings, authorization blocks, escaping,
+and markup are preserved.
+
+28. Public search, collection, and photo pages, publication administration, and
+visitor suggestions use `lang/nl/publication.php`. Stable HTTP headers,
+download filenames, API fields, and provider identifiers remain technical
+values.
+
+29. Import/export uses `lang/nl/exchange.php`; remaining identity messages use
+`lang/nl/identity.php`; user/operator messages from jobs, services, and console
+output use `lang/nl/shared.php`. SQL, query aliases, scanner protocols, and
+static Artisan signatures/descriptions are explicitly classified as technical
+values. The regenerated inventory contains **0** user-visible entries.
+
+30. `LOCALIZATION.md`, `OPERATIONS.md`, `AI_CAPABILITY_DECISION.md`, and this
+acceptance document are updated. OCR, AI indexing, and import/export are no
+longer described as planned; AI provider settings and encrypted keys are stored
+in the database and managed through the administrator UI.
+
+**Status:** repository checks and the complete Pest suite were run locally on
+Windows with the committed test settings. Linux/Docker/PostgreSQL CI remains
+**PENDING** until the parent pushes the final branch. Live S3, real provider and
+model proof, live `pgvector`, production HTTPS/passkeys, Komodo UI, and complete
+WCAG acceptance remain **BLOCKED** on external resources; local fixtures are
+not presented as evidence for those gates.
 
 The Quality PHP job now fail-fast runs both the encrypted-backup-copy smoke
-check and local AI HTTP contract stub. They use temporary files and loopback
-only; pgvector provision remains no claim about the `database_json` app path.
+check, local AI HTTP contract stub, and a small `ai-image-load --images=2`
+binary ingest smoke. They use temporary files, loopback, or a marked fixture
+directory only; pgvector provision remains no claim about the `database_json`
+app path.
 
 ### Nederlands
 

@@ -165,6 +165,26 @@ relevantiedrempel met positieve en negatieve Nederlandse queries. Modeldownload,
 providerkosten en live uitvoering zijn geblokkeerd totdat de operator die
 middelen expliciet levert.
 
+### Synthetische binaire AI-ingest-smoke
+
+`tests/Smoke/ai-image-load.php` is nu een echte, herbruikbare binaire
+ingest-harness voor lokaal bewijs van de applicatiecode die FotoArchief zelf
+bezit. Hij weigert zonder `FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1`, gebruikt
+alleen een lege map met markerbestand `.fotoarchief-disposable-ai-load`, zet de
+Laravel testomgeving op met `sqlite::memory:` en schrijft private opslag naar
+die unieke fixturemap. De `--images=1..25` optie bepaalt hoeveel lokaal
+gegenereerde JPEG/PNG-bestanden echt door `QuarantineUploadService`,
+`ProcessUpload` en de private previewcontroller gaan. De uitvoer rapporteert
+geaccepteerde uploads, succesvol verwerkte items, mislukkingen,
+geverifieerde private JPEG-previews, bytes en looptijd.
+
+Er is bewust geen `--workers` optie meer. Deze smoke is single-process en
+synthetisch; hij bewijst geen queueconcurrency, proxygedrag, S3-latency,
+providerlatency of representatieve 50k-productiebelasting. Gebruik de echte
+gekozen deploymentruntime en een door de operator goedgekeurde beeldcorpus voor
+die acceptatie. CI draait alleen een kleine `--images=2` controle als regressie
+op echte binaire upload/ingest/preview-code.
+
 ### Compatibele embeddings en vectorbackend
 
 Semantische beeldzoekopdrachten vereisen echte multimodale beeld- en
@@ -340,6 +360,26 @@ failure rate, retry behavior, CPU/GPU/memory profile, and a chosen relevance
 threshold with positive and negative Dutch queries. Model download, provider
 spend, and live execution are blocked until the operator explicitly supplies
 those resources.
+
+### Synthetic binary AI ingest smoke
+
+`tests/Smoke/ai-image-load.php` is now a real, reusable binary ingest harness
+for local evidence of the application code FotoArchief owns. It refuses to run
+without `FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1`, accepts only an empty
+directory with the `.fotoarchief-disposable-ai-load` marker, boots the Laravel
+test environment with `sqlite::memory:`, and writes private storage to that
+unique fixture directory. The `--images=1..25` option controls how many locally
+generated JPEG/PNG files actually pass through `QuarantineUploadService`,
+`ProcessUpload`, and the private preview controller. Output reports accepted
+uploads, successfully processed items, failures, verified private JPEG
+previews, bytes, and elapsed time.
+
+There is deliberately no `--workers` option anymore. This smoke is
+single-process and synthetic; it does not prove queue concurrency, proxy
+behavior, S3 latency, provider latency, or representative 50k production load.
+Use the real chosen deployment runtime and an operator-approved image corpus
+for that acceptance. CI runs only a small `--images=2` check as a regression for
+real binary upload/ingest/preview code.
 
 ### Compatible embeddings and vector backend
 

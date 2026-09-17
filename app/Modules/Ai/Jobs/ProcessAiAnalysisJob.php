@@ -58,7 +58,7 @@ class ProcessAiAnalysisJob extends OperationJob
             try {
                 $candidate = Asset::query()->with('files')->find($assetId);
                 if (! $candidate instanceof Asset) {
-                    throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
+                    throw new RuntimeException(__('ai.errors.asset_missing', ['asset' => $assetId]));
                 }
                 $asset = $candidate;
                 ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
@@ -87,7 +87,7 @@ class ProcessAiAnalysisJob extends OperationJob
                 $asset->refresh();
                 $file->refresh()->load('asset');
                 if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                    throw new RuntimeException("Foto {$assetId} is tijdens de AI-analyse gewijzigd. Probeer de taak opnieuw.");
+                    throw new RuntimeException(__('ai.errors.asset_changed_analysis', ['asset' => $assetId]));
                 }
 
                 $aiRun = AiRun::query()->firstOrCreate(

@@ -12,8 +12,9 @@ deployments, not required before the onboarding wizard.
   Caddy or Nginx.
 - `worker`: waits for completed installation, then processes the dedicated
   database `ingest` queue: validation, optional scanning, checksums,
-  technical metadata, private derivatives and retry recovery.
-  OCR, indexing and import/export jobs are still planned.
+  technical metadata, private derivatives, OCR, AI indexing, import/export
+  work and retry recovery. These features are implemented; availability still
+  depends on their documented configuration and worker prerequisites.
 - `scheduler`: waits for completed installation and runs scheduled Laravel tasks. Prefer the scheduler container;
   use a host cron/systemd timer running `php artisan schedule:run` every minute
   only as a fallback.

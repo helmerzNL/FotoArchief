@@ -71,7 +71,7 @@ class WebAuthnCeremony
                 $this->transports($payload['transports'] ?? null),
             );
         } catch (Throwable) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey kon niet veilig worden geregistreerd. Probeer opnieuw.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_60d18f15114728d1')]);
         }
     }
 
@@ -96,7 +96,7 @@ class WebAuthnCeremony
             );
             $this->signatureCounter = $server->getSignatureCounter();
         } catch (Throwable) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey is niet geaccepteerd.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_0352497aa8179233')]);
         }
     }
 
@@ -132,11 +132,11 @@ class WebAuthnCeremony
     {
         $value = $payload[$key] ?? null;
         if (! is_string($value) || $value === '') {
-            throw ValidationException::withMessages(['passkey' => 'De passkey-aanvraag is onvolledig.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_e12cf689bb8cd42e')]);
         }
         $decoded = base64_decode($value, true);
         if ($decoded === false) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey-aanvraag is ongeldig.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_5f8519365a6860a8')]);
         }
 
         return $decoded;

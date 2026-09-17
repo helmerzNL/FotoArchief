@@ -1,21 +1,21 @@
 @extends('layouts.app')
 @section('title', 'Ontdek de collectie - FotoArchief')
 @section('content')
-    <p class="eyebrow">Publieke collectie</p>
-    <h1>@if(request()->routeIs('public.home'))FotoArchief @else Ontdek foto’s @endif</h1>
-    @if(request()->routeIs('public.home'))<p class="intro">Doorzoek de gepubliceerde foto's uit het archief. Elke foto toont bronvermelding, rechten en een permalink.</p>@endif
+    <p class="eyebrow">{{ __('publication.generated.t_05722e41037c766f') }}</p>
+    <h1>@if(request()->routeIs('public.home'))FotoArchief @else {{ __('publication.generated.t_82e7da97cbd81b7c') }} @endif</h1>
+    @if(request()->routeIs('public.home'))<p class="intro">{{ __('publication.generated.t_05e1a0396ccfa924') }}</p>@endif
     <form class="actions" method="get" action="{{ route('public.discover') }}">
-        <label for="q">Zoeken op titel of beschrijving</label>
+        <label for="q">{{ __('publication.generated.t_a63bc3b3e256d205') }}</label>
         <input id="q" name="q" value="{{ request('q') }}" maxlength="200">
         <label for="tag">Trefwoord</label>
         <select id="tag" name="tag">
-            <option value="">Alle trefwoorden</option>
+            <option value="">{{ __('publication.generated.t_84910209468b482a') }}</option>
             @foreach($tags as $tag)
                 <option value="{{ $tag->slug }}" @selected(request('tag') === $tag->slug)>{{ $tag->name }}</option>
             @endforeach
         </select>
         <button class="secondary">Filteren</button>
-        <a href="{{ route('public.discover') }}">Filters wissen</a>
+        <a href="{{ route('public.discover') }}">{{ __('publication.generated.t_b81cc74c63510f91') }}</a>
     </form>
     <form class="actions" method="get" action="{{ route('public.discover') }}">
         <label for="semantic_q">{{ __('ai.public.label') }}</label>
@@ -43,10 +43,10 @@
                 </a>
             </article>
         @empty
-            <p>Geen foto’s gevonden.</p>
+            <p>{{ __('publication.generated.t_4b76db9d96d9f49c') }}</p>
         @endforelse
     </section>
     @if($nextCursor)
-        <a class="button secondary" href="{{ route('public.discover', array_filter(['q' => request('q'), 'tag' => request('tag'), 'collection' => request('collection'), 'cursor' => $nextCursor])) }}">Volgende pagina</a>
+        <a class="button secondary" href="{{ route('public.discover', array_filter(['q' => request('q'), 'tag' => request('tag'), 'collection' => request('collection'), 'cursor' => $nextCursor])) }}">{{ __('publication.generated.t_78904cbff656c1f8') }}</a>
     @endif
 @endsection

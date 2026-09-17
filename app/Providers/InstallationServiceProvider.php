@@ -24,7 +24,7 @@ final class InstallationServiceProvider extends ServiceProvider
     {
         Event::listen(CommandStarting::class, function (CommandStarting $event): void {
             if ($event->command === 'config:cache' && config('installation.enabled') && ! app(InstallationStore::class)->completed()) {
-                throw new RuntimeException('Voltooi de installatie voordat je de configuratie cachet.');
+                throw new RuntimeException(__('shared.generated.t_9946fb38d885cc30'));
             }
         });
     }

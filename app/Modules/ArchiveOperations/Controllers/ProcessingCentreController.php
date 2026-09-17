@@ -49,7 +49,7 @@ class ProcessingCentreController extends Controller
 
         return redirect()
             ->back()
-            ->with('status', 'Taak opnieuw klaargezet in de verwerkingswachtrij.');
+            ->with('status', __('operations.generated.t_afe580e11be4225b'));
     }
 
     public function retryAll(Request $request): RedirectResponse
@@ -73,6 +73,6 @@ class ProcessingCentreController extends Controller
 
         return redirect()
             ->back()
-            ->with('status', 'Taak handmatig geannuleerd.');
+            ->with('status', __('operations.generated.t_608e14856421fb0f'));
     }
 }

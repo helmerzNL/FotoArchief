@@ -39,7 +39,7 @@ class TesseractOcrService
                 'binary' => $binary,
                 'version' => null,
                 'languages' => [],
-                'status_message' => 'OCR is uitgeschakeld via OCR_ENABLED=false.',
+                'status_message' => __('operations.generated.t_5f3f4462187251d4'),
             ];
         }
 
@@ -55,7 +55,7 @@ class TesseractOcrService
                     'binary' => $binary,
                     'version' => null,
                     'languages' => [],
-                    'status_message' => 'Tesseract binary kon niet worden uitgevoerd: '.$versionProcess->getErrorOutput(),
+                    'status_message' => __('operations.generated.t_ea64f6e299c2df4c').$versionProcess->getErrorOutput(),
                 ];
             }
 
@@ -88,7 +88,7 @@ class TesseractOcrService
                 'binary' => $binary,
                 'version' => null,
                 'languages' => [],
-                'status_message' => 'Fout bij controleren van Tesseract: '.$e->getMessage(),
+                'status_message' => __('operations.generated.t_7b3b6dc3bec2e0cb').$e->getMessage(),
             ];
         }
     }
@@ -121,7 +121,7 @@ class TesseractOcrService
         if (! $diagnostics['enabled']) {
             $ocrRecord->fill([
                 'status' => 'disabled',
-                'error_message' => 'OCR is uitgeschakeld in de configuratie.',
+                'error_message' => __('operations.generated.t_2d7cfd72f8feff1a'),
                 'processed_at' => now(),
             ])->save();
 
@@ -131,7 +131,7 @@ class TesseractOcrService
         if (! $diagnostics['available']) {
             $ocrRecord->fill([
                 'status' => 'failed',
-                'error_message' => 'Tesseract executable niet beschikbaar: '.$diagnostics['status_message'],
+                'error_message' => __('operations.generated.t_076b96c01c122a08').$diagnostics['status_message'],
                 'processed_at' => now(),
             ])->save();
 
@@ -157,7 +157,7 @@ class TesseractOcrService
         if (! is_string($tempPath)) {
             $ocrRecord->fill([
                 'status' => 'failed',
-                'error_message' => 'Aanmaken van tijdelijk bestand mislukt.',
+                'error_message' => __('operations.generated.t_3940232747566ace'),
                 'processed_at' => now(),
             ])->save();
 
@@ -177,7 +177,7 @@ class TesseractOcrService
             if (! $process->isSuccessful()) {
                 $ocrRecord->fill([
                     'status' => 'failed',
-                    'error_message' => 'Tesseract verwerking mislukt: '.$process->getErrorOutput(),
+                    'error_message' => __('operations.generated.t_9e2f31d2e7b73be9').$process->getErrorOutput(),
                     'processed_at' => now(),
                 ])->save();
 
@@ -198,7 +198,7 @@ class TesseractOcrService
         } catch (Throwable $e) {
             $ocrRecord->fill([
                 'status' => 'failed',
-                'error_message' => 'Onverwachte OCR-fout: '.$e->getMessage(),
+                'error_message' => __('operations.generated.t_c83cb019b6e6608f').$e->getMessage(),
                 'processed_at' => now(),
             ])->save();
 

@@ -73,7 +73,7 @@ class LocationController extends Controller
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'name' => 'Er bestaat al een locatie met deze naam onder de geselecteerde bovenliggende locatie.',
+                'name' => __('catalogue.generated.t_f244b3ce8162fd88'),
             ]);
         }
 
@@ -95,7 +95,7 @@ class LocationController extends Controller
         });
 
         return redirect()->route('catalogue.locations.show', $location)
-            ->with('status', 'Locatie succesvol aangemaakt.');
+            ->with('status', __('catalogue.generated.t_e3263e192f6daec1'));
     }
 
     public function show(Request $request, Location $location): View
@@ -143,7 +143,7 @@ class LocationController extends Controller
             $invalidParentIds = array_merge([$location->id], $location->allDescendantIds());
             if (in_array($parentId, $invalidParentIds, true)) {
                 throw ValidationException::withMessages([
-                    'parent_id' => 'Een locatie kan niet onder zichzelf of een sublocatie worden geplaatst.',
+                    'parent_id' => __('catalogue.generated.t_e230ebfa26a95d0a'),
                 ]);
             }
         }
@@ -157,7 +157,7 @@ class LocationController extends Controller
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'name' => 'Er bestaat al een andere locatie met deze naam onder de geselecteerde bovenliggende locatie.',
+                'name' => __('catalogue.generated.t_98fc690a3c9ae9fe'),
             ]);
         }
 
@@ -177,7 +177,7 @@ class LocationController extends Controller
         });
 
         return redirect()->route('catalogue.locations.show', $location)
-            ->with('status', 'Locatie succesvol bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_49dc77ac39655ebd'));
     }
 
     public function destroy(Request $request, Location $location): RedirectResponse
@@ -194,7 +194,7 @@ class LocationController extends Controller
         });
 
         return redirect()->route('catalogue.locations.index')
-            ->with('status', 'Locatie verwijderd.');
+            ->with('status', __('catalogue.generated.t_2955d8e616ad67ed'));
     }
 
     public function addAsset(Request $request, Location $location): RedirectResponse
@@ -214,13 +214,13 @@ class LocationController extends Controller
 
         if ($asset === null) {
             throw ValidationException::withMessages([
-                'asset_id' => 'De opgegeven foto kon niet worden gevonden.',
+                'asset_id' => __('catalogue.generated.t_535f3aaae9765ff2'),
             ]);
         }
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te koppelen.');
+            abort(403, __('catalogue.generated.t_2159d6168feb9347'));
         }
 
         $existing = DB::table('asset_locations')
@@ -247,7 +247,7 @@ class LocationController extends Controller
         }
 
         return redirect()->route('catalogue.locations.show', $location)
-            ->with('status', 'Foto succesvol gekoppeld aan locatie.');
+            ->with('status', __('catalogue.generated.t_30c0b3183e73f598'));
     }
 
     public function removeAsset(Request $request, Location $location, Asset $asset): RedirectResponse
@@ -256,7 +256,7 @@ class LocationController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te ontkoppelen.');
+            abort(403, __('catalogue.generated.t_01f6c1ce25102b10'));
         }
 
         $relationshipType = $request->query('relationship_type');
@@ -271,7 +271,7 @@ class LocationController extends Controller
         }
 
         return redirect()->route('catalogue.locations.show', $location)
-            ->with('status', 'Locatiekoppeling verwijderd.');
+            ->with('status', __('catalogue.generated.t_d2f077dd2df74867'));
     }
 
     private function syncAliases(Location $location, string $rawAliases): void
@@ -298,7 +298,7 @@ class LocationController extends Controller
     {
         $user = $request->user();
         if ($user === null || (! $user->hasPermission('catalogue.manage') && ! $user->hasPermission('assets.update'))) {
-            abort(403, 'Onvoldoende rechten om locaties te beheren.');
+            abort(403, __('catalogue.generated.t_a451388402802289'));
         }
     }
 }

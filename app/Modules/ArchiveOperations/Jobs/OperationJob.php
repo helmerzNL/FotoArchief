@@ -141,7 +141,7 @@ abstract class OperationJob implements ShouldQueue
                             'failed' => $run->failed_items,
                             'truncated' => false,
                         ]),
-                        'error_message' => $run->error_message ?? 'Geen enkel item kon worden verwerkt. Bekijk het auditlog voor de concrete oorzaak.',
+                        'error_message' => $run->error_message ?? __('operations.generated.t_fe6dbc5f320d76f2'),
                     ])->save();
 
                     return;
@@ -179,8 +179,8 @@ abstract class OperationJob implements ShouldQueue
                         'resume_cursor' => $run->payload['cursor'] ?? null,
                     ]),
                     'error_message' => $stalled
-                        ? 'De bewerking maakte geen voortgang meer en is gestopt. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.'
-                        : 'De bewerking bereikte de maximale omvang van '.(self::MAX_CHUNKS * self::CHUNK_SIZE).' items en is niet afgerond. Start opnieuw om verder te gaan vanaf het laatst verwerkte bestand.',
+                        ? __('operations.generated.t_00f72eaf625b0a81')
+                        : __('operations.generated.t_0dedf429a0bb87e1').(self::MAX_CHUNKS * self::CHUNK_SIZE).__('operations.generated.t_22e0aac3e7ccde63'),
                 ])->save();
 
                 return;
@@ -217,7 +217,7 @@ abstract class OperationJob implements ShouldQueue
             'finished_at' => now(),
             'error_message' => $exception !== null
                 ? $this->describe($exception)
-                : 'De bewerking is mislukt. Controleer worker, opslag en rechten en probeer opnieuw.',
+                : __('operations.generated.t_e8f286da9110e7ea'),
         ])->save();
     }
 

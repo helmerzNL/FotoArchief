@@ -5,7 +5,7 @@
     <p class="eyebrow">Publicatie</p>
     <h1>{{ $asset->title ?? $asset->accession_number }}</h1>
     <p class="intro">Status: <strong>{{ $publication?->status ?? 'concept, nog niet aangevraagd' }}</strong>
-        @if($publication?->needsReReview())<br><strong>Metadata is gewijzigd sinds publicatie; foto is publiek verborgen tot herbeoordeling.</strong>@endif
+        @if($publication?->needsReReview())<br><strong>{{ __('publication.generated.t_1218c562633b3a69') }}</strong>@endif
     </p>
     @if($publication?->permalink_slug)
         <p>Permalink: <code>/foto/{{ $publication->permalink_slug }}</code></p>
@@ -13,18 +13,18 @@
 
     @if(!$publication || in_array($publication->status, ['draft'], true))
         <section class="card">
-            <h2>Aanvragen voor review</h2>
+            <h2>{{ __('publication.generated.t_a798dc1087062d58') }}</h2>
             <form method="post" action="{{ route('admin.publications.submit', $asset) }}">
                 @csrf
-                <label><input type="checkbox" name="privacy_cleared" value="1" required> Privacy gecontroleerd: geen identificeerbare personen zonder toestemming zichtbaar</label>
+                <label><input type="checkbox" name="privacy_cleared" value="1" required> {{ __('publication.generated.t_8ee0972f5537b520') }}</label>
                 <label>Downloadbeleid
                     <select name="download_policy">
-                        <option value="preview_only">Voorbeeldweergave downloadbaar</option>
-                        <option value="none">Alleen bekijken, geen download</option>
+                        <option value="preview_only">{{ __('publication.generated.t_2e191d996aeb8876') }}</option>
+                        <option value="none">{{ __('publication.generated.t_e1a4ac883863c604') }}</option>
                     </select>
                 </label>
                 <label>Bronvermelding <input type="text" name="credit_line" maxlength="500"></label>
-                <label>Embargo tot (optioneel) <input type="date" name="embargo_until"></label>
+                <label>{{ __('publication.generated.t_bec92f3cceb1d55c') }} <input type="date" name="embargo_until"></label>
                 <button type="submit">Aanvragen</button>
             </form>
         </section>
@@ -48,7 +48,7 @@
             <form method="post" action="{{ route('admin.publications.revoke', $asset) }}">
                 @csrf
                 <label>Reden <textarea name="revoked_reason" required maxlength="2000"></textarea></label>
-                <button type="submit">Direct intrekken</button>
+                <button type="submit">{{ __('publication.generated.t_100e8cf989107ba5') }}</button>
             </form>
         </section>
     @endif

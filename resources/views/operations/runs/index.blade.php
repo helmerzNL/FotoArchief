@@ -2,9 +2,9 @@
 @section('title', 'Achtergrondtaken - FotoArchief Operaties')
 @section('content')
     @include('operations._nav')
-    <p class="eyebrow">Operaties &middot; Achtergrondtaken</p>
+    <p class="eyebrow">{{ __('operations.generated.t_a40762c3c9123975') }}</p>
     <h1>Achtergrondtaken</h1>
-    <p class="intro">Alle zware archiefbewerkingen draaien op de ingest-wachtrij met een zichtbare status, foutmelding en herpoging.</p>
+    <p class="intro">{{ __('operations.generated.t_9c33349ac53589cc') }}</p>
 
     @include('operations.runs._panel', ['runs' => $runs])
 

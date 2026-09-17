@@ -2,36 +2,36 @@
 @section('title', 'OCR Tekstherkenning - FotoArchief Operaties')
 @section('content')
     @include('operations._nav')
-    <p class="eyebrow">Operaties &middot; Tekstverwerking</p>
-    <h1>Tesseract OCR Tekstherkenning</h1>
-    <p class="intro">Achtergrondtekstherkenning voor archiefscans met machine-tekstlabels, archivarissencorrectie en doorzoekbaarheid.</p>
+    <p class="eyebrow">{{ __('operations.generated.t_a70fa03342889655') }}</p>
+    <h1>{{ __('operations.generated.t_c376b363af0d22aa') }}</h1>
+    <p class="intro">{{ __('operations.generated.t_b8c11dea97fd92be') }}</p>
 
     {{-- Diagnostiek Card --}}
     <section class="card" style="margin-bottom: 2rem;">
-        <h2>OCR Engine Status</h2>
+        <h2>{{ __('operations.generated.t_4e9196a03d483453') }}</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
             <div>
                 <strong>Configuratiestatus:</strong>
                 <p>
                     @if($diagnostics['enabled'])
-                        <span style="color: #059669; font-weight: bold;">Ingeschakeld (OCR_ENABLED=true)</span>
+                        <span style="color: #059669; font-weight: bold;">{{ __('operations.generated.t_a94da4f43c16de24') }}</span>
                     @else
-                        <span style="color: #dc2626; font-weight: bold;">Uitgeschakeld (OCR_ENABLED=false)</span>
+                        <span style="color: #dc2626; font-weight: bold;">{{ __('operations.generated.t_1e86c0fb71bbfdc5') }}</span>
                     @endif
                 </p>
             </div>
             <div>
-                <strong>Executable Status:</strong>
+                <strong>{{ __('operations.generated.t_da836c86561bd59c') }}</strong>
                 <p>
                     @if($diagnostics['available'])
                         <span style="color: #059669; font-weight: bold;">Beschikbaar</span>
                     @else
-                        <span style="color: #d97706; font-weight: bold;">Niet Beschikbaar</span>
+                        <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_021d08e92e4b3adc') }}</span>
                     @endif
                 </p>
             </div>
             <div>
-                <strong>Engine Versie:</strong>
+                <strong>{{ __('operations.generated.t_3598ad25e588427a') }}</strong>
                 <p>{{ $diagnostics['version'] ?? 'Geen executable gevonden' }}</p>
             </div>
             <div>
@@ -44,9 +44,9 @@
 
     {{-- Zoekbalk --}}
     <section class="card" style="margin-bottom: 2rem;">
-        <h2>Doorzoek Herkende Archiefteksten</h2>
+        <h2>{{ __('operations.generated.t_2d2bb01619bb1043') }}</h2>
         <form method="get" action="{{ route('admin.operations.ocr.index') }}" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-            <input type="text" name="q" value="{{ $queryString ?? '' }}" placeholder="Zoek op woorden in machine- of gecorrigeerde tekst..." style="flex: 1; padding: 0.5rem;">
+            <input type="text" name="q" value="{{ $queryString ?? '' }}" placeholder="{{ __('operations.generated.t_8dee5dc02b65ff46') }}" style="flex: 1; padding: 0.5rem;">
             <button type="submit" class="button">Zoeken</button>
             @if($queryString)
                 <a href="{{ route('admin.operations.ocr.index') }}" class="button secondary" style="text-decoration: none; align-content: center;">Wissen</a>
@@ -56,9 +56,9 @@
 
     {{-- Resultatenlijst --}}
     <section class="card">
-        <h2>OCR Dossiers &amp; Teksten ({{ $ocrRecords->total() }})</h2>
+        <h2>{{ __('operations.generated.t_a3157a7322e183b4') }}{{ $ocrRecords->total() }})</h2>
         @if($ocrRecords->isEmpty())
-            <p>Geen OCR-resultaten gevonden.</p>
+            <p>{{ __('operations.generated.t_a2ab9823f8ec3bc5') }}</p>
         @else
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -67,7 +67,7 @@
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
                         <th style="padding: 0.75rem;">Status</th>
-                        <th style="padding: 0.75rem;">Machine-tekst Preview</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_206cae1ea77a0db7') }}</th>
                         <th style="padding: 0.75rem;">Bewerkt?</th>
                         <th style="padding: 0.75rem;">Actie</th>
                     </tr>
@@ -93,13 +93,13 @@
                             </td>
                             <td style="padding: 0.75rem;">
                                 @if($rec->is_edited)
-                                    <span style="color: #2563eb; font-weight: bold;">Gecorrigeerd door Archivaris</span>
+                                    <span style="color: #2563eb; font-weight: bold;">{{ __('operations.generated.t_59c6040bf3ded0a7') }}</span>
                                 @else
                                     <span style="color: #4b5563;">Machine-gegenereerd</span>
                                 @endif
                             </td>
                             <td style="padding: 0.75rem;">
-                                <a href="{{ route('admin.operations.ocr.show', $rec) }}" class="button" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">Bekijk / Bewerk</a>
+                                <a href="{{ route('admin.operations.ocr.show', $rec) }}" class="button" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none;">{{ __('operations.generated.t_0341da55b5ee325c') }}</a>
                             </td>
                         </tr>
                     @endforeach

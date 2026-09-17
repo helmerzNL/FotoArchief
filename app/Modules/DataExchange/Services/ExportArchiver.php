@@ -66,10 +66,10 @@ class ExportArchiver
             ? $this->metadataJson($export, $assets, $skipped)
             : $this->csv->toString(self::COLUMNS, array_map(fn (Asset $asset): array => $this->row($asset), $assets));
         if (strlen($contents) > $maxBytes) {
-            throw new RuntimeException('Export exceeds the configured maximum size.');
+            throw new RuntimeException(__('exchange.generated.t_5479931b50fa195a'));
         }
         if (! Storage::disk($diskName)->put($storageKey, $contents, ['visibility' => 'private'])) {
-            throw new RuntimeException('Export write failed.');
+            throw new RuntimeException(__('exchange.generated.t_021d47373ce6f04b'));
         }
 
         return [
@@ -96,25 +96,25 @@ class ExportArchiver
     private function buildPackage(DataExport $export, array $assets, array $skipped, string $diskName, string $storageKey, int $maxBytes): array
     {
         if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('The zip extension is required for package exports.');
+            throw new RuntimeException(__('exchange.generated.t_5b51f0767771ed5b'));
         }
         $archivePath = tempnam(sys_get_temp_dir(), 'fa-export');
         if ($archivePath === false) {
-            throw new RuntimeException('Export workspace unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_544fca40f2f0af3c'));
         }
         $temporaryFiles = [];
         $zip = new ZipArchive;
         $open = false;
         try {
             if ($zip->open($archivePath, ZipArchive::OVERWRITE | ZipArchive::CREATE) !== true) {
-                throw new RuntimeException('Export archive could not be created.');
+                throw new RuntimeException(__('exchange.generated.t_2849df25e55273aa'));
             }
             $open = true;
             $entries = [];
             foreach ($assets as $asset) {
                 foreach ($asset->files as $file) {
                     if ($file->storage_disk === null) {
-                        $skipped[] = ['accession_number' => (string) $asset->accession_number, 'reason' => 'Bestand heeft geen opslagschijf (oude registratie).'];
+                        $skipped[] = ['accession_number' => (string) $asset->accession_number, 'reason' => __('exchange.generated.t_09124f5cfd7b3e00')];
 
                         continue;
                     }
@@ -145,23 +145,23 @@ class ExportArchiver
                 $entries,
             ))."\n");
             if (! $zip->close()) {
-                throw new RuntimeException('Export archive could not be finished.');
+                throw new RuntimeException(__('exchange.generated.t_23d8bf6c37b4a612'));
             }
             $open = false;
             $size = filesize($archivePath);
             if ($size === false) {
-                throw new RuntimeException('Export archive unreadable.');
+                throw new RuntimeException(__('exchange.generated.t_dbb1049321c1e97f'));
             }
             if ($size > $maxBytes) {
-                throw new RuntimeException('Export exceeds the configured maximum size.');
+                throw new RuntimeException(__('exchange.generated.t_5479931b50fa195a'));
             }
             $stream = fopen($archivePath, 'rb');
             if ($stream === false) {
-                throw new RuntimeException('Export archive unreadable.');
+                throw new RuntimeException(__('exchange.generated.t_dbb1049321c1e97f'));
             }
             try {
                 if (! Storage::disk($diskName)->writeStream($storageKey, $stream, ['visibility' => 'private'])) {
-                    throw new RuntimeException('Export write failed.');
+                    throw new RuntimeException(__('exchange.generated.t_021d47373ce6f04b'));
                 }
             } finally {
                 fclose($stream);
@@ -194,18 +194,18 @@ class ExportArchiver
         $disk = Storage::disk((string) $file->storage_disk);
         $source = $disk->readStream($key);
         if (! is_resource($source)) {
-            throw new RuntimeException('Export source file unreadable.');
+            throw new RuntimeException(__('exchange.generated.t_75c9609ac79821fd'));
         }
         $temporary = tempnam(sys_get_temp_dir(), 'fa-item');
         if ($temporary === false) {
             fclose($source);
-            throw new RuntimeException('Export workspace unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_544fca40f2f0af3c'));
         }
         $temporaryFiles[] = $temporary;
         $target = fopen($temporary, 'wb');
         if ($target === false) {
             fclose($source);
-            throw new RuntimeException('Export workspace unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_544fca40f2f0af3c'));
         }
         try {
             stream_copy_to_stream($source, $target);
@@ -214,7 +214,7 @@ class ExportArchiver
             fclose($target);
         }
         if (! $zip->addFile($temporary, $path)) {
-            throw new RuntimeException('Export archive rejected a file.');
+            throw new RuntimeException(__('exchange.generated.t_c9c21be6ab1af061'));
         }
         $size = filesize($temporary);
 

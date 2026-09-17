@@ -46,7 +46,7 @@ class StorageMigrationService
     public function prepareMigration(string $sourceDisk, string $targetDisk, User $user): StorageMigration
     {
         if ($sourceDisk === $targetDisk) {
-            throw new RuntimeException('Bron- en doelschijf mogen niet identiek zijn.');
+            throw new RuntimeException(__('operations.generated.t_ec41088f129fa460'));
         }
 
         return StorageMigration::create([
@@ -255,7 +255,7 @@ class StorageMigrationService
     public function cutover(StorageMigration $migration, User $user): void
     {
         if ($migration->status !== 'verified') {
-            throw new RuntimeException('Alleen volledig geverifieerde migraties kunnen omgezet worden (cutover).');
+            throw new RuntimeException(__('operations.generated.t_7ab5137d22fa83a3'));
         }
 
         DB::transaction(function () use ($migration): void {
@@ -273,7 +273,7 @@ class StorageMigrationService
     public function cleanupSourceFiles(StorageMigration $migration, User $user): int
     {
         if ($migration->status !== 'cutover_completed') {
-            throw new RuntimeException('Bronbestanden mogen pas worden opgeruimd na succesvolle cutover.');
+            throw new RuntimeException(__('operations.generated.t_5f360cd8359c9635'));
         }
 
         $sourceStorage = Storage::disk($migration->source_disk);

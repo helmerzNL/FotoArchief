@@ -51,8 +51,8 @@ class ProcessUpload implements ShouldQueue
             $reason = implode(' ', array_merge(...array_values($exception->errors())));
             $this->finish($upload, $token, 'rejected', $reason);
         } catch (Throwable $exception) {
-            Log::error('Photo processing failed.', ['upload_id' => $upload->id, 'exception_type' => $exception::class]);
-            $this->finish($upload, $token, 'queued', 'Verwerking tijdelijk mislukt; automatische herpoging volgt.');
+            Log::error(__('shared.generated.t_69080f22096b7014'), ['upload_id' => $upload->id, 'exception_type' => $exception::class]);
+            $this->finish($upload, $token, 'queued', __('shared.generated.t_14b2f6bd20704c44'));
             throw $exception;
         }
     }
@@ -62,7 +62,7 @@ class ProcessUpload implements ShouldQueue
         $upload = QuarantineUpload::query()->find($this->uploadId);
         if ($upload !== null && in_array($upload->status, ['queued', 'running'], true)) {
             DB::transaction(function () use ($upload): void {
-                $upload->update(['status' => 'failed', 'claim_token' => null, 'failure_reason' => 'Verwerking mislukt. Controleer worker, opslag en scanner; probeer daarna opnieuw.']);
+                $upload->update(['status' => 'failed', 'claim_token' => null, 'failure_reason' => __('shared.generated.t_01c175f3a99f2038')]);
                 AssetAuditEvent::query()->create(['asset_id' => $upload->asset_id, 'event_type' => 'upload.failed', 'details' => ['upload_id' => $upload->id]]);
             });
         }

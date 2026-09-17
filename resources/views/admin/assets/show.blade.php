@@ -1,48 +1,48 @@
 @extends('layouts.app')
-@section('title', ($asset->title ?: $asset->accession_number).' - FotoArchief')
+@section('title', ($asset->title ?: $asset->accession_number).__('catalogue.fragments.application_suffix'))
 @section('content')
-<a href="{{ route('admin.assets.index') }}">Terug naar alle foto’s</a>
+<a href="{{ route('admin.assets.index') }}">{{ __('catalogue.generated.t_1453c8c37526025e') }}</a>
 <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
-<p>{{ $asset->accession_number }} · Concept / privé · Revisie {{ $asset->lock_version }}</p>
-<p><a href="#ai-results">AI-resultaten bekijken</a></p>
+<p>{{ $asset->accession_number }} {{ __('catalogue.generated.t_5fac28e5672fef1d') }} {{ $asset->lock_version }}</p>
+<p><a href="#ai-results">{{ __('catalogue.generated.t_d22d67d7e9ebfa16') }}</a></p>
 @php($file = $asset->files->first())
 @php($right = $asset->rights->sortByDesc('id')->first())
 @if($file && isset($file->derivatives['preview1200']))
     <img class="preview" src="{{ route('admin.assets.media', [$asset, $file, 'preview1200']) }}" alt="Voorbeeld van {{ $asset->title ?: $asset->accession_number }}">
-    <p><a href="{{ route('admin.assets.media', [$asset, $file, 'preview2000']) }}">Groot privévoorbeeld (maximaal 2000 px)</a></p>
+    <p><a href="{{ route('admin.assets.media', [$asset, $file, 'preview2000']) }}">{{ __('catalogue.generated.t_213d129cfee83c16') }}</a></p>
 @endif
 <section class="card"><h2>Verwerking</h2>
     @foreach($asset->uploads as $upload)
-        <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} poging(en)</p>
+        <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} {{ __('catalogue.fragments.attempts') }}</p>
         @if($upload->failure_reason)<p role="alert">{{ $upload->failure_reason }}</p>@endif
-        @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">Verwerkingsdetails en logboek van {{ $upload->original_filename }}</a></p>@endcanany
+        @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">{{ __('catalogue.generated.t_02d801eb4453bb6e') }} {{ $upload->original_filename }}</a></p>@endcanany
         @can('update', $asset)
             @if($upload->status === 'failed' || ($upload->status === 'running' && $upload->started_at?->lt(now()->subMinutes(4))))
-                <form method="post" action="{{ route('admin.assets.retry', [$asset, $upload]) }}">@csrf<button>Verwerking opnieuw proberen</button></form>
+                <form method="post" action="{{ route('admin.assets.retry', [$asset, $upload]) }}">@csrf<button>{{ __('catalogue.generated.t_a69428155b67f899') }}</button></form>
             @endif
         @endcan
     @endforeach
     @if($file)
-        <p>Status: <strong>{{ $file->ingest_status }}</strong> · Malwarecontrole: <strong>{{ $file->scanner_status === 'clean' ? 'Schoon volgens ingest-scanner' : 'NIET GESCAND' }}</strong></p>
-        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} px · {{ $file->media_type }} · {{ number_format($file->byte_size) }} bytes</p>
+        <p>Status: <strong>{{ $file->ingest_status }}</strong> {{ __('catalogue.generated.t_ca0369fb4e5a2f74') }} <strong>{{ $file->scanner_status === 'clean' ? 'Schoon volgens ingest-scanner' : 'NIET GESCAND' }}</strong></p>
+        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} {{ __('catalogue.generated.t_98bb76673444cd14') }} {{ $file->media_type }} · {{ number_format($file->byte_size) }} {{ __('catalogue.fragments.bytes') }}</p>
         <p class="checksum">SHA-256: {{ $file->sha256 }}</p>
-        <p>Oriëntatie: {{ $file->technical_metadata['orientation'] ?? 'onbekend' }}. EXIF en GPS worden niet overgenomen in voorbeelden. Het origineel blijft ongewijzigd in private opslag.</p>
+        <p>{{ __('catalogue.generated.t_e09420bb3e35b28b') }} {{ $file->technical_metadata['orientation'] ?? 'onbekend' }}{{ __('catalogue.generated.t_cafe7f0d435cf7c0') }}</p>
     @else
-        <p>Nog geen verwerkt voorbeeld beschikbaar. Voor queued/running: wacht op de worker en vernieuw deze pagina.</p>
+        <p>{{ __('catalogue.generated.t_f447e280b1df24b2') }}</p>
     @endif
-    <a href="{{ route('admin.assets.show', $asset) }}">Status vernieuwen</a>
-    <p>Er is geen automatische publicatie. Ook een schone scan geeft geen publicatietoestemming.</p>
+    <a href="{{ route('admin.assets.show', $asset) }}">{{ __('catalogue.generated.t_b64b6b7558474301') }}</a>
+    <p>{{ __('catalogue.generated.t_d9ec106a4491f7b6') }}</p>
 </section>
-<section class="card"><h2>Beschrijving en rechten</h2>
+<section class="card"><h2>{{ __('catalogue.generated.t_c8e6c9b1a3d8fa52') }}</h2>
     <p>{{ $asset->description ?: 'Nog geen beschrijving.' }}</p>
-    <p>Datering: {{ $asset->date_display ?: $asset->date_precision }} · {{ $asset->date_earliest?->format('Y-m-d') }} — {{ $asset->date_latest?->format('Y-m-d') }}</p>
+    <p>{{ __('catalogue.fragments.dating') }}: {{ $asset->date_display ?: $asset->date_precision }} · {{ $asset->date_earliest?->format('Y-m-d') }} — {{ $asset->date_latest?->format('Y-m-d') }}</p>
     <p>Tags: {{ $asset->tags->pluck('name')->join(', ') ?: 'Geen' }}</p>
-    <p>Rechthebbende: {{ $right?->rights_holder ?: 'Onbekend' }} · {{ $right?->verification_status ?? 'unverified' }}</p>
+    <p>{{ __('catalogue.fragments.rights_holder') }}: {{ $right?->rights_holder ?: 'Onbekend' }} · {{ $right?->verification_status ?? 'unverified' }}</p>
     <p>{{ $right?->note }}</p>
 </section>
 @include('ai.results._photo')
 @can('update', $asset)
-<section class="card"><h2>Metadata bewerken</h2>
+<section class="card"><h2>{{ __('catalogue.generated.t_0b5aad2002476f41') }}</h2>
     <form method="post" action="{{ route('admin.assets.update', $asset) }}">
         @csrf @method('PUT')
         <input type="hidden" name="lock_version" value="{{ old('lock_version', $asset->lock_version) }}">
@@ -53,31 +53,31 @@
                 <option value="{{ $key }}" @selected(old('date_precision', $asset->date_precision) === $key)>{{ $label }}</option>
             @endforeach
         </select></label>
-        <p>Onbekend: beide datums leeg. Exact: begindatum. Vóór: alleen einddatum. Na: alleen begindatum. Bereik: beide datums. Jaar/decennium: kies een begindatum; deze wordt opgeslagen als het volledige jaar/decennium. Circa kan een onzekerheidsbereik bevatten.</p>
+        <p>{{ __('catalogue.generated.t_1f06d3c1f6dd3929') }}</p>
         <label>Van <input type="date" name="date_earliest" value="{{ old('date_earliest', $asset->date_earliest?->format('Y-m-d')) }}"></label>
         <label>Tot <input type="date" name="date_latest" value="{{ old('date_latest', $asset->date_latest?->format('Y-m-d')) }}"></label>
-        <label>Weergave datering <input name="date_display" maxlength="255" value="{{ old('date_display', $asset->date_display) }}"></label>
-        <label>Tags (komma-gescheiden, maximaal 20) <input name="tags" maxlength="2000" value="{{ old('tags', $asset->tags->pluck('name')->join(', ')) }}"></label>
+        <label>{{ __('catalogue.generated.t_77e3cd6e89341a93') }} <input name="date_display" maxlength="255" value="{{ old('date_display', $asset->date_display) }}"></label>
+        <label>{{ __('catalogue.generated.t_144ea79e7876c626') }} <input name="tags" maxlength="2000" value="{{ old('tags', $asset->tags->pluck('name')->join(', ')) }}"></label>
         <label>Rechthebbende <input name="rights_holder" maxlength="255" value="{{ old('rights_holder', $right?->rights_holder) }}"></label>
         <label>Rechtencontrole <select name="rights_status">
             @foreach(['unverified'=>'Onbekend / niet geverifieerd','verified'=>'Geverifieerd','disputed'=>'Betwist'] as $key=>$label)
                 <option value="{{ $key }}" @selected(old('rights_status', $right?->verification_status ?? 'unverified') === $key)>{{ $label }}</option>
             @endforeach
         </select></label>
-        <label>Rechtennotitie en bewijs <textarea name="rights_note" maxlength="10000">{{ old('rights_note', $right?->note) }}</textarea></label>
-        <p>Rechtencontrole is documentatie, geen toestemming voor openbare publicatie.</p>
+        <label>{{ __('catalogue.generated.t_97502a225516e180') }} <textarea name="rights_note" maxlength="10000">{{ old('rights_note', $right?->note) }}</textarea></label>
+        <p>{{ __('catalogue.generated.t_ddb6b082550b78f7') }}</p>
         <button>Opslaan</button>
     </form>
 </section>
 @endcan
 <section class="card"><h2>Archiefbewerkingen</h2>
-    <p>Bewerkingen op dit dossier. Zware taken draaien op de achtergrond; volg ze via Achtergrondtaken.</p>
+    <p>{{ __('catalogue.generated.t_d75725cecb05bcc9') }}</p>
     <ul class="actions" style="list-style: none; padding: 0;">
         @can('assets.view')
-            <li><a class="button secondary" href="{{ route('admin.operations.versions.index', $asset) }}">Bestandsversies en herverwerking</a></li>
+            <li><a class="button secondary" href="{{ route('admin.operations.versions.index', $asset) }}">{{ __('catalogue.generated.t_6d80c9381b112519') }}</a></li>
         @endcan
         @canany(['catalogue.manage', 'users.manage', 'assets.view'])
-            <li><a class="button secondary" href="{{ route('admin.operations.ocr.index', ['q' => $asset->accession_number]) }}">Herkende tekst (OCR)</a></li>
+            <li><a class="button secondary" href="{{ route('admin.operations.ocr.index', ['q' => $asset->accession_number]) }}">{{ __('catalogue.generated.t_f786745fa8f4515d') }}</a></li>
         @endcanany
         @canany(['assets.update', 'catalogue.manage', 'users.manage'])
             <li><a class="button secondary" href="{{ route('admin.operations.runs.index') }}">Achtergrondtaken</a></li>
@@ -86,23 +86,23 @@
     @canany(['catalogue.manage', 'users.manage'])
         <form method="post" action="{{ route('admin.operations.ocr.dispatch', $asset) }}">
             @csrf
-            <button class="secondary">Tekstherkenning starten voor deze foto</button>
+            <button class="secondary">{{ __('catalogue.generated.t_be33d4bc26e3fc3a') }}</button>
         </form>
-        <p>De tekstherkenning draait op de ingest-wachtrij en vereist een ingeschakelde, beschikbare Tesseract-installatie. Zonder worker blijft de taak in de wachtrij staan.</p>
+        <p>{{ __('catalogue.generated.t_6e9a4a7327abfeac') }}</p>
         <form method="post" action="{{ route('admin.operations.trash.trash', $asset) }}" onsubmit="return confirm('Deze foto naar de prullenbak verplaatsen? Herstellen kan via Operaties · Prullenbak.');">
             @csrf
-            <label for="trash-reason">Reden voor verwijdering</label>
-            <input id="trash-reason" name="reason" maxlength="1000" required placeholder="Bijvoorbeeld: dubbel ingevoerd dossier">
-            <button class="secondary">Naar prullenbak verplaatsen</button>
+            <label for="trash-reason">{{ __('catalogue.generated.t_4d6fd29b27f22db9') }}</label>
+            <input id="trash-reason" name="reason" maxlength="1000" required placeholder="{{ __('catalogue.generated.t_8d65165c975026b8') }}">
+            <button class="secondary">{{ __('catalogue.generated.t_75b26d698742de62') }}</button>
         </form>
-        <p>Verplaatsen naar de prullenbak verwijdert niets onherroepelijk: het dossier verdwijnt uit alle overzichten en blijft herstelbaar tot een beheerder het definitief vernietigt.</p>
+        <p>{{ __('catalogue.generated.t_21ef49971f3377bd') }}</p>
     @endcanany
-</section><section class="card"><h2>Wijzigings- en verwerkingshistorie</h2>
-    <p>Laatste 50 gebeurtenissen, nieuwste eerst. Alle revisies blijven in de database bewaard.</p>
+</section><section class="card"><h2>{{ __('catalogue.generated.t_a7038276a26c2f41') }}</h2>
+    <p>{{ __('catalogue.generated.t_1026e1d956549e47') }}</p>
     <ol>@forelse($events as $event)
         <li>{{ $event->created_at }} · {{ $event->event_type }} · {{ $event->actor_user_id ? 'Medewerker '.$event->actor_user_id : 'Worker' }}
-            @if($event->details)<details><summary>Details / revisie vergelijken</summary><pre class="revision">{{ json_encode($event->details, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre></details>@endif
+            @if($event->details)<details><summary>{{ __('catalogue.generated.t_99e075f8b379f354') }}</summary><pre class="revision">{{ json_encode($event->details, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre></details>@endif
         </li>
-    @empty<li>Nog geen gebeurtenissen.</li>@endforelse</ol>
+    @empty<li>{{ __('catalogue.generated.t_d211c35b14ec2a0c') }}</li>@endforelse</ol>
 </section>
 @endsection

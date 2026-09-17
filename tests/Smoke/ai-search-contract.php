@@ -24,9 +24,9 @@ $required = [
     'bounded candidate window' => str_contains($files['service'], '$candidateLimit = 500'),
     'admin policy filtering' => str_contains($files['service'], "Gate::forUser(\$user)->allows('view', \$asset)"),
     'public visibility predicate' => str_contains($files['service'], '->publiclyVisible()'),
-    'public semantic label' => str_contains($files['public_view'], '<label for="semantic_q">Zoeken op beeldinhoud</label>'),
+    'public semantic label' => str_contains($files['public_view'], '<label for="semantic_q">{{ __(\'ai.public.label\') }}</label>'),
     'public error role' => str_contains($files['public_view'], 'role="alert"'),
-    'admin semantic label' => str_contains($files['admin_view'], '<label>Zoekvraag'),
+    'admin semantic label' => str_contains($files['admin_view'], '<label>{{ __(\'ai.search.query\') }}'),
     'caption-only rejection documented' => str_contains($files['decision'], 'caption-only retrieval is still'),
 ];
 

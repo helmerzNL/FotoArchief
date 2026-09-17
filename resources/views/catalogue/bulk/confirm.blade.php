@@ -1,12 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Batch-bewerking bevestigen - FotoArchief')
 @section('content')
-<p class="eyebrow"><a href="{{ route('admin.assets.index') }}">← Terug naar foto-overzicht</a></p>
-<h1>Batch-bewerking foto’s ({{ $assets->count() }} geselecteerd)</h1>
+<p class="eyebrow"><a href="{{ route('admin.assets.index') }}">{{ __('catalogue.generated.t_65f8a04d2b51e459') }}</a></p>
+<h1>{{ __('catalogue.generated.t_2d4e35046e927ab6') }}{{ $assets->count() }} geselecteerd)</h1>
 
 @if($errors->any())
     <div class="card" style="border-color: #b91c1c; background-color: #fef2f2;">
-        <h2>Fout bij verwerking</h2>
+        <h2>{{ __('catalogue.generated.t_ee8eee677f2e1cf3') }}</h2>
         <ul>
             @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -19,15 +19,15 @@
     @csrf
 
     <section class="card">
-        <h2>Geselecteerde foto’s &amp; status</h2>
-        <p>Elke foto wordt beschermd tegen gelijktijdige bewerking via een versieslot.</p>
+        <h2>{{ __('catalogue.generated.t_78f0e940902276ce') }}</h2>
+        <p>{{ __('catalogue.generated.t_c8b6e5e84cbdbcf2') }}</p>
         <ul class="asset-list">
             @foreach($assets as $asset)
                 <li>
                     <strong>{{ $asset->title ?: $asset->accession_number }}</strong>
                     <small>
-                        {{ $asset->accession_number }} · Status: {{ $asset->catalogue_status }} · Versie: {{ $asset->lock_version }}
-                        @if($asset->tags->isNotEmpty()) · Tags: {{ $asset->tags->pluck('name')->join(', ') }} @endif
+                        {{ $asset->accession_number }} {{ __('catalogue.generated.t_34ba21340c9968af') }} {{ $asset->catalogue_status }} {{ __('catalogue.generated.t_2bff4f1da3ccc83d') }} {{ $asset->lock_version }}
+                        @if($asset->tags->isNotEmpty()) {{ __('catalogue.generated.t_ea0ad7387f9ad8ff') }} {{ $asset->tags->pluck('name')->join(', ') }} @endif
                     </small>
                     <input type="hidden" name="asset_ids[]" value="{{ $asset->id }}">
                     <input type="hidden" name="lock_versions[{{ $asset->id }}]" value="{{ $asset->lock_version }}">
@@ -37,14 +37,14 @@
     </section>
 
     <section class="card">
-        <h2>Tags &amp; Trefwoorden</h2>
+        <h2>{{ __('catalogue.generated.t_edf0cac4b05289f5') }}</h2>
         <div class="field">
-            <label for="tags_to_add">Tags toevoegen aan alle geselecteerde foto’s (komma-gescheiden)</label>
-            <input type="text" id="tags_to_add" name="tags_to_add" placeholder="bijv. monument, straatbeeld, restauratie" value="{{ old('tags_to_add') }}">
+            <label for="tags_to_add">{{ __('catalogue.generated.t_e79e63c015e2b7d0') }}</label>
+            <input type="text" id="tags_to_add" name="tags_to_add" placeholder="{{ __('catalogue.generated.t_0897de2ccf92dfc4') }}" value="{{ old('tags_to_add') }}">
         </div>
         @if($tags->isNotEmpty())
             <div class="field">
-                <label>Tags verwijderen van geselecteerde foto’s (optioneel):</label>
+                <label>{{ __('catalogue.generated.t_f04eb9e77224112a') }}</label>
                 <div class="grid">
                     @foreach($tags as $t)
                         <label>
@@ -58,21 +58,21 @@
     </section>
 
     <section class="card">
-        <h2>Collectie / Album koppeling</h2>
+        <h2>{{ __('catalogue.generated.t_ed73d612d15290e4') }}</h2>
         <div class="grid">
             <div>
-                <label for="collection_id_to_add">Toevoegen aan collectie / album</label>
+                <label for="collection_id_to_add">{{ __('catalogue.generated.t_19717475b3a29a76') }}</label>
                 <select id="collection_id_to_add" name="collection_id_to_add">
-                    <option value="">-- Geen collectie toevoegen --</option>
+                    <option value="">{{ __('catalogue.generated.t_735f984e26fbeeb8') }}</option>
                     @foreach($collections as $col)
                         <option value="{{ $col->id }}" {{ old('collection_id_to_add') === $col->id ? 'selected' : '' }}>{{ $col->title }}</option>
                     @endforeach
                 </select>
             </div>
             <div>
-                <label for="collection_id_to_remove">Verwijderen uit collectie / album</label>
+                <label for="collection_id_to_remove">{{ __('catalogue.generated.t_f5fd03fa83105a86') }}</label>
                 <select id="collection_id_to_remove" name="collection_id_to_remove">
-                    <option value="">-- Geen collectie verwijderen --</option>
+                    <option value="">{{ __('catalogue.generated.t_23bd85a9b32fde48') }}</option>
                     @foreach($collections as $col)
                         <option value="{{ $col->id }}" {{ old('collection_id_to_remove') === $col->id ? 'selected' : '' }}>{{ $col->title }}</option>
                     @endforeach
@@ -82,10 +82,10 @@
     </section>
 
     <section class="card">
-        <h2>Rechten &amp; Verificatie</h2>
+        <h2>{{ __('catalogue.generated.t_7629d04c7ecb9704') }}</h2>
         <label>
             <input type="checkbox" name="update_rights" value="1" {{ old('update_rights') ? 'checked' : '' }}>
-            Rechtenstatus bijwerken voor alle geselecteerde foto’s
+            {{ __('catalogue.generated.t_50190a3c8df713d7') }}
         </label>
         <div class="grid">
             <div>
@@ -108,10 +108,10 @@
     </section>
 
     <section class="card">
-        <h2>Datering &amp; Catalogusstatus</h2>
+        <h2>{{ __('catalogue.generated.t_a3b60f37daffade9') }}</h2>
         <label>
             <input type="checkbox" name="update_dates" value="1" {{ old('update_dates') ? 'checked' : '' }}>
-            Datering bijwerken
+            {{ __('catalogue.generated.t_fa3024c0c8d161e9') }}
         </label>
         <div class="grid">
             <div>
@@ -125,36 +125,36 @@
             </div>
             <div>
                 <label for="date_display">Weergavedatum</label>
-                <input type="text" id="date_display" name="date_display" value="{{ old('date_display') }}" placeholder="bijv. ca. 1930">
+                <input type="text" id="date_display" name="date_display" value="{{ old('date_display') }}" placeholder="{{ __('catalogue.generated.t_db30453be8fad24f') }}">
             </div>
         </div>
         <div class="grid">
             <div>
-                <label for="date_earliest">Datum vroegst</label>
+                <label for="date_earliest">{{ __('catalogue.generated.t_119ccc61ca53846d') }}</label>
                 <input type="date" id="date_earliest" name="date_earliest" value="{{ old('date_earliest') }}">
             </div>
             <div>
-                <label for="date_latest">Datum laatst</label>
+                <label for="date_latest">{{ __('catalogue.generated.t_1413312e7df2bedd') }}</label>
                 <input type="date" id="date_latest" name="date_latest" value="{{ old('date_latest') }}">
             </div>
         </div>
 
         <label style="margin-top: 1rem; display: block;">
             <input type="checkbox" name="update_status" value="1" {{ old('update_status') ? 'checked' : '' }}>
-            Catalogusstatus bijwerken
+            {{ __('catalogue.generated.t_8a22e1b808cce8d0') }}
         </label>
         <div class="field">
             <label for="catalogue_status">Status</label>
             <select id="catalogue_status" name="catalogue_status">
-                <option value="draft">Concept (draft)</option>
-                <option value="under_review">In beoordeling (under_review)</option>
-                <option value="catalogued">Gecatalogiseerd (catalogued)</option>
+                <option value="draft">{{ __('catalogue.generated.t_eb3d3711e6f803f9') }}</option>
+                <option value="under_review">{{ __('catalogue.generated.t_928692b3d39adb88') }}</option>
+                <option value="catalogued">{{ __('catalogue.generated.t_8611ae4f1ce07ab9') }}</option>
             </select>
         </div>
     </section>
 
     <div class="actions">
-        <button type="submit">Batch-wijzigingen toepassen</button>
+        <button type="submit">{{ __('catalogue.generated.t_2d362fbef1dd2e49') }}</button>
         <a href="{{ route('admin.assets.index') }}" class="button secondary">Annuleren</a>
     </div>
 </form>

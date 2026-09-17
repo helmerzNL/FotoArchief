@@ -50,11 +50,11 @@ class MetadataImportService
         $path = (string) $file->getRealPath();
         $stream = fopen($path, 'rb');
         if ($stream === false) {
-            throw new RuntimeException('Import stream unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_d4b00e3b2d70bf8f'));
         }
         try {
             if (! $disk->writeStream($storageKey, $stream, ['visibility' => 'private'])) {
-                throw new RuntimeException('Import write failed.');
+                throw new RuntimeException(__('exchange.generated.t_af70b0b069e0dacb'));
             }
             $import = MetadataImport::query()->create([
                 'created_by_user_id' => $user->id,
@@ -88,10 +88,10 @@ class MetadataImportService
     {
         $this->assertWriteMode($writeMode);
         if ($import->isBusy()) {
-            throw ValidationException::withMessages(['file' => 'Deze import wordt op dit moment verwerkt.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_a69c4a2761071bf5')]);
         }
         if ($import->status === 'completed') {
-            throw ValidationException::withMessages(['file' => 'Een afgeronde import kan niet opnieuw worden voorbereid. Upload een nieuw bestand.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_2c3cc51429268870')]);
         }
         $import->update(['write_mode' => $writeMode, 'status' => 'analysing', 'failure_reason' => null, 'claim_token' => null]);
         if ($import->byte_size > (int) config('exchange.sync_analysis_bytes')) {
@@ -118,15 +118,15 @@ class MetadataImportService
             $fields = $this->mapper->mappedFields($mapping);
             foreach (['accession_number', 'lock_version'] as $required) {
                 if (! in_array($required, $fields, true)) {
-                    throw ValidationException::withMessages(['file' => 'De kolom '.$required.' ontbreekt. Zonder archiefnummer en versie kan bestaande data niet veilig worden bijgewerkt.']);
+                    throw ValidationException::withMessages(['file' => __('exchange.generated.t_0bc48d2fbe45296e').$required.__('exchange.generated.t_ecae82d637c112a2')]);
                 }
             }
             if (array_intersect($fields, MetadataColumnMapper::WRITABLE) === []) {
-                throw ValidationException::withMessages(['file' => 'Geen enkele herkenbare metadatakolom gevonden. Er valt niets bij te werken.']);
+                throw ValidationException::withMessages(['file' => __('exchange.generated.t_6f3430b21c0b8526')]);
             }
             $user = $import->creator;
             if (! $user instanceof User || ! $user->hasPermission('assets.update')) {
-                throw ValidationException::withMessages(['file' => 'De indiener heeft geen rechten meer om metadata bij te werken.']);
+                throw ValidationException::withMessages(['file' => __('exchange.generated.t_a0757fad04dbfb2e')]);
             }
             $rows = $this->buildRows($import, $mapping, $parsed['rows'], $user);
             DB::transaction(function () use ($import, $mapping, $parsed, $rows, $token): void {
@@ -146,8 +146,8 @@ class MetadataImportService
         } catch (ValidationException $exception) {
             $this->release($import, $token, ['status' => 'failed', 'failure_reason' => implode(' ', array_merge(...array_values($exception->errors())))]);
         } catch (Throwable $exception) {
-            Log::error('Metadata import analysis failed.', ['import_id' => $import->id, 'exception_type' => $exception::class]);
-            $this->release($import, $token, ['status' => 'failed', 'failure_reason' => 'Analyse mislukt. Controleer opslag en database en probeer opnieuw.']);
+            Log::error(__('exchange.generated.t_b9fd650dd839fc24'), ['import_id' => $import->id, 'exception_type' => $exception::class]);
+            $this->release($import, $token, ['status' => 'failed', 'failure_reason' => __('exchange.generated.t_cc985fc592cbc8ba')]);
         }
 
         return true;
@@ -156,16 +156,16 @@ class MetadataImportService
     public function confirm(MetadataImport $import, User $user, string $checksum): void
     {
         if ($import->created_by_user_id !== $user->id) {
-            throw ValidationException::withMessages(['file' => 'Alleen de indiener kan deze import bevestigen.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_a3a8d56dc6af54ba')]);
         }
         if (! hash_equals($import->content_sha256, $checksum)) {
-            throw ValidationException::withMessages(['file' => 'Het voorbeeld hoort niet bij dit bestand. Bekijk de controle opnieuw.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_ffe8ac66248a1d26')]);
         }
         if (! in_array($import->status, ['analysed', 'failed'], true)) {
-            throw ValidationException::withMessages(['file' => 'Bevestig pas nadat de controle zonder verwerking is afgerond.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_6639a3a2abba98f3')]);
         }
         if ((int) ($import->summary['ready'] ?? 0) < 1) {
-            throw ValidationException::withMessages(['file' => 'Er zijn geen rijen die veilig kunnen worden bijgewerkt.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_3951f3e8badd69e6')]);
         }
         DB::transaction(function () use ($import): void {
             $import->update(['status' => 'queued', 'confirmed_at' => now(), 'failure_reason' => null, 'claim_token' => null]);
@@ -189,7 +189,7 @@ class MetadataImportService
         }
         $user = $import->creator;
         if (! $user instanceof User || ! $user->hasPermission('assets.update')) {
-            $this->release($import, $token, ['status' => 'failed', 'failure_reason' => 'De indiener heeft geen rechten meer om metadata bij te werken.']);
+            $this->release($import, $token, ['status' => 'failed', 'failure_reason' => __('exchange.generated.t_a0757fad04dbfb2e')]);
 
             return true;
         }
@@ -198,8 +198,8 @@ class MetadataImportService
             try {
                 $this->applyRow($import, $row, $user);
             } catch (Throwable $exception) {
-                Log::error('Metadata import row failed.', ['import_id' => $import->id, 'row' => $row->row_number, 'exception_type' => $exception::class]);
-                $row->update(['status' => 'failed', 'messages' => ['Bijwerken mislukt. Controleer database en opslag en probeer opnieuw.']]);
+                Log::error(__('exchange.generated.t_159448fce2dbb776'), ['import_id' => $import->id, 'row' => $row->row_number, 'exception_type' => $exception::class]);
+                $row->update(['status' => 'failed', 'messages' => [__('exchange.generated.t_362c23db4155c1c6')]]);
             }
         }
         $this->release($import, $token, ['status' => 'completed', 'completed_at' => now(), 'summary' => $this->summary($import)]);
@@ -228,7 +228,7 @@ class MetadataImportService
             $released = MetadataImport::query()->whereKey($import->id)->whereIn('status', ['analysing', 'running'])->where('started_at', '<', $cutoff)
                 ->update([
                     'status' => 'failed',
-                    'failure_reason' => 'De verwerking is afgebroken: de worker is gestopt voordat de import klaar was. Bevestig opnieuw om verder te gaan.',
+                    'failure_reason' => __('exchange.generated.t_b95ddfd22a7d96ec'),
                     'claim_token' => null,
                 ]);
             $recovered += $released;
@@ -245,8 +245,8 @@ class MetadataImportService
     private function missingAssetMessage(bool $trashed): string
     {
         return $trashed
-            ? 'Deze foto staat in de prullenbak en is niet bijgewerkt. Zet de foto terug en bevestig de import opnieuw.'
-            : 'De foto bestaat niet meer.';
+            ? __('exchange.generated.t_c6d8d7996567ad7b')
+            : __('exchange.generated.t_1d26e3b6f3979d0b');
     }
 
     private function applyRow(MetadataImport $import, MetadataImportRow $row, User $user): void
@@ -261,12 +261,12 @@ class MetadataImportService
                 return;
             }
             if (! Gate::forUser($user)->allows('update', $asset)) {
-                $row->update(['status' => 'failed', 'messages' => ['Je mag deze foto niet meer bijwerken.']]);
+                $row->update(['status' => 'failed', 'messages' => [__('exchange.generated.t_db11cfffcea7568c')]]);
 
                 return;
             }
             if ($asset->lock_version !== $row->expected_lock_version) {
-                $row->update(['status' => 'failed', 'messages' => ['Deze foto is inmiddels gewijzigd (versie '.$asset->lock_version.'). Exporteer opnieuw en controleer de wijziging.']]);
+                $row->update(['status' => 'failed', 'messages' => [__('exchange.generated.t_a47e35dfbccf9bc6').$asset->lock_version.__('exchange.generated.t_12d0c9e5e078cdc7')]]);
 
                 return;
             }
@@ -279,7 +279,7 @@ class MetadataImportService
                 return;
             }
             if ($plan === []) {
-                $row->update(['status' => 'unchanged', 'changes' => [], 'messages' => ['Geen wijziging nodig.']]);
+                $row->update(['status' => 'unchanged', 'changes' => [], 'messages' => [__('exchange.generated.t_83dc7362ac4c2db4')]]);
 
                 return;
             }
@@ -341,25 +341,25 @@ class MetadataImportService
             $messages = [];
             $asset = $accession === null ? null : ($assets[$accession] ?? null);
             if ($accession === null) {
-                $messages[] = 'Kolom accession_number is leeg.';
+                $messages[] = __('exchange.generated.t_5884e7afcff92eb9');
             } elseif (isset($seenAccessions[$accession])) {
-                $messages[] = 'Archiefnummer '.$accession.' komt meerdere keren voor in dit bestand.';
+                $messages[] = 'Archiefnummer '.$accession.__('exchange.generated.t_a8ffcb129c15272b');
             } elseif ($asset === null) {
                 $messages[] = Asset::onlyTrashed()->where('accession_number', $accession)->exists()
-                    ? 'Foto '.$accession.' staat in de prullenbak en wordt niet bijgewerkt. Zet de foto terug en controleer daarna opnieuw.'
-                    : 'Geen foto gevonden met archiefnummer '.$accession.'. Importeren maakt nooit nieuwe foto’s aan.';
+                    ? 'Foto '.$accession.__('exchange.generated.t_2335aca7143e5672')
+                    : __('exchange.generated.t_a868c08ee7d8fe9d').$accession.__('exchange.generated.t_89605f1170d4654a');
             } elseif (! Gate::forUser($user)->allows('update', $asset)) {
-                $messages[] = 'Je mag deze foto niet bijwerken.';
+                $messages[] = __('exchange.generated.t_c82248c2f7e25b10');
                 $asset = null;
             }
             if ($accession !== null) {
                 $seenAccessions[$accession] = true;
             }
             if ($lockVersion === null || preg_match('/^\d{1,9}$/', $lockVersion) !== 1) {
-                $messages[] = 'Kolom lock_version moet het versienummer uit de export bevatten.';
+                $messages[] = __('exchange.generated.t_c797c560410db721');
             } elseif ($asset !== null && (int) $lockVersion !== $asset->lock_version) {
-                $messages[] = 'Versie '.$lockVersion.' komt niet overeen met de huidige versie '.$asset->lock_version.'. Exporteer opnieuw.';
-                $messages[] = 'Bestaande gegevens blijven ongewijzigd.';
+                $messages[] = 'Versie '.$lockVersion.__('exchange.generated.t_809c6998ad89229e').$asset->lock_version.__('exchange.generated.t_63bcc4f1fe7ff5ff');
+                $messages[] = __('exchange.generated.t_c95f6c8cb68e0de6');
             }
             $validated = $this->validator->validate($values);
             $messages = array_merge($messages, $validated['errors']);
@@ -377,7 +377,7 @@ class MetadataImportService
                 default => 'ready',
             };
             if ($status === 'unchanged') {
-                $messages[] = 'Geen wijziging nodig.';
+                $messages[] = __('exchange.generated.t_83dc7362ac4c2db4');
             }
             $prepared[] = [
                 'id' => (string) str()->ulid(),
@@ -466,7 +466,7 @@ class MetadataImportService
                 sort($after);
             }
             if (count($after) > 20) {
-                throw ValidationException::withMessages(['tags' => 'Samen met de bestaande trefwoorden zouden er meer dan 20 trefwoorden ontstaan.']);
+                throw ValidationException::withMessages(['tags' => __('exchange.generated.t_3b8ddbe740454385')]);
             }
             if ($after !== $current) {
                 $changes['tags'] = ['before' => $current, 'after' => $after];
@@ -568,7 +568,7 @@ class MetadataImportService
         $disk = Storage::disk($import->storage_disk);
         $stream = $disk->readStream($import->storage_key);
         if (! is_resource($stream)) {
-            throw new RuntimeException('Import file unreadable.');
+            throw new RuntimeException(__('exchange.generated.t_13a441b5bee192c1'));
         }
         try {
             return $this->reader->parse($stream);
@@ -628,20 +628,20 @@ class MetadataImportService
         $maxBytes = (int) config('exchange.max_import_bytes');
         $size = $file->getSize();
         if (! $file->isValid() || $size === false || $size <= 0 || $size > $maxBytes) {
-            throw ValidationException::withMessages(['file' => 'Het CSV-bestand moet geldig zijn en tussen 1 en '.$maxBytes.' bytes groot zijn.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_fb85b64aeaa38708').$maxBytes.__('exchange.generated.t_1b748306f69476d9')]);
         }
         if (! in_array(mb_strtolower($file->getClientOriginalExtension()), ['csv', 'txt'], true)) {
-            throw ValidationException::withMessages(['file' => 'Gebruik een CSV-bestand (.csv).']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_b3413f4202c74176')]);
         }
         if (! in_array((string) $file->getMimeType(), self::TEXT_MIME_TYPES, true)) {
-            throw ValidationException::withMessages(['file' => 'Alleen platte CSV-tekst wordt gelezen. Sla je spreadsheet op als CSV UTF-8.']);
+            throw ValidationException::withMessages(['file' => __('exchange.generated.t_0872398955a33fd8')]);
         }
     }
 
     private function assertWriteMode(string $writeMode): void
     {
         if (! in_array($writeMode, ['fill_empty', 'overwrite'], true)) {
-            throw ValidationException::withMessages(['write_mode' => 'Kies hoe bestaande gegevens worden behandeld.']);
+            throw ValidationException::withMessages(['write_mode' => __('exchange.generated.t_fbb40ae1d4cdfd57')]);
         }
     }
 }

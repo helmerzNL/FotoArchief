@@ -41,7 +41,7 @@ class IdentityUserController extends Controller
             $lockedUser->forceFill(['session_revoked_at' => now()])->save();
         });
 
-        return redirect()->route('identity.users.index')->with('status', 'Gebruiker bijgewerkt. Bestaande sessies zijn ingetrokken.');
+        return redirect()->route('identity.users.index')->with('status', __('identity.generated.t_e428b4f28d705346'));
     }
 
     public function deactivate(User $user, AdministratorProtection $protection): RedirectResponse
@@ -61,7 +61,7 @@ class IdentityUserController extends Controller
             ])->save();
         });
 
-        return redirect()->route('identity.users.index')->with('status', 'Gebruiker gedeactiveerd en sessies ingetrokken.');
+        return redirect()->route('identity.users.index')->with('status', __('identity.generated.t_dea2c3ee98eddc77'));
     }
 
     public function reactivate(User $user): RedirectResponse
@@ -72,6 +72,6 @@ class IdentityUserController extends Controller
             'session_revoked_at' => now(),
         ])->save();
 
-        return redirect()->route('identity.users.index')->with('status', 'Gebruiker opnieuw geactiveerd.');
+        return redirect()->route('identity.users.index')->with('status', __('identity.generated.t_6b98fa9d4a9279d4'));
     }
 }

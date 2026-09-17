@@ -59,7 +59,7 @@ class ProcessAiIndexJob extends OperationJob
             try {
                 $candidate = Asset::query()->with('files')->find($assetId);
                 if (! $candidate instanceof Asset) {
-                    throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
+                    throw new RuntimeException(__('ai.errors.asset_missing', ['asset' => $assetId]));
                 }
                 $asset = $candidate;
                 ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
@@ -84,7 +84,7 @@ class ProcessAiIndexJob extends OperationJob
                 $asset->refresh();
                 $file->refresh()->load('asset');
                 if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                    throw new RuntimeException("Foto {$assetId} is tijdens de AI-indexering gewijzigd. Probeer de taak opnieuw.");
+                    throw new RuntimeException(__('ai.errors.asset_changed_index', ['asset' => $assetId]));
                 }
 
                 $generation = AiEmbeddingGeneration::query()->firstOrCreate(
@@ -109,7 +109,7 @@ class ProcessAiIndexJob extends OperationJob
                 if ((string) $generation->provider_kind !== $provider
                     || (int) $generation->dimensions !== (int) $embedding['dimensions']
                     || (string) $generation->status !== AiEmbeddingGeneration::STATUS_ACTIVE) {
-                    throw new RuntimeException("AI-indexering geweigerd: modelruimte {$embedding['model_space']} hoort bij een andere provider, dimensie of status.");
+                    throw new RuntimeException(__('ai.errors.model_space_conflict', ['space' => $embedding['model_space']]));
                 }
 
                 $generation->embeddings()

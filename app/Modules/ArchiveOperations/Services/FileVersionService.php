@@ -47,7 +47,7 @@ class FileVersionService
             'event_type' => 'version.uploaded',
             'details' => [
                 'original_filename' => $file->getClientOriginalName(),
-                'change_note' => $changeNote ?: 'Nieuwe scanversie aangeboden.',
+                'change_note' => $changeNote ?: __('operations.generated.t_0121674ad6112d98'),
                 'upload_id' => $upload->id,
             ],
         ]);
@@ -58,13 +58,13 @@ class FileVersionService
         $disk = Storage::disk($file->storage_disk);
         $stream = $disk->readStream($file->storage_key);
         if (! is_resource($stream)) {
-            throw new RuntimeException('Origineel archiefbestand is niet beschikbaar op opslagschijf.');
+            throw new RuntimeException(__('operations.generated.t_29ddb3e4b8f63093'));
         }
 
         $temporary = tempnam(sys_get_temp_dir(), 'fotoarchief-reprocess-');
         if ($temporary === false) {
             fclose($stream);
-            throw new RuntimeException('Kon geen tijdelijke verwerkingsruimte reserveren.');
+            throw new RuntimeException(__('operations.generated.t_eb2afa5b6f54a65c'));
         }
 
         $writtenKeys = [];
@@ -73,7 +73,7 @@ class FileVersionService
         try {
             $output = fopen($temporary, 'wb');
             if ($output === false) {
-                throw new RuntimeException('Kon tijdelijke opslag niet openen.');
+                throw new RuntimeException(__('operations.generated.t_cd8d2285c54f763b'));
             }
             try {
                 stream_copy_to_stream($stream, $output);
@@ -84,17 +84,17 @@ class FileVersionService
             // Verify sha256 of immutable original
             $sha = hash_file('sha256', $temporary);
             if ($sha !== $file->sha256) {
-                throw new RuntimeException('Origineel archiefbestand integriteitsfout (checksum mismatch). Reprocessing gestaakt.');
+                throw new RuntimeException(__('operations.generated.t_a0fd9a9a9b63df34'));
             }
 
             set_error_handler(function (): never {
-                throw ValidationException::withMessages(['reprocess' => 'De afbeelding of ingebedde metadata is beschadigd.']);
+                throw ValidationException::withMessages(['reprocess' => __('operations.generated.t_3c2421dae8c49b8b')]);
             });
 
             try {
                 $info = getimagesize($temporary);
                 if ($info === false || ! isset(self::TYPES[$info[2]])) {
-                    throw new RuntimeException('Afbeeldingsformaat niet ondersteund voor weergavegeneratie.');
+                    throw new RuntimeException(__('operations.generated.t_8929289bd56274a2'));
                 }
                 [$width, $height, $type] = $info;
                 $orientation = 1;
@@ -109,7 +109,7 @@ class FileVersionService
                     IMAGETYPE_WEBP => imagecreatefromwebp($temporary),
                 };
                 if ($source === false) {
-                    throw new RuntimeException('Kon afbeelding niet decoderen.');
+                    throw new RuntimeException(__('operations.generated.t_7239b69474cd661a'));
                 }
             } finally {
                 restore_error_handler();
@@ -138,7 +138,7 @@ class FileVersionService
                 $targetH = max(1, (int) round($displayHeight * $ratio));
                 $target = imagecreatetruecolor($targetW, $targetH);
                 if ($target === false) {
-                    throw new RuntimeException('Derivative allocation failed.');
+                    throw new RuntimeException(__('operations.generated.t_a3bee48f77a8380c'));
                 }
                 imagefill($target, 0, 0, 16777215);
                 imagecopyresampled($target, $source, 0, 0, 0, 0, $targetW, $targetH, $displayWidth, $displayHeight);
@@ -152,13 +152,13 @@ class FileVersionService
                 unset($target);
 
                 if (! is_string($encoded)) {
-                    throw new RuntimeException('Derivative encoding failed.');
+                    throw new RuntimeException(__('operations.generated.t_e1dcbebc736a4b37'));
                 }
 
                 $key = 'derivatives/'.$file->id.'/preview-'.$limit.'-'.time().'.jpg';
                 $writtenKeys[] = $key;
                 if (! $disk->put($key, $encoded, ['visibility' => 'private', 'ContentType' => 'image/jpeg'])) {
-                    throw new RuntimeException('Opslaan van afgeleide weergave mislukt.');
+                    throw new RuntimeException(__('operations.generated.t_ecccfcb443a4ed7d'));
                 }
                 $derivatives['preview'.$limit] = $key;
             }
@@ -201,7 +201,7 @@ class FileVersionService
     public function setActiveVersion(Asset $asset, AssetFile $file, User $actor): void
     {
         if ($file->asset_id !== $asset->id) {
-            throw new RuntimeException('Bestand hoort niet bij dit dossier.');
+            throw new RuntimeException(__('operations.generated.t_4a074aa48939b7a2'));
         }
 
         DB::transaction(function () use ($asset, $file, $actor): void {

@@ -44,6 +44,6 @@ class PublicSuggestionController extends Controller
             'status' => 'pending',
         ]);
 
-        return redirect()->route('public.photo', $publication)->with('status', 'Bedankt! Je suggestie is doorgestuurd naar de beheerders ter beoordeling.');
+        return redirect()->route('public.photo', $publication)->with('status', __('publication.generated.t_aae69ae1e08aeab1'));
     }
 }

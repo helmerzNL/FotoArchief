@@ -138,8 +138,8 @@ class AdminAssetController extends Controller
                 $results[] = ['name' => $file->getClientOriginalName(), 'ok' => false, 'error' => implode(' ', array_merge(...array_values($exception->errors())))];
             } catch (Throwable $exception) {
                 $reference = (string) str()->uuid();
-                Log::error('Upload acceptance failed.', ['reference' => $reference, 'exception_type' => $exception::class]);
-                $results[] = ['name' => $file->getClientOriginalName(), 'ok' => false, 'error' => 'Opslaan mislukt. Controleer opslag en database. Referentie: '.$reference];
+                Log::error(__('catalogue.generated.t_6c53ada851a7b566'), ['reference' => $reference, 'exception_type' => $exception::class]);
+                $results[] = ['name' => $file->getClientOriginalName(), 'ok' => false, 'error' => __('catalogue.generated.t_a908dfaf3b1f0ddd').$reference];
             }
             if ($asset !== null && ! $asset->uploads()->exists()) {
                 $asset->delete();
@@ -182,13 +182,13 @@ class AdminAssetController extends Controller
         $earliest = $data['date_earliest'] ?? null;
         $latest = $data['date_latest'] ?? null;
         if ($precision === 'unknown' && ($earliest !== null || $latest !== null)) {
-            throw ValidationException::withMessages(['date_precision' => 'Wis de datums bij een onbekende datering.']);
+            throw ValidationException::withMessages(['date_precision' => __('catalogue.generated.t_caa7af0e5a5061f2')]);
         }
         if ($precision !== 'unknown' && ($precision === 'before' ? $latest === null : $earliest === null)) {
-            throw ValidationException::withMessages(['date_earliest' => 'Vul de vereiste datum in (bij Vóór: de einddatum).']);
+            throw ValidationException::withMessages(['date_earliest' => __('catalogue.generated.t_50c23821b0a95587')]);
         }
         if ($precision === 'range' && $latest === null) {
-            throw ValidationException::withMessages(['date_latest' => 'Een bereik vereist beide datums.']);
+            throw ValidationException::withMessages(['date_latest' => __('catalogue.generated.t_de4038053bc9bc52')]);
         }
         if ($precision === 'year' || $precision === 'decade') {
             $year = (int) substr((string) $earliest, 0, 4);
@@ -196,30 +196,30 @@ class AdminAssetController extends Controller
                 $year = intdiv($year, 10) * 10;
             }
             if ($year < 1 || $year > ($precision === 'decade' ? 9990 : 9999)) {
-                throw ValidationException::withMessages(['date_earliest' => 'Dit jaar valt buiten het ondersteunde bereik.']);
+                throw ValidationException::withMessages(['date_earliest' => __('catalogue.generated.t_efeb1e0a30087ed7')]);
             }
             $earliest = sprintf('%04d-01-01', $year);
             $latest = sprintf('%04d-12-31', $year + ($precision === 'decade' ? 9 : 0));
         }
         if ($precision === 'exact') {
             if ($latest !== null && $latest !== $earliest) {
-                throw ValidationException::withMessages(['date_latest' => 'Bij een exacte datum moeten beide datums gelijk zijn.']);
+                throw ValidationException::withMessages(['date_latest' => __('catalogue.generated.t_60d9ebdc5cba051a')]);
             }
             $latest = $earliest;
         }
         if (($earliest !== null && $latest !== null && $earliest > $latest) || ($precision === 'before' && $earliest !== null) || ($precision === 'after' && $latest !== null)) {
-            throw ValidationException::withMessages(['date_latest' => 'Datumbereik is niet geldig voor deze datering.']);
+            throw ValidationException::withMessages(['date_latest' => __('catalogue.generated.t_782c5d380a998eb0')]);
         }
         $data['date_earliest'] = $earliest;
         $data['date_latest'] = $latest;
         $tagNames = collect(explode(',', (string) ($data['tags'] ?? '')))->map(fn ($name) => trim($name))->filter(fn ($name) => $name !== '')->unique()->values();
         if ($tagNames->count() > 20 || $tagNames->contains(fn ($name) => mb_strlen($name) > 100)) {
-            throw ValidationException::withMessages(['tags' => 'Gebruik maximaal 20 tags van maximaal 100 tekens.']);
+            throw ValidationException::withMessages(['tags' => __('catalogue.generated.t_40b8e381d73aa3d2')]);
         }
         DB::transaction(function () use ($asset, $data, $tagNames, $request): void {
             $locked = Asset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
             if ((int) $data['lock_version'] !== $locked->lock_version) {
-                throw ValidationException::withMessages(['lock_version' => 'Dit item is intussen gewijzigd. Vernieuw de pagina voordat je opnieuw opslaat.']);
+                throw ValidationException::withMessages(['lock_version' => __('catalogue.generated.t_dae19fcb83529b1e')]);
             }
             $right = $locked->rights()->latest('id')->first();
             $before = ['metadata' => Arr::only($locked->attributesToArray(), self::METADATA), 'tags' => $locked->tags()->pluck('name')->all(), 'rights' => $right?->only(['rights_holder', 'verification_status', 'note'])];
@@ -236,7 +236,7 @@ class AdminAssetController extends Controller
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $this->user($request)->id, 'event_type' => 'metadata.updated', 'details' => ['revision' => $locked->lock_version, 'before' => $before, 'after' => ['metadata' => Arr::only($locked->attributesToArray(), self::METADATA), 'tags' => $tagNames->all(), 'rights' => $rightData]]]);
         });
 
-        return redirect()->route('admin.assets.show', $asset)->with('status', 'Metadata en rechten opgeslagen. De foto blijft privé.');
+        return redirect()->route('admin.assets.show', $asset)->with('status', __('catalogue.generated.t_3ffcd1a97bc06c4e'));
     }
 
     public function media(Request $request, Asset $asset, AssetFile $file, string $size): StreamedResponse
@@ -246,7 +246,7 @@ class AdminAssetController extends Controller
         $key = $file->derivatives[$size] ?? null;
         abort_unless(is_string($key), 404);
         $stream = Storage::disk($file->storage_disk)->readStream($key);
-        abort_unless(is_resource($stream), 503, 'Voorbeeld tijdelijk niet beschikbaar.');
+        abort_unless(is_resource($stream), 503, __('catalogue.generated.t_194a9c2224822d03'));
 
         return response()->stream(function () use ($stream): void {
             try {
@@ -264,13 +264,13 @@ class AdminAssetController extends Controller
         DB::transaction(function () use ($upload, $asset, $request): void {
             $locked = QuarantineUpload::query()->whereKey($upload->id)->lockForUpdate()->firstOrFail();
             $stale = $locked->status === 'running' && $locked->started_at?->lt(now()->subMinutes(4));
-            abort_unless($locked->status === 'failed' || $stale, 409, 'Alleen mislukte of vastgelopen verwerking kan opnieuw starten.');
+            abort_unless($locked->status === 'failed' || $stale, 409, __('catalogue.generated.t_29c9a7a2008777d8'));
             $locked->update(['status' => 'queued', 'failure_reason' => null, 'claim_token' => null]);
             Queue::connection('ingest')->push(new ProcessUpload($locked->id));
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $this->user($request)->id, 'event_type' => 'upload.retried', 'details' => ['upload_id' => $upload->id]]);
         });
 
-        return redirect()->route('admin.assets.show', $asset)->with('status', 'Verwerking opnieuw gestart.');
+        return redirect()->route('admin.assets.show', $asset)->with('status', __('catalogue.generated.t_85746463158a4b56'));
     }
 
     private function user(Request $request): User

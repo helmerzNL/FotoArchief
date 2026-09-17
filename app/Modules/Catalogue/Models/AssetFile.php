@@ -32,7 +32,7 @@ class AssetFile extends CatalogueModel
     {
         static::updating(function (self $file): void {
             if ($file->isDirty(['storage_key', 'sha256'])) {
-                throw new LogicException('Asset file storage keys and checksums are immutable.');
+                throw new LogicException(__('catalogue.generated.t_d73ef55661d85bbd'));
             }
         });
     }

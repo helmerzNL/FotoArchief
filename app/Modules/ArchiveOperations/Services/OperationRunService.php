@@ -69,13 +69,13 @@ class OperationRunService
         if (in_array($run->operation_type, [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE], true)) {
             $user ??= $run->requestedBy;
             if (! $user instanceof User) {
-                throw ValidationException::withMessages(['asset_ids' => 'De aanvrager van deze AI-taak bestaat niet meer. Start een nieuwe taak.']);
+                throw ValidationException::withMessages(['asset_ids' => __('operations.generated.t_b58140650ba0115d')]);
             }
             $payload = $run->payload ?? [];
             $references = $payload['asset_ids'] ?? null;
             $format = $payload['asset_id_format'] ?? 'legacy';
             if (! is_array($references) || ! is_string($format)) {
-                throw ValidationException::withMessages(['asset_ids' => 'Deze AI-taak bevat ongeldige fotoreferenties. Start een nieuwe taak.']);
+                throw ValidationException::withMessages(['asset_ids' => __('operations.generated.t_84c6d8299f0347ee')]);
             }
             $batch = app(AiAssetBatchService::class)->normalize($references, $user, $format);
             if ($format !== AiAssetBatchService::INTERNAL_FORMAT) {
@@ -97,7 +97,7 @@ class OperationRunService
             $migrationId = is_string($payload['migration_id'] ?? null) ? $payload['migration_id'] : null;
             $migration = $migrationId !== null ? StorageMigration::query()->find($migrationId) : null;
             if (! $migration instanceof StorageMigration) {
-                throw ValidationException::withMessages(['operation' => 'De opslagmigratie bestaat niet meer. Start een nieuwe migratie.']);
+                throw ValidationException::withMessages(['operation' => __('operations.generated.t_4add14f922600857')]);
             }
             $migration->relocations()->where('is_verified', false)->update(['error_message' => null]);
             $migration->forceFill([
@@ -118,7 +118,7 @@ class OperationRunService
                 $run->auditEvents()->create([
                     'event_type' => $run->operation_type.'.references_normalized',
                     'severity' => 'info',
-                    'message' => 'Fotoreferenties gecontroleerd en omgezet naar interne IDs voor een herpoging.',
+                    'message' => __('operations.generated.t_a54c5df439cd0da9'),
                     'context' => ['references' => $normalization, 'retried_by_user_id' => $user?->id],
                 ]);
             }

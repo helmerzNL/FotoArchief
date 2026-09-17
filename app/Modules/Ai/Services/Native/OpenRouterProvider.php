@@ -51,7 +51,7 @@ class OpenRouterProvider extends AbstractNativeProvider implements EmbeddingProv
             ? $context['model']
             : (string) ($this->nativeConfig()['vision_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('OpenRouter: geen visionmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_vision_model', ['provider' => 'OpenRouter']));
         }
 
         $request = $this->http->withToken($this->apiKey());
@@ -70,7 +70,7 @@ class OpenRouterProvider extends AbstractNativeProvider implements EmbeddingProv
 
         $text = Arr::get($payload, 'choices.0.message.content');
         if (! is_string($text) || trim($text) === '') {
-            throw new AiProviderException('OpenRouter: geen tekstinhoud in het antwoord.');
+            throw new AiProviderException(__('ai.provider_errors.missing_text', ['provider' => 'OpenRouter']));
         }
 
         $analysis = $this->parseAnalysisJson($text);
@@ -140,13 +140,13 @@ class OpenRouterProvider extends AbstractNativeProvider implements EmbeddingProv
             ? $context['model']
             : (string) ($this->nativeConfig()['embedding_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('OpenRouter: geen embeddingmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_embedding_model', ['provider' => 'OpenRouter']));
         }
 
         /** @var list<string> $allowlist */
         $allowlist = Arr::get($this->nativeConfig(), 'embedding_model_allowlist', []);
         if (! in_array($model, $allowlist, true)) {
-            throw new AiProviderException("OpenRouter: embeddingmodel {$model} staat niet op de toegestane multimodale modellenlijst.");
+            throw new AiProviderException(__('ai.provider_errors.openrouter_model_not_allowed', ['model' => $model]));
         }
 
         return $model;
@@ -167,7 +167,7 @@ class OpenRouterProvider extends AbstractNativeProvider implements EmbeddingProv
 
         $values = Arr::get($payload, 'data.0.embedding');
         if (! is_array($values) || $values === []) {
-            throw new AiProviderException('OpenRouter: antwoord miste data.0.embedding.');
+            throw new AiProviderException(__('ai.provider_errors.openrouter_embedding'));
         }
 
         $embedding = array_values(array_map(static fn (mixed $v): float => (float) $v, $values));

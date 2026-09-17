@@ -58,7 +58,7 @@ class TagController extends Controller
 
         $this->syncSynonyms($tag, $validated['synonyms'] ?? '');
 
-        return redirect()->route('catalogue.tags.show', $tag)->with('status', 'Tag aangemaakt.');
+        return redirect()->route('catalogue.tags.show', $tag)->with('status', __('catalogue.generated.t_822f13271c7c93db'));
     }
 
     public function show(Request $request, Tag $tag): View
@@ -108,7 +108,7 @@ class TagController extends Controller
 
         $this->syncSynonyms($tag, $validated['synonyms'] ?? '');
 
-        return redirect()->route('catalogue.tags.show', $tag)->with('status', 'Tag bijgewerkt.');
+        return redirect()->route('catalogue.tags.show', $tag)->with('status', __('catalogue.generated.t_89284071417da17c'));
     }
 
     public function merge(Request $request, Tag $tag): RedirectResponse
@@ -148,7 +148,7 @@ class TagController extends Controller
             $tag->delete();
         });
 
-        return redirect()->route('catalogue.tags.show', $targetTag)->with('status', sprintf('Tag "%s" succesvol samengevoegd met "%s".', $tag->name, $targetTag->name));
+        return redirect()->route('catalogue.tags.show', $targetTag)->with('status', sprintf(__('catalogue.generated.t_964f41685fae46bb'), $tag->name, $targetTag->name));
     }
 
     public function destroy(Tag $tag): RedirectResponse
@@ -158,7 +158,7 @@ class TagController extends Controller
             $tag->delete();
         });
 
-        return redirect()->route('catalogue.tags.index')->with('status', 'Tag verwijderd.');
+        return redirect()->route('catalogue.tags.index')->with('status', __('catalogue.generated.t_df528784fcec0310'));
     }
 
     private function syncSynonyms(Tag $tag, string $synonymsInput): void
@@ -177,7 +177,7 @@ class TagController extends Controller
 
             if ($conflictTag) {
                 throw ValidationException::withMessages([
-                    'synonyms' => sprintf('Synoniem "%s" is al in gebruik als tagnaam voor "%s".', $name, $conflictTag->name),
+                    'synonyms' => sprintf(__('catalogue.generated.t_d6b46aacf9b48fb5'), $name, $conflictTag->name),
                 ]);
             }
         }

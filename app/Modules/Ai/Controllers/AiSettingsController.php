@@ -54,7 +54,7 @@ class AiSettingsController extends Controller
         ]);
         $this->providerConfigs->update($provider, $validated, $user);
 
-        return redirect()->route('admin.operations.ai.edit')->with('status', 'AI-providerinstellingen opgeslagen; vaste endpoints en versies zijn niet wijzigbaar.');
+        return redirect()->route('admin.operations.ai.edit')->with('status', __('ai.settings.provider_saved'));
     }
 
     public function setProviderKey(Request $request, string $provider): RedirectResponse
@@ -65,7 +65,7 @@ class AiSettingsController extends Controller
         $request->validate(['api_key' => ['required', 'string', 'max:1000']]);
         $this->providerConfigs->setApiKey($provider, (string) $request->string('api_key'), $user);
 
-        return redirect()->route('admin.operations.ai.edit')->with('status', 'API-sleutel opgeslagen. De sleutel wordt niet getoond of teruggegeven.');
+        return redirect()->route('admin.operations.ai.edit')->with('status', __('ai.settings.key_saved'));
     }
 
     public function deleteProviderKey(Request $request, string $provider): RedirectResponse
@@ -76,7 +76,7 @@ class AiSettingsController extends Controller
         $request->validate(['confirm_delete' => ['accepted']]);
         $this->providerConfigs->deleteApiKey($provider, $user);
 
-        return redirect()->route('admin.operations.ai.edit')->with('status', 'API-sleutel verwijderd.');
+        return redirect()->route('admin.operations.ai.edit')->with('status', __('ai.settings.key_deleted'));
     }
 
     public function update(Request $request): RedirectResponse
@@ -107,7 +107,7 @@ class AiSettingsController extends Controller
 
         return redirect()
             ->route('admin.operations.ai.edit')
-            ->with('status', 'AI-instellingen opgeslagen. Wijzigingen activeren nooit automatisch externe fallback.');
+            ->with('status', __('ai.settings.settings_saved'));
     }
 
     public function dispatchAnalysis(Request $request): RedirectResponse
@@ -128,7 +128,7 @@ class AiSettingsController extends Controller
 
         return redirect()
             ->route('admin.operations.runs.index')
-            ->with('status', "AI-analyse {$run->id} is in de achtergrondwachtrij geplaatst.");
+            ->with('status', __('ai.settings.analysis_queued', ['run' => $run->id]));
     }
 
     public function dispatchIndex(Request $request): RedirectResponse
@@ -149,7 +149,7 @@ class AiSettingsController extends Controller
 
         return redirect()
             ->route('admin.operations.runs.index')
-            ->with('status', "AI-index {$run->id} is in de achtergrondwachtrij geplaatst.");
+            ->with('status', __('ai.settings.index_queued', ['run' => $run->id]));
     }
 
     public function testConnection(Request $request): RedirectResponse

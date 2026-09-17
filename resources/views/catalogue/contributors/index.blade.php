@@ -2,24 +2,24 @@
 @section('title', 'Schenkers & Bijdragers — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">&larr; Catalogus</a></div>
-    <h1>Schenkers &amp; Bijdragers</h1>
-    <p class="intro">Overzicht van schenkers, particuliere fotografen, verzamelaars en contactpersonen.</p>
+    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">{{ __('catalogue.generated.t_50589dc3880be794') }}</a></div>
+    <h1>{{ __('catalogue.generated.t_9556d720b1fb5754') }}</h1>
+    <p class="intro">{{ __('catalogue.generated.t_f368afd20fd66eba') }}</p>
     <div class="actions">
-        <a href="{{ route('catalogue.contributors.create') }}" class="button">+ Nieuwe schenker / bijdrager</a>
-        <a href="{{ route('catalogue.sources.index') }}" class="button secondary">Herkomstbronnen &amp; Archieven</a>
+        <a href="{{ route('catalogue.contributors.create') }}" class="button">{{ __('catalogue.generated.t_67ca9d6246597ce6') }}</a>
+        <a href="{{ route('catalogue.sources.index') }}" class="button secondary">{{ __('catalogue.generated.t_32b9d9a7d6c1eef2') }}</a>
     </div>
 </div>
 
 <div class="card">
     <form method="get" action="{{ route('catalogue.contributors.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
         <div style="flex: 2; min-width: 200px;">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Zoek op naam of e-mail...">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="{{ __('catalogue.generated.t_4be193004d9abcf7') }}">
         </div>
         <div style="flex: 1; min-width: 150px;">
             <select name="contributor_type" onchange="this.form.submit()">
-                <option value="">Alle types</option>
-                <option value="donor" {{ request('contributor_type') === 'donor' ? 'selected' : '' }}>Schenker / Donateur</option>
+                <option value="">{{ __('catalogue.generated.t_448b8c66e76bba81') }}</option>
+                <option value="donor" {{ request('contributor_type') === 'donor' ? 'selected' : '' }}>{{ __('catalogue.generated.t_6b7c5cff25c942d4') }}</option>
                 <option value="photographer" {{ request('contributor_type') === 'photographer' ? 'selected' : '' }}>Fotograaf</option>
                 <option value="collector" {{ request('contributor_type') === 'collector' ? 'selected' : '' }}>Verzamelaar</option>
                 <option value="individual" {{ request('contributor_type') === 'individual' ? 'selected' : '' }}>Individu</option>
@@ -35,7 +35,7 @@
     </form>
 
     @if($contributors->isEmpty())
-        <p>Geen schenkers of bijdragers gevonden.</p>
+        <p>{{ __('catalogue.generated.t_e72904142f601069') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse;">
@@ -43,8 +43,8 @@
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
                     <th style="padding: .5rem;">Naam</th>
                     <th style="padding: .5rem;">Type</th>
-                    <th style="padding: .5rem;">E-mail / Contact</th>
-                    <th style="padding: .5rem; text-align: right;">Gekoppelde foto’s</th>
+                    <th style="padding: .5rem;">{{ __('catalogue.generated.t_dd54705848ae874f') }}</th>
+                    <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_9d945313bfdd8bfa') }}</th>
                     <th style="padding: .5rem; text-align: right;">Acties</th>
                 </tr>
             </thead>

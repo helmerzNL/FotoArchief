@@ -45,7 +45,7 @@ class OperationalAlertService
         }
 
         if (! (bool) config('operations.alerts.enabled', false)) {
-            Log::warning('Operationele FotoArchief melding gedetecteerd, verzending staat uit.', $payload);
+            Log::warning(__('operations.generated.t_cd2bd43263428fdd'), $payload);
 
             return [
                 'sent' => false,
@@ -57,7 +57,7 @@ class OperationalAlertService
 
         $webhookUrl = (string) config('operations.alerts.webhook_url', '');
         if ($webhookUrl === '') {
-            Log::warning('Operationele FotoArchief melding gedetecteerd.', $payload);
+            Log::warning(__('operations.generated.t_21f7679e1b5a75e1'), $payload);
 
             return [
                 'sent' => false,
@@ -69,7 +69,7 @@ class OperationalAlertService
 
         $response = Http::timeout(5)->acceptJson()->asJson()->post($webhookUrl, $payload);
         if (! $response->successful()) {
-            throw new RuntimeException('Operations alert webhook failed with status '.$response->status().'.');
+            throw new RuntimeException(__('operations.generated.t_dc8bae9b0e84c0b8').$response->status().'.');
         }
 
         return [
@@ -106,7 +106,7 @@ class OperationalAlertService
                 'key' => $section,
                 'severity' => $severity,
                 'title' => $this->title($section),
-                'detail' => (string) ($data['remediation'] ?? $data['message'] ?? 'Controleer de operationele diagnose.'),
+                'detail' => (string) ($data['remediation'] ?? $data['message'] ?? __('operations.generated.t_9a1ee9bfc64830bf')),
             ];
         }
 
@@ -120,7 +120,7 @@ class OperationalAlertService
                 $incidents[] = [
                     'key' => 'worker.pending_ingest_jobs',
                     'severity' => 'warning',
-                    'title' => 'Ingestwachtrij loopt op',
+                    'title' => __('operations.generated.t_0796d5c11ba7fcdf'),
                     'detail' => "Er staan {$pending} ingesttaken klaar; drempel is {$pendingThreshold}.",
                 ];
             }
@@ -128,7 +128,7 @@ class OperationalAlertService
                 $incidents[] = [
                     'key' => 'worker.failed_ingest_jobs',
                     'severity' => 'warning',
-                    'title' => 'Mislukte ingesttaken boven drempel',
+                    'title' => __('operations.generated.t_8819f1c1ecebf706'),
                     'detail' => "Er zijn {$failed} mislukte ingesttaken; drempel is {$failedThreshold}.",
                 ];
             }
@@ -145,15 +145,15 @@ class OperationalAlertService
     private function title(string $section): string
     {
         return match ($section) {
-            'php' => 'PHP-runtime vraagt aandacht',
-            'extensions' => 'PHP-extensies ontbreken',
-            'storage' => 'Opslagprobe faalt',
-            'database' => 'Databaseprobe faalt',
-            'limits' => 'Uploadlimieten zijn onveilig laag',
-            'scanner' => 'Malwarescanner vraagt aandacht',
-            'worker' => 'Verwerkingswachtrij vraagt aandacht',
-            'activity' => 'Scheduler of worker heartbeat is oud',
-            default => 'Operationele diagnose vraagt aandacht',
+            'php' => __('operations.generated.t_520492bc08bda94b'),
+            'extensions' => __('operations.generated.t_9056d6cca64c1e21'),
+            'storage' => __('operations.generated.t_0f9bd09fcb5c1fc9'),
+            'database' => __('operations.generated.t_41b1aba040516b0c'),
+            'limits' => __('operations.generated.t_df161173f1f9a899'),
+            'scanner' => __('operations.generated.t_e8f4e33cc1abaeb9'),
+            'worker' => __('operations.generated.t_0686c5770c1cecd2'),
+            'activity' => __('operations.generated.t_9175b973b7bdee46'),
+            default => __('operations.generated.t_0a15005d4d8f4355'),
         };
     }
 }

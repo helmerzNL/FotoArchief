@@ -61,7 +61,7 @@ class SourceController extends Controller
         $source = Source::query()->create($data);
 
         return redirect()->route('catalogue.sources.show', $source)
-            ->with('status', 'Herkomstbron succesvol geregistreerd.');
+            ->with('status', __('catalogue.generated.t_cb5ded7d8f9f04aa'));
     }
 
     public function show(Request $request, Source $source): View
@@ -94,7 +94,7 @@ class SourceController extends Controller
         $source->update($data);
 
         return redirect()->route('catalogue.sources.show', $source)
-            ->with('status', 'Herkomstbron bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_557eb2d771536cf5'));
     }
 
     public function destroy(Request $request, Source $source): RedirectResponse
@@ -107,7 +107,7 @@ class SourceController extends Controller
         });
 
         return redirect()->route('catalogue.sources.index')
-            ->with('status', 'Herkomstbron verwijderd.');
+            ->with('status', __('catalogue.generated.t_f67ea35d77e5f3a3'));
     }
 
     public function addAsset(Request $request, Source $source): RedirectResponse
@@ -127,13 +127,13 @@ class SourceController extends Controller
 
         if ($asset === null) {
             throw ValidationException::withMessages([
-                'asset_id' => 'De opgegeven foto kon niet worden gevonden.',
+                'asset_id' => __('catalogue.generated.t_535f3aaae9765ff2'),
             ]);
         }
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te koppelen.');
+            abort(403, __('catalogue.generated.t_2159d6168feb9347'));
         }
 
         $existing = DB::table('asset_sources')
@@ -160,7 +160,7 @@ class SourceController extends Controller
         }
 
         return redirect()->route('catalogue.sources.show', $source)
-            ->with('status', 'Foto succesvol gekoppeld aan herkomstbron.');
+            ->with('status', __('catalogue.generated.t_1fbd9a52cac09f1e'));
     }
 
     public function removeAsset(Request $request, Source $source, Asset $asset): RedirectResponse
@@ -169,7 +169,7 @@ class SourceController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te ontkoppelen.');
+            abort(403, __('catalogue.generated.t_01f6c1ce25102b10'));
         }
 
         $relationshipType = $request->query('relationship_type');
@@ -184,14 +184,14 @@ class SourceController extends Controller
         }
 
         return redirect()->route('catalogue.sources.show', $source)
-            ->with('status', 'Fotokoppeling verwijderd.');
+            ->with('status', __('catalogue.generated.t_2dfe5d4490877d08'));
     }
 
     private function checkManagePermission(Request $request): void
     {
         $user = $request->user();
         if ($user === null || (! $user->hasPermission('catalogue.manage') && ! $user->hasPermission('assets.update'))) {
-            abort(403, 'Onvoldoende rechten om herkomstbronnen te beheren.');
+            abort(403, __('catalogue.generated.t_972bb6f5df1eef1f'));
         }
     }
 }

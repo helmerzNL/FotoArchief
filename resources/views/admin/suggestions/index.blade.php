@@ -3,11 +3,11 @@
 @section('content')
     <p class="eyebrow">Bezoekersbijdragen</p>
     <h1>Suggesties</h1>
-    <p class="intro">Correcties en identificaties van bezoekers, ter beoordeling. Een goedkeuring past de metadata niet automatisch aan.</p>
+    <p class="intro">{{ __('publication.generated.t_497d00c86e9c1edb') }}</p>
     <form method="get" class="actions">
         <label for="status">Status</label>
         <select id="status" name="status" onchange="this.form.submit()">
-            <option value="pending" @selected($status === 'pending')>In behandeling</option>
+            <option value="pending" @selected($status === 'pending')>{{ __('publication.generated.t_402bfea45686dabc') }}</option>
             <option value="accepted" @selected($status === 'accepted')>Geaccepteerd</option>
             <option value="rejected" @selected($status === 'rejected')>Afgewezen</option>
             <option value="all" @selected($status === 'all')>Alles</option>
@@ -26,7 +26,7 @@
                     <td><a href="{{ route('admin.suggestions.show', $suggestion) }}">Openen</a></td>
                 </tr>
             @empty
-                <tr><td colspan="5">Geen suggesties gevonden.</td></tr>
+                <tr><td colspan="5">{{ __('publication.generated.t_7dc6ef8a0ee51510') }}</td></tr>
             @endforelse
             </tbody>
         </table>

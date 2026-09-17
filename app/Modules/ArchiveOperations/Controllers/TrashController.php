@@ -142,6 +142,6 @@ class TrashController extends Controller
 
         return redirect()
             ->route('admin.operations.trash.index')
-            ->with('status', 'Opschoning van wees-quarantainebestanden is in de wachtrij geplaatst.');
+            ->with('status', __('operations.generated.t_1bf0b5fe2963cf0f'));
     }
 }

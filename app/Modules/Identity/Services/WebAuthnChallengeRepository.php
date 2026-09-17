@@ -26,7 +26,7 @@ class WebAuthnChallengeRepository
     {
         $challenge = WebAuthnChallenge::query()->whereKey($id)->lockForUpdate()->first();
         if (! $challenge instanceof WebAuthnChallenge || ! $challenge->isUsable($purpose)) {
-            throw ValidationException::withMessages(['passkey' => 'De passkey-aanvraag is verlopen. Probeer opnieuw.']);
+            throw ValidationException::withMessages(['passkey' => __('identity.generated.t_2b3724b0f713a540')]);
         }
         $challenge->forceFill(['consumed_at' => now()])->save();
 

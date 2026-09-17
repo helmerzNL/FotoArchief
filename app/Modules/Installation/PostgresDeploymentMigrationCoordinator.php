@@ -60,7 +60,7 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
     {
         $connection = DB::connection();
         if ($connection->getDriverName() !== 'pgsql') {
-            throw new RuntimeException('Automatic deployment migrations require the configured PostgreSQL connection.');
+            throw new RuntimeException(__('shared.generated.t_82ef04782faa8339'));
         }
 
         return $connection;
@@ -68,7 +68,7 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
 
     private function tryAcquireLock(Connection $connection): bool
     {
-        $rows = $connection->select('SELECT pg_try_advisory_lock(?, ?) AS acquired', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
+        $rows = $connection->select(__('shared.generated.t_8beba9b040b88470'), [self::LOCK_NAMESPACE, self::LOCK_KEY]);
         $first = (array) ($rows[0] ?? []);
         $acquired = $first['acquired'] ?? false;
 
@@ -79,14 +79,14 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
     {
         $timeout = (int) config('installation.deployment_migration_lock_timeout_seconds', 300);
         if ($timeout < 1) {
-            throw new RuntimeException('Deployment migration lock timeout must be at least one second.');
+            throw new RuntimeException(__('shared.generated.t_af9c9a907afbeca0'));
         }
 
-        $connection->select("SELECT set_config('lock_timeout', ?, false)", [$timeout.'s']);
+        $connection->select(__('shared.generated.t_b1f4a6e3c2835e82'), [$timeout.'s']);
         $acquired = false;
 
         try {
-            $connection->select('SELECT pg_advisory_lock(?, ?)', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
+            $connection->select(__('shared.generated.t_53c726b14eda25f3'), [self::LOCK_NAMESPACE, self::LOCK_KEY]);
             $acquired = true;
         } catch (QueryException $exception) {
             $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
@@ -108,14 +108,14 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
 
     private function releaseLock(Connection $connection): void
     {
-        $connection->select('SELECT pg_advisory_unlock(?, ?)', [self::LOCK_NAMESPACE, self::LOCK_KEY]);
+        $connection->select(__('shared.generated.t_e0a5df31f7bb6c36'), [self::LOCK_NAMESPACE, self::LOCK_KEY]);
     }
 
     private function ensureNoPendingMigrations(): void
     {
         $pending = $this->pendingMigrations();
         if ($pending !== []) {
-            throw new RuntimeException('Database migrations are still pending after the coordinated migration run: '.implode(', ', $pending));
+            throw new RuntimeException(__('shared.generated.t_7a9737f775066652').implode(', ', $pending));
         }
     }
 
@@ -125,7 +125,7 @@ final class PostgresDeploymentMigrationCoordinator implements DeploymentMigratio
     private function pendingMigrations(): array
     {
         if (! $this->migrator->repositoryExists()) {
-            throw new RuntimeException('Migration repository was not created.');
+            throw new RuntimeException(__('shared.generated.t_cfd9cc499c717d1b'));
         }
 
         $files = $this->migrator->getMigrationFiles([database_path('migrations')]);

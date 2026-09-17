@@ -29,13 +29,13 @@ final class AiSourceImageService
             ->first();
 
         if (! $file instanceof AssetFile) {
-            throw new RuntimeException("Foto {$asset->id} heeft geen primair verwerkt bestand voor AI.");
+            throw new RuntimeException(__('ai.errors.source_missing', ['asset' => $asset->id]));
         }
 
         $disk = Storage::disk((string) ($file->storage_disk ?: config('filesystems.default')));
         $bytes = $disk->get($file->storage_key);
         if (! is_string($bytes) || ! hash_equals((string) $file->sha256, hash('sha256', $bytes))) {
-            throw new RuntimeException("Het primaire bestand van foto {$asset->id} ontbreekt of wijkt af van de opgeslagen checksum.");
+            throw new RuntimeException(__('ai.errors.source_checksum', ['asset' => $asset->id]));
         }
 
         if ($file->scanner_status !== 'clean') {
@@ -49,12 +49,12 @@ final class AiSourceImageService
     {
         $key = $file->derivatives['preview1200'] ?? null;
         if (! is_string($key) || $key === '') {
-            throw new RuntimeException('De metadata-arme AI-afgeleide ontbreekt.');
+            throw new RuntimeException(__('ai.errors.ai_derivative_missing'));
         }
 
         $bytes = $disk->get($key);
         if (! is_string($bytes) || $bytes === '') {
-            throw new RuntimeException('De metadata-arme AI-afgeleide kon niet worden gelezen.');
+            throw new RuntimeException(__('ai.errors.ai_derivative_unreadable'));
         }
 
         set_error_handler(static fn (): bool => true);
@@ -64,7 +64,7 @@ final class AiSourceImageService
             restore_error_handler();
         }
         if ($source === false) {
-            throw new RuntimeException('De metadata-arme AI-afgeleide kon niet veilig worden gedecodeerd.');
+            throw new RuntimeException(__('ai.errors.ai_derivative_decode'));
         }
 
         $width = imagesx($source);
@@ -77,7 +77,7 @@ final class AiSourceImageService
         if ($target === false) {
             imagedestroy($source);
 
-            throw new RuntimeException('Geheugen voor de AI-afgeleide kon niet worden gereserveerd.');
+            throw new RuntimeException(__('ai.errors.ai_derivative_memory'));
         }
 
         imagefill($target, 0, 0, 16777215);
@@ -87,7 +87,7 @@ final class AiSourceImageService
         ob_start();
         try {
             if (! imagejpeg($target, null, 85)) {
-                throw new RuntimeException('De AI-afgeleide kon niet als JPEG worden gecodeerd.');
+                throw new RuntimeException(__('ai.errors.ai_derivative_encode'));
             }
             $encoded = ob_get_contents();
         } finally {
@@ -95,7 +95,7 @@ final class AiSourceImageService
             imagedestroy($target);
         }
         if (! is_string($encoded) || $encoded === '') {
-            throw new RuntimeException('De gecodeerde AI-afgeleide is niet beschikbaar.');
+            throw new RuntimeException(__('ai.errors.ai_derivative_encoded_missing'));
         }
 
         return $encoded;
@@ -104,20 +104,20 @@ final class AiSourceImageService
     private function scan(AssetFile $file, string $bytes): void
     {
         if (config('ingest.scanner') === 'none') {
-            throw new RuntimeException('Het primaire bestand is niet malwaregescand. Activeer eerst ClamAV; probeer de AI-taak daarna opnieuw om het bestand veilig te hercontroleren.');
+            throw new RuntimeException(__('ai.errors.unscanned_source'));
         }
 
         $temporary = tempnam(sys_get_temp_dir(), 'fotoarchief-ai-scan-');
         if ($temporary === false) {
-            throw new RuntimeException('Tijdelijke opslag voor de malwarecontrole kon niet worden aangemaakt.');
+            throw new RuntimeException(__('ai.errors.scan_temp_create'));
         }
 
         try {
             if (file_put_contents($temporary, $bytes, LOCK_EX) !== strlen($bytes)) {
-                throw new RuntimeException('Het bestand kon niet voor de malwarecontrole worden klaargezet.');
+                throw new RuntimeException(__('ai.errors.scan_temp_write'));
             }
             if ($this->scanner->scan($temporary) !== 'clean') {
-                throw new RuntimeException('De malwarecontrole heeft het bestand niet als schoon vrijgegeven.');
+                throw new RuntimeException(__('ai.errors.scan_not_clean'));
             }
         } finally {
             if (is_file($temporary)) {

@@ -2,25 +2,25 @@
 @section('title', 'Herkomstbronnen & Archieven — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">&larr; Catalogus</a></div>
-    <h1>Herkomstbronnen &amp; Archieven</h1>
-    <p class="intro">Provenance-registratie, institutionele herkomst, fysieke vindplaatsen en referentiecodes.</p>
+    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">{{ __('catalogue.generated.t_50589dc3880be794') }}</a></div>
+    <h1>{{ __('catalogue.generated.t_32b9d9a7d6c1eef2') }}</h1>
+    <p class="intro">{{ __('catalogue.generated.t_6606bdedefc8062e') }}</p>
     <div class="actions">
-        <a href="{{ route('catalogue.sources.create') }}" class="button">+ Nieuwe herkomstbron</a>
-        <a href="{{ route('catalogue.contributors.index') }}" class="button secondary">Schenkers &amp; Bijdragers bekijken</a>
+        <a href="{{ route('catalogue.sources.create') }}" class="button">{{ __('catalogue.generated.t_5be03efb1e62857d') }}</a>
+        <a href="{{ route('catalogue.contributors.index') }}" class="button secondary">{{ __('catalogue.generated.t_12aef68b6757111a') }}</a>
     </div>
 </div>
 
 <div class="card">
     <form method="get" action="{{ route('catalogue.sources.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
         <div style="flex: 2; min-width: 200px;">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Zoek op naam of referentiecode...">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="{{ __('catalogue.generated.t_f372a31cd0ae785f') }}">
         </div>
         <div style="flex: 1; min-width: 150px;">
             <select name="source_type" onchange="this.form.submit()">
-                <option value="">Alle types</option>
-                <option value="archive" {{ request('source_type') === 'archive' ? 'selected' : '' }}>Archief / Instelling</option>
-                <option value="donor" {{ request('source_type') === 'donor' ? 'selected' : '' }}>Schenking / Particulier</option>
+                <option value="">{{ __('catalogue.generated.t_448b8c66e76bba81') }}</option>
+                <option value="archive" {{ request('source_type') === 'archive' ? 'selected' : '' }}>{{ __('catalogue.generated.t_73d0e45ed6d9026a') }}</option>
+                <option value="donor" {{ request('source_type') === 'donor' ? 'selected' : '' }}>{{ __('catalogue.generated.t_3aee1fdcf886167a') }}</option>
                 <option value="collection" {{ request('source_type') === 'collection' ? 'selected' : '' }}>Deelcollectie</option>
                 <option value="family" {{ request('source_type') === 'family' ? 'selected' : '' }}>Familiearchief</option>
                 <option value="other" {{ request('source_type') === 'other' ? 'selected' : '' }}>Overig</option>
@@ -35,7 +35,7 @@
     </form>
 
     @if($sources->isEmpty())
-        <p>Geen herkomstbronnen gevonden.</p>
+        <p>{{ __('catalogue.generated.t_95a4e43946316a3e') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse;">
@@ -44,7 +44,7 @@
                     <th style="padding: .5rem;">Naam</th>
                     <th style="padding: .5rem;">Type</th>
                     <th style="padding: .5rem;">Referentiecode</th>
-                    <th style="padding: .5rem; text-align: right;">Gekoppelde foto’s</th>
+                    <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_9d945313bfdd8bfa') }}</th>
                     <th style="padding: .5rem; text-align: right;">Acties</th>
                 </tr>
             </thead>

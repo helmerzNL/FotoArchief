@@ -101,6 +101,10 @@ jobs:
           set -euo pipefail
           sh tests/Smoke/encrypted-backup-copy.sh
           php tests/Smoke/local-ai-http-contract.php
+          fixture="$(mktemp -d)"
+          trap 'rm -rf "$fixture"' EXIT
+          touch "$fixture/.fotoarchief-disposable-ai-load"
+          FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1 php tests/Smoke/ai-image-load.php --fixture-dir="$fixture" --images=2
 
   postgres:
     name: PostgreSQL fresh installation and forward upgrade
