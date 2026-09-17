@@ -43,7 +43,11 @@ class AiSemanticSearchService
      */
     public function searchPublic(string $query, string $provider, int $limit = 24): Collection
     {
-        $matches = $this->rankEmbeddings($query, $provider, max(1, min($limit, 24)));
+        $limit = max(1, min($limit, 24));
+        // Visibility is an SQL authorization predicate, not a ranking signal.
+        // Rank a bounded candidate set first, then retain enough authorized
+        // publications to satisfy the requested page where they exist.
+        $matches = $this->rankEmbeddings($query, $provider, 500);
         if ($matches === []) {
             return collect();
         }
@@ -57,6 +61,8 @@ class AiSemanticSearchService
             ->whereIn('asset_id', $assetIds)
             ->get()
             ->sortBy(fn (Publication $publication): int => $rank[$publication->asset_id] ?? PHP_INT_MAX)
+            ->values()
+            ->take($limit)
             ->values();
     }
 

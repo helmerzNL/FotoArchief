@@ -160,3 +160,54 @@ it('semantic public search only renders publicly visible publication candidates'
         ->assertSee('Publiek plein')
         ->assertDontSee('Verborgen plein');
 });
+
+it('applies every public visibility guard before semantic results are counted', function (): void {
+    $owner = discoveryOwner();
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1', 'embeddings_enabled' => '1', 'local_provider_enabled' => '1',
+        'local_endpoint' => 'http://127.0.0.1:8088', 'max_assets_per_batch' => 10,
+        'derivative_max_pixels' => 512, 'request_timeout_seconds' => 15, 'monthly_external_budget_cents' => 0,
+    ], $owner);
+    $generation = AiEmbeddingGeneration::query()->create([
+        'provider_kind' => 'local', 'provider_name' => 'owned-http', 'model_id' => 'visibility-proof',
+        'model_space' => 'visibility-proof', 'dimensions' => 2, 'distance_metric' => 'cosine',
+        'vector_backend' => 'database_json', 'status' => AiEmbeddingGeneration::STATUS_ACTIVE, 'activated_at' => now(),
+    ]);
+    $visible = discoveryPublishedAsset($owner, 'Zichtbaar resultaat');
+    $denied = [
+        discoveryPublishedAsset($owner, 'Ingetrokken resultaat', ['status' => 'revoked', 'revoked_at' => now()]),
+        discoveryPublishedAsset($owner, 'Privacy resultaat', ['privacy_cleared' => false]),
+        discoveryPublishedAsset($owner, 'Embargo resultaat', ['embargo_until' => now()->addDay()->toDateString()]),
+        discoveryPublishedAsset($owner, 'Versie resultaat', ['published_lock_version' => 99]),
+        discoveryPublishedAsset($owner, 'Prullenbak resultaat'),
+    ];
+    $denied[4]->delete();
+    foreach (array_merge([$visible], $denied) as $asset) {
+        $file = $asset->files()->firstOrFail();
+        AiEmbedding::query()->create([
+            'ai_embedding_generation_id' => $generation->id, 'asset_id' => $asset->id, 'asset_file_id' => $file->id,
+            'source_asset_lock_version' => $asset->lock_version, 'source_file_sha256' => $file->sha256,
+            'embedding' => [1.0, 0.0], 'indexed_at' => now(), 'metadata' => ['modality' => 'image'],
+        ]);
+    }
+    Http::fake(['http://127.0.0.1:8088/v1/embed-text' => Http::response([
+        'embedding' => [1.0, 0.0], 'model_space' => 'visibility-proof', 'dimensions' => 2,
+    ])]);
+
+    $response = $this->get('/ontdek?semantic_q=resultaat&semantic_consent=1');
+    $response->assertOk()->assertSee('Zichtbaar resultaat');
+    foreach (['Ingetrokken resultaat', 'Privacy resultaat', 'Embargo resultaat', 'Versie resultaat', 'Prullenbak resultaat'] as $title) {
+        $response->assertDontSee($title);
+    }
+    expect($response->viewData('publications'))->toHaveCount(1);
+});
+
+it('does not send a visitor query to an AI provider without per-request consent', function (): void {
+    Http::fake();
+
+    $this->get('/ontdek?semantic_q=priv%C3%A9+zoekvraag')
+        ->assertOk()
+        ->assertSee('Geef eerst toestemming om je zoektekst naar een AI-provider te sturen voor semantisch zoeken.');
+
+    Http::assertNothingSent();
+});

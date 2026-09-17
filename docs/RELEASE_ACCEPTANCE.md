@@ -618,6 +618,86 @@ tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` with
 
 ## Items 16-20 backup and AI/vector acceptance provisions
 
+## Items 21-25 semantic, public, load, accessibility and localisation provisions
+
+### Nederlands
+
+21. `tests/Smoke/semantic-relevance.php` is een uitvoerbare, standaard
+uitgeschakelde evaluator. Hij accepteert uitsluitend een door de operator
+aangeleverd JSON-corpus met zoekvraag, goedgekeurde verwachte IDs en gerankte
+IDs, plus expliciete `k`, minimale precision en minimale recall. Hij rapporteert
+precision@k, recall@k en reciprocal rank en faalt onder een drempel. Hij doet
+geen providerrequest en bevat geen standaardcorpus of verzonnen succes. Echte
+Nederlandse relevantieacceptatie blijft **GEBLOKKEERD** tot corpus en drempels
+zijn aangeleverd.
+
+22. Publiek semantisch zoeken rangschikt maximaal 500 kandidaten maar past
+vervolgens uitsluitend de bestaande `publiclyVisible()` SQL-predicate toe en
+neemt daarna maximaal 24 resultaten. Hierdoor vullen ingetrokken, privacy-,
+embargo-, prullenbak- of versie-invalide kandidaten nooit een pagina. De
+featuretest bevestigt elk geval, de telling en dat een bezoeker zonder
+toestemmingsvakje geen request naar een provider veroorzaakt.
+
+23. `tests/Smoke/ai-image-load.php` is een begrensde, expliciet ingeschakelde
+fixture-harness (1--100 labels, 1--8 workers). Hij weigert iedere directory
+zonder markerbestand of met andere inhoud en kan dus geen gebruikershost of
+productie-installatie raken. De huidige meting is uitdrukkelijk alleen een
+metadata/queued-job-regressie; een echt 50k-binaire-corpus en
+concurrentieacceptatie zijn **GEBLOKKEERD** totdat representatieve bestanden en
+runtime zijn gekozen.
+
+24. Er is in deze sessie geen browser-automatiseringstool aan de agent
+beschikbaar gesteld. Daarom zijn geen visuele/WCAG-observaties gefabriceerd en
+blijft desktop, 390px en toetsenbordvalidatie **PENDING** voor een geïsoleerde
+browserfixture of -server.
+
+25. De AI-catalogusextractie blijft Nederlands als enige huidige UI-locale;
+cataloguscontroles bewaken letterlijke sleutels. De resterende settings- en
+resultaatoppervlakken worden in de volgende batch volledig naar `lang/nl/ai.php`
+verplaatst; deze batch claimt geen voltooide UI-lokalisatie.
+
+De Quality PHP-job voert nu fail-fast zowel de versleutelde-backupkopie-smoke
+als de lokale AI HTTP-contractstub uit. Zij gebruiken uitsluitend tijdelijke
+bestanden en loopback; de pgvector-provision blijft geen claim over het
+`database_json`-app-pad.
+
+### English
+
+21. `tests/Smoke/semantic-relevance.php` is an executable, opt-in evaluator.
+It accepts only operator-supplied JSON with query text, approved expected IDs,
+and ranked IDs, plus explicit `k`, minimum precision, and minimum recall. It
+reports precision@k, recall@k, and reciprocal rank and fails below a threshold.
+It makes no provider request and has no default corpus or fabricated success.
+Real Dutch relevance acceptance remains **BLOCKED** until corpus and thresholds
+are supplied.
+
+22. Public semantic search ranks at most 500 candidates, then applies only the
+existing `publiclyVisible()` SQL predicate and finally takes at most 24 results.
+Revoked, privacy, embargo, trash, and version-invalid candidates therefore
+cannot consume a page. The feature test covers every case, count, and that a
+visitor without consent causes no provider request.
+
+23. `tests/Smoke/ai-image-load.php` is a bounded explicitly enabled fixture
+harness (1--100 labels, 1--8 workers). It refuses any directory without its
+marker or with other content, so it cannot target a user host or production
+installation. The present measurement is explicitly metadata/queued-job
+regression only; real 50k binary corpus and concurrency acceptance remain
+**BLOCKED** until representative files and runtime are selected.
+
+24. No browser automation tool was made available to the agent in this session.
+No visual/WCAG observations have therefore been fabricated; desktop, 390px,
+and keyboard validation remain **PENDING** for an isolated browser fixture or
+server.
+
+25. AI catalogue extraction remains Dutch as the sole current UI locale;
+catalogue checks guard literal keys. The remaining settings and result surfaces
+will be fully moved to `lang/nl/ai.php` in the next batch; this batch does not
+claim completed UI localisation.
+
+The Quality PHP job now fail-fast runs both the encrypted-backup-copy smoke
+check and local AI HTTP contract stub. They use temporary files and loopback
+only; pgvector provision remains no claim about the `database_json` app path.
+
 ### Nederlands
 
 Deze batch is lokaal voorbereid zonder productie-installatie, providergeheimen,

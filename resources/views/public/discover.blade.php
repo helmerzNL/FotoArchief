@@ -18,17 +18,17 @@
         <a href="{{ route('public.discover') }}">Filters wissen</a>
     </form>
     <form class="actions" method="get" action="{{ route('public.discover') }}">
-        <label for="semantic_q">Zoeken op beeldinhoud</label>
-        <input id="semantic_q" name="semantic_q" value="{{ request('semantic_q') }}" maxlength="200" placeholder="bijvoorbeeld: kinderen bij een molen">
-        <p class="hint">Semantisch zoeken stuurt je zoektekst naar een externe AI-provider om te vergelijken met beeldbeschrijvingen. Zonder toestemming hieronder wordt alleen op titel/beschrijving gezocht.</p>
+        <label for="semantic_q">{{ __('ai.public.label') }}</label>
+        <input id="semantic_q" name="semantic_q" value="{{ request('semantic_q') }}" maxlength="200" placeholder="{{ __('ai.public.placeholder') }}">
+        <p class="hint">{{ __('ai.public.notice') }}</p>
         <label>
             <input type="checkbox" id="semantic_consent" name="semantic_consent" value="1" @checked(request()->boolean('semantic_consent'))>
-            Ik geef toestemming om deze zoektekst naar de AI-provider te sturen voor semantisch zoeken.
+            {{ __('ai.public.consent') }}
         </label>
-        <button class="secondary">Semantisch zoeken</button>
+        <button class="secondary">{{ __('ai.public.submit') }}</button>
     </form>
     @if($semanticError)
-        <p role="alert">Semantisch zoeken is nu niet beschikbaar: {{ $semanticError }}</p>
+        <p role="alert">{{ __('ai.public.unavailable', ['error' => $semanticError]) }}</p>
     @endif
     <section class="gallery" aria-label="Zoekresultaten">
         @forelse($publications as $publication)

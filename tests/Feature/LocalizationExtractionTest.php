@@ -55,7 +55,7 @@ it('renders representative installed onboarding shell text from translations', f
         ->assertSee('Nieuwe uitnodiging');
 });
 
-it('keeps extracted shared shell, auth and onboarding blades free of raw rendered text', function (): void {
+it('keeps extracted shared shell, auth, onboarding and AI blades free of raw rendered text', function (): void {
     $scanner = new UserVisibleTextScanner;
     $bladeFiles = array_values(array_filter(
         UserVisibleTextScanner::EXTRACTED_FILES,

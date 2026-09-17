@@ -34,6 +34,8 @@ final class UserVisibleTextScanner
         'resources/views/identity/users/index.blade.php',
         'resources/views/installation/setup.blade.php',
         'resources/views/layouts/app.blade.php',
+        'resources/views/ai/search/admin.blade.php',
+        'resources/views/ai/suggestions/index.blade.php',
     ];
 
     /**

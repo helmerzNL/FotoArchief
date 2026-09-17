@@ -94,6 +94,14 @@ jobs:
         if: steps.scripts.outputs.test == 'true'
         run: composer test
 
+      - name: Run isolated encrypted-backup and local-AI contract smoke checks
+        if: steps.project.outputs.exists == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh tests/Smoke/encrypted-backup-copy.sh
+          php tests/Smoke/local-ai-http-contract.php
+
   postgres:
     name: PostgreSQL fresh installation and forward upgrade
     runs-on: ubuntu-latest

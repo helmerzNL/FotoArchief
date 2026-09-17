@@ -51,7 +51,7 @@ class AiSuggestionReviewController extends Controller
         $this->review->accept($suggestion, $user, (int) $validated['lock_version']);
 
         return $this->reviewRedirect($suggestion, $validated['return_to'] ?? null)
-            ->with('status', 'AI-suggestie geaccepteerd en als metadatawijziging opgeslagen.');
+            ->with('status', __('ai.suggestions.accepted'));
     }
 
     public function reject(Request $request, AiSuggestion $suggestion): RedirectResponse
@@ -69,7 +69,7 @@ class AiSuggestionReviewController extends Controller
         $this->review->reject($suggestion, $user, $validated['review_note'] ?? null);
 
         return $this->reviewRedirect($suggestion, $validated['return_to'] ?? null)
-            ->with('status', 'AI-suggestie afgewezen zonder metadata te wijzigen.');
+            ->with('status', __('ai.suggestions.rejected'));
     }
 
     private function reviewRedirect(AiSuggestion $suggestion, ?string $returnTo): RedirectResponse
