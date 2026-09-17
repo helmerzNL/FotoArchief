@@ -42,6 +42,22 @@ class AiSuggestion extends CatalogueModel
         ];
     }
 
+    public function matchesSource(?AssetFile $file): bool
+    {
+        return $file !== null
+            && $file->asset_id === $this->asset_id
+            && $file->id === $this->asset_file_id
+            && $file->is_primary
+            && $this->source_file_sha256 !== null
+            && $this->source_file_sha256 === $file->sha256;
+    }
+
+    public function canReview(): bool
+    {
+        return $this->review_status === self::REVIEW_PENDING
+            || ($this->review_status === self::REVIEW_SUPERSEDED && $this->matchesSource($this->assetFile));
+    }
+
     /** @return BelongsTo<AiRun, $this> */
     public function run(): BelongsTo
     {
