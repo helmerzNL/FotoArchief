@@ -58,7 +58,7 @@ class TrashController extends Controller
         $this->trashService->moveToTrash($asset, $validated['reason'], $user);
 
         return redirect()
-            ->back()
+            ->route('admin.operations.trash.index')
             ->with('status', "Asset {$asset->accession_number} is verplaatst naar de prullenbak.");
     }
 

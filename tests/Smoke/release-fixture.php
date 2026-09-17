@@ -61,10 +61,11 @@ function releaseArtisan(string $installed, array $environment, array $arguments)
     (new Process([PHP_BINARY, 'artisan', ...$arguments], $installed, $environment, timeout: 120))->mustRun();
 }
 
-function startReleaseServer(string $installed, array $environment): Process
+function startReleaseServer(string $installed, array $environment, ?string $router = null): Process
 {
     $address = parse_url($environment['SMOKE_URL'], PHP_URL_HOST).':'.parse_url($environment['SMOKE_URL'], PHP_URL_PORT);
-    $process = new Process([PHP_BINARY, '-S', $address, '-t', 'public'], $installed, $environment, timeout: null);
+    $arguments = ['-t', 'public', ...($router === null ? [] : [$router])];
+    $process = new Process([PHP_BINARY, '-S', $address, ...$arguments], $installed, $environment, timeout: null);
     $process->start();
     for ($attempt = 0; $attempt < 100; $attempt++) {
         $curl = curl_init($environment['SMOKE_URL'].'/up');
@@ -82,7 +83,7 @@ function startReleaseServer(string $installed, array $environment): Process
     throw new RuntimeException('Fixture HTTP server did not become responsive.');
 }
 
-function runReleaseOnboarding(string $installed, array $environment): void
+function runReleaseOnboarding(string $installed, array $environment, string $console = 'artisan'): void
 {
     $worker = null;
     $acceptance = new Process([PHP_BINARY, __DIR__.'/http-onboarding.php'], $installed, $environment, timeout: 150);
@@ -94,7 +95,7 @@ function runReleaseOnboarding(string $installed, array $environment): void
                 ? json_decode(file_get_contents($statePath), true, 512, JSON_THROW_ON_ERROR)
                 : [];
             if (($state['phase'] ?? null) === 'complete') {
-                $worker = new Process([PHP_BINARY, 'artisan', 'queue:work', 'ingest', '--sleep=1', '--tries=3'], $installed, $environment, timeout: null);
+                $worker = new Process([PHP_BINARY, $console, 'queue:work', 'ingest', '--sleep=1', '--tries=3'], $installed, $environment, timeout: null);
                 $worker->start();
                 break;
             }

@@ -186,6 +186,57 @@ jobs:
             performance-public.json
           if-no-files-found: ignore
 
+  browser:
+    name: Browser acceptance (11-15)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: browser_fixture
+          POSTGRES_PASSWORD: disposable-fixture-password
+          POSTGRES_DB: acceptance_browser_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U browser_fixture -d acceptance_browser_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, pdo_sqlite, gd, exif, fileinfo, zip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/Browser/package-lock.json
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: npm ci
+        working-directory: tests/Browser
+      - run: npm run typecheck
+        working-directory: tests/Browser
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/Browser
+      - name: Exercise real browser routes with isolated PostgreSQL and ingest worker
+        env:
+          FOTOARCHIEF_DISPOSABLE_BROWSER: "1"
+          FOTOARCHIEF_BROWSER_DATABASE: acceptance_browser_test
+          FOTOARCHIEF_BROWSER_DB_PORT: "5432"
+          FOTOARCHIEF_BROWSER_DB_USER: browser_fixture
+        run: php tests/Browser/fixture.php --run
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-acceptance-${{ github.sha }}
+          path: |
+            tests/Browser/playwright-report
+            tests/Browser/test-results
+
   container:
     name: Container smoke test
     runs-on: ubuntu-latest

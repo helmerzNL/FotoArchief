@@ -72,10 +72,11 @@ test('soft-deleting an asset moves it to trash and excludes it from standard ass
 
     expect(Asset::count())->toBe(1);
 
-    $response = $this->actingAs($this->archivist)->post("/admin/operations/trash/assets/{$asset->id}/trash", [
+    $response = $this->actingAs($this->archivist)->from("/admin/assets/{$asset->id}")->post("/admin/operations/trash/assets/{$asset->id}/trash", [
         'reason' => 'Per ongeluk dubbel ingevoerd',
     ]);
-    $response->assertRedirect();
+    $response->assertRedirect('/admin/operations/trash');
+    $this->get('/admin/operations/trash')->assertOk()->assertSee('FA-TRASH-001');
 
     // Standard queries now block this deleted asset
     expect(Asset::count())->toBe(0);

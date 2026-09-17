@@ -21,7 +21,12 @@ is geen productieacceptatie.
 | 8. Versleutelde volledige restore | Gebouwd, CI nog te draaien | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
 | 9. S3-restore | Lokaal uitgevoerd | Afzonderlijke echte PostgreSQL- en SeaweedFS-diensten; bron gestopt en hersteld naar nieuwe lege diensten, inclusief private installatiestatus en objectchecksums. |
 | 10. Opslagmigratie hervatten | Lokaal getest | Echte workeronderbreking na receipt/cursor; duurzame tellingen, werkelijke disk-omschakeling, afgeleide-checksums en hervatbare bronopruiming. |
-| 11–20 | Nog te bouwen | Geen claim op basis van bestaande stubs of fixtures. |
+| 11. AI-review in de browser | Lokaal uitgevoerd | Metadatarevisie wijzigen, beschrijving/tag accepteren, afwijzen met reden, echte bronwijziging weigeren en beslissingen teruglezen. |
+| 12. Upload/ingest in de browser | Lokaal uitgevoerd | Echte multipart-upload en queueworker, private JPEG-preview, expliciet niet-gescand en zichtbare duplicaatfout. |
+| 13. Rollen in de browser | Lokaal uitgevoerd | Echte logins voor viewer, vrijwilliger, editor en archivaris; ownership, formulieren en geweigerde directe routes. |
+| 14. Publicatie intrekken/embargo/prullenbak | Lokaal uitgevoerd | Anonieme detail-, media- en IIIF-routes: 200 vóór intrekken/verwijderen, 404 erna; embargo altijd 404. |
+| 15. Mobiel en toetsenbord | Lokaal uitgevoerd | Chromium op 360 px: echte stylesheet, preview, labels, zichtbare focus, Tab/Enter, opgeslagen wijziging en geen paginaoverflow. |
+| 16–20 | Nog te bouwen | Geen claim op basis van bestaande stubs of fixtures. |
 
 ### Uitgevoerde lokale controles
 
@@ -115,6 +120,51 @@ applicatielimieten. De upgradehelper wacht expliciet op gezonde diensten.
 De S3-proef is een begrensde testharness, geen algemene productiebackup-tool
 en geen Hetzner/offsite-acceptatie.
 
+### Browservoorzieningen 11-15
+
+Na handmatige Playwright-browserinteracties zijn vijf geautomatiseerde
+Chromium-scenario's gebouwd: **5 geslaagd in 2,0 minuten** tegen PostgreSQL
+16.14. De fixture doorloopt de echte HTTP-installatiewizard, login, CSRF,
+multipart-upload en ingest-worker. Iedere run vereist een lege loopbackdatabase
+met suffix `_browser_test`; opslag, sessies en caches liggen in een gemarkeerde
+tijdelijke map. De toepassingseigen `.env` wordt niet gelezen. Alleen eigen
+server-/workerprocessen en tijdelijke bestanden worden na afloop opgeruimd.
+De database blijft beschikbaar voor diagnose en wordt niet gewist/hergebruikt.
+
+De browserproef vond een echte redirectfout: verwijderen vanaf een dossier
+leidde terug naar het soft-deleted dossier en daarmee naar 404. Het antwoord
+verwijst nu naar de prullenbak met bevestiging. De gerichte PHP-regressiesuite
+is geslaagd: **5 tests, 44 assertions**. PHPStan, Pint, TypeScript,
+vertaalcontrole en workflowvalidatie zijn uitgevoerd.
+
+Uitvoeren op een eigen wegwerpdatabase (PHP 8.5, PostgreSQL, Node 22):
+
+```sh
+cd tests/Browser
+npm ci
+npm run typecheck
+npx playwright install chromium
+cd ../..
+FOTOARCHIEF_DISPOSABLE_BROWSER=1 \
+FOTOARCHIEF_BROWSER_DATABASE=acceptance_browser_test \
+FOTOARCHIEF_BROWSER_DB_PORT=5432 \
+FOTOARCHIEF_BROWSER_DB_USER=browser_fixture \
+php tests/Browser/fixture.php --run
+```
+
+Het testaccount gebruikt uitsluitend het vaste wegwerpwachtwoord
+`disposable-fixture-password` voor PostgreSQL. De CI-job maakt deze database
+zelf in een aparte service. Zonder `--run` blijft de fixture maximaal een uur
+beschikbaar voor handmatige browserinteractie; een bestand `stop` in de
+afgedrukte tijdelijke root stopt de eigen processen.
+
+AI-resultaten en schone publiceerbare bestanden zijn expliciet synthetisch
+voorbereid: geen provider is aangeroepen en ClamAV is niet uitgevoerd.
+Nieuwe uploads doorlopen echte verwerking met scanner `none` en tonen
+terecht **NIET GESCAND**. Dit is geen live-OpenAI-, ClamAV-, fysieke-mobiele-
+of volledige WCAG-acceptatie. Geen nieuwe operatorvariabelen, Compose-mappings
+of gewijzigde applicatielimieten.
+
 ## English
 
 ### Progress
@@ -135,7 +185,12 @@ skipped environment check is not production acceptance.
 | 8. Encrypted full restore | Built, CI pending | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
 | 9. S3 restore | Run locally | Separate real PostgreSQL and SeaweedFS services; source stopped and restored into new empty services, including private installation state and object checksums. |
 | 10. Resumable storage migration | Tested locally | Actual worker interruption after receipt/cursor; durable counts, actual disk cutover, derivative checksums and resumable source cleanup. |
-| 11–20 | Still to build | No claim is made from existing stubs or fixtures. |
+| 11. Browser AI review | Run locally | Edit metadata revision, accept description/tag, reject with reason, refuse changed source and read back decisions. |
+| 12. Browser upload/ingest | Run locally | Real multipart upload and queue worker, private JPEG preview, explicit unscanned state and visible duplicate failure. |
+| 13. Browser roles | Run locally | Real viewer, volunteer, editor and archivist logins; ownership, forms and denied direct routes. |
+| 14. Revocation/embargo/trash | Run locally | Anonymous detail, media and IIIF routes: 200 before revocation/trash, 404 afterwards; embargo always 404. |
+| 15. Mobile and keyboard | Run locally | Chromium at 360 px: real stylesheet, preview, labels, visible focus, Tab/Enter, persisted edit and no page overflow. |
+| 16–20 | Still to build | No claim is made from existing stubs or fixtures. |
 
 ### Local checks performed
 
@@ -227,3 +282,33 @@ mappings or `.env` variables, and no higher application limits. The upgrade
 helper explicitly waits for healthy services. The S3 scenario is a bounded
 test harness, not a general production backup tool or Hetzner/offsite
 acceptance.
+
+### Browser features 11-15
+
+Following manual Playwright browser interactions, five automated Chromium
+scenarios were built: **5 passed in 2.0 minutes** against PostgreSQL 16.14.
+The fixture uses the real HTTP installation wizard, login, CSRF, multipart
+upload and ingest worker. Each run requires an empty loopback database ending
+in `_browser_test`; storage, sessions and caches live in a marked temporary
+directory. The application's own `.env` is never loaded. Only owned server/
+worker processes and temporary files are cleaned up. The populated database
+remains available for diagnosis and is neither wiped nor reused.
+
+The browser test found a real redirect bug: trashing from an asset returned
+to the soft-deleted detail page and produced 404. It now redirects to the
+trash dashboard with confirmation. Targeted PHP regression checks passed:
+**5 tests, 44 assertions**. PHPStan, Pint, TypeScript, translation checks and
+workflow validation were executed.
+
+Use the command block in the Dutch section with PHP 8.5, PostgreSQL and Node
+22 on a disposable database. Its database account uses the fixed disposable
+password `disposable-fixture-password`; CI creates this in a separate service.
+Without `--run`, the fixture stays available for manual browser interaction
+for at most one hour; creating `stop` inside the printed temporary root stops
+its processes.
+
+AI outputs and clean publishable files are explicitly synthetic fixtures:
+no provider was called and ClamAV was not executed. New uploads use real
+processing with scanner `none` and correctly display **NIET GESCAND**.
+This is not live OpenAI, ClamAV, physical mobile-device or full WCAG
+acceptance. No new operator variables, Compose mappings or application limits.
