@@ -930,3 +930,71 @@ Error getting password
 The cause was verified, not assumed: `which openssl` in the same shell resolves to `/mingw64/bin/openssl`, a native Windows build. Git Bash only rewrites MSYS paths such as `/tmp/...` for arguments it recognizes as a bare path; the compound argument `-pass file:/tmp/...` is not rewritten, so `openssl.exe` calls Win32 `fopen()` against a path that literally does not exist. This is a confirmed Windows/MSYS path interop problem with this specific argument form, **not evidence of a defect in the scripts or in the Linux runtime**. The scripts themselves (`scripts/backup-copy-encrypted.sh`, `scripts/backup-restore-encrypted-copy.sh`) are unmodified POSIX `sh`, and on a real Linux runner `/tmp/...` is an ordinary filesystem path with no reason to expect the same failure. The final, authoritative proof remains the isolated Ubuntu CI runner actually executing `tests/Smoke/encrypted-backup-copy.sh`; this local Windows attempt does not prove that and is not presented as if it did.
 
 32. **Scope correction for `PgvectorAcceptanceTest`.** The test name and docblock have been tightened: the test proves only the raw PostgreSQL `vector` extension's behavior (model isolation, stale filtering, rebuild) against synthetic tables in a disposable schema created and torn down by the test itself. It exercises no FotoArchief application path at all: no application model, controller, job, or Eloquent layer is invoked. The application still persists embeddings through `database_json`; no application-owned `pgvector` adapter or migration exists. This is a **remaining implementation issue, not merely an evidence gap**: the adapter (index-job storage, search-path integration as described under steps 46-48 in `AI_CAPABILITY_DECISION.md`) is **UNBUILT and BLOCKED**, not just untested. This test must not be read as acceptance of a pgvector backend for the application.
+
+## Item 30 persistent backlog: tracked GitHub issues for remaining live blockers
+
+### Nederlands
+
+Na een controle op reeds bestaande open issues heeft de pakkettende partij de
+hierboven benoemde resterende live blokkades vastgelegd als aanhoudende
+GitHub-issues, zodat ze niet stilzwijgend verdwijnen zodra deze branch
+samengevoegd wordt. Dit document verwijst ernaar ter referentie; het opent,
+sluit of dupliceert ze niet, en gebruikt geen closing-keywords.
+
+- **helmerzNL/FotoArchief#14** — de daadwerkelijke applicatie-`pgvector`-adapter
+  ontbreekt nog. De applicatie bewaart embeddings vandaag via `database_json`;
+  `PgvectorAcceptanceTest` is uitsluitend een extensie-experiment (zie item 32
+  hierboven) en telt niet als bewijs dat de applicatie een pgvector-backend
+  heeft. Dit issue volgt het werkelijke bouwwerk (indexjob-opslag,
+  zoekpad-integratie), niet slechts ontbrekend bewijs.
+- **helmerzNL/FotoArchief#15** — geblokkeerde live acceptatie voor
+  installatie/provider/host/proxy/hardware/manager/S3/backup-items 2 t/m 17
+  (o.a. echte Docker-/webhosting-upgrade, Komodo-import, S3/Hetzner-provisioning
+  en de in dit document gecorrigeerde Dockhand-preservatiesmoke tegenover een
+  echte vorige-naar-nieuwe-versie manager-upgrade). Elk van deze items blijft
+  hierboven expliciet **GEBLOKKEERD** tot de genoemde disposable omgeving
+  beschikbaar is; dit issue is waar die afhankelijkheden verzameld blijven.
+- **helmerzNL/FotoArchief#16** — geblokkeerd echt bewijs voor AI-relevantie/
+  corpus, gelijktijdige belasting op 50k assets en volledige
+  toegankelijkheidsaudit voor items 18 t/m 24. De bestaande deterministische
+  `SemanticRelevanceEvaluatorTest` en de statische/kleinschalige
+  browserproeven in dit document bewijzen alleen wat ze daadwerkelijk
+  uitvoeren; ze vervangen geen echte corpusevaluatie, geen belastingtest op
+  realistische schaal en geen volledige WCAG-audit.
+
+Deze verwijzingen vervangen geen van de hierboven vastgelegde GEBLOKKEERD-
+statussen; ze zijn de plek waar de opvolging ervan buiten deze branch
+wordt bijgehouden.
+
+### English
+
+After checking for existing open issues, the integrating party recorded the
+remaining live blockers named above as persistent GitHub issues, so they do
+not silently disappear once this branch is merged. This document references
+them for traceability; it does not open, close or duplicate them, and uses no
+closing keywords.
+
+- **helmerzNL/FotoArchief#14** — the actual application `pgvector` adapter is
+  still missing. The application persists embeddings today through
+  `database_json`; `PgvectorAcceptanceTest` is an extension-only experiment
+  (see item 32 above) and does not count as evidence that the application has
+  a pgvector backend. This issue tracks the real build work (index-job
+  storage, search-path integration), not merely missing evidence.
+- **helmerzNL/FotoArchief#15** — blocked live acceptance for the
+  installation/provider/host/proxy/hardware/manager/S3/backup items 2 through
+  17 (including the real Docker/webhosting upgrade, Komodo import, S3/Hetzner
+  provisioning, and the Dockhand preservation smoke corrected in this
+  document versus a real previous-to-new-version manager upgrade). Each of
+  these items remains explicitly **BLOCKED** above until the named disposable
+  environment is available; this issue is where those dependencies stay
+  collected.
+- **helmerzNL/FotoArchief#16** — blocked real evidence for AI relevance/
+  corpus, concurrent load on 50k assets, and a full accessibility audit for
+  items 18 through 24. The existing deterministic
+  `SemanticRelevanceEvaluatorTest` and the static/small-scale browser checks
+  in this document only prove what they actually run; they do not substitute
+  for real corpus evaluation, a realistic-scale load test, or a full WCAG
+  audit.
+
+These references do not supersede any of the BLOCKED statuses recorded above;
+they are where follow-up on them is tracked outside this branch.
