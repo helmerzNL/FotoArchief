@@ -132,6 +132,23 @@ it('processes OpenAI analysis through the worker with the safe review chain and 
     app(AiProviderConfigService::class)->update('openai', [
         'enabled' => true,
         'vision_model' => 'gpt-4.1-mini',
+    ], $this->user);
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1',
+        'image_analysis_enabled' => '1',
+        'embeddings_enabled' => '1',
+        'local_provider_enabled' => '1',
+        'local_endpoint' => 'http://127.0.0.1:8088',
+        'external_processing_allowed' => '0',
+        'image_analysis_native_consent' => '1',
+        'image_analysis_provider' => 'openai',
+        'max_assets_per_batch' => 10,
+        'derivative_max_pixels' => 512,
+        'request_timeout_seconds' => 15,
+    ], $this->user);
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true,
+        'vision_model' => 'gpt-4.1-mini',
         'cost_cents_per_image' => 1,
         'monthly_budget_cents' => 100,
     ], $this->user);
@@ -257,6 +274,27 @@ it('refuses AI batches above the configured limit', function (): void {
 
     expect(fn () => app(AiDispatchService::class)->dispatchImageAnalysis($ids, 'local', $this->user))
         ->toThrow(ValidationException::class, 'Selecteer 1 tot 10 assets');
+});
+
+it('cancels a queued AI run after the emergency stop is enabled without contacting a provider', function (): void {
+    Http::preventStrayRequests();
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'local', 'cursor' => 0],
+        'total_items' => 1,
+    ]);
+
+    $settings = app(AiConfigurationService::class)->effective();
+    app(AiConfigurationService::class)->update(array_merge($settings, ['emergency_stop' => true]), $this->user);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_CANCELLED)
+        ->and($run->fresh()->processed_items)->toBe(0)
+        ->and($run->fresh()->error_message)->toContain('AI-taak geannuleerd')
+        ->and(AiSuggestion::query()->count())->toBe(0);
 });
 
 it('restarts a legacy failed AI run from the first item with clean counters', function (): void {

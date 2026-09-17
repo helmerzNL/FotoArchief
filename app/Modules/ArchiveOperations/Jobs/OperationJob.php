@@ -121,6 +121,10 @@ abstract class OperationJob implements ShouldQueue
         try {
             $outcome = $this->executeChunk($run);
 
+            if ($run->status === OperationRun::STATUS_CANCELLED) {
+                return;
+            }
+
             $run->forceFill([
                 'processed_items' => $run->processed_items + $outcome['processed'],
                 'failed_items' => $run->failed_items + $outcome['failed'],

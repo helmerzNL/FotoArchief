@@ -417,3 +417,85 @@ images and budget, host deployment with ClamAV, real worker/scheduler processes
 over time, and setup of a real alert channel/webhook. These remain release
 blockers until the user host provides the required services, credentials, and
 permission.
+
+## Batch 2 acceptance evidence for items 6-10
+
+### Nederlands
+
+Deze batch is lokaal voorbereid en getest met veilige SQLite-/fake-fixtures; de
+versie blijft `0.9.51` en er is geen push, release of productie-installatie
+uitgevoerd.
+
+6. **AI-budgetten, toestemming en noodstop**: de bestaande ledger-tests
+bewijzen reserveren, verbruiken, vrijgeven, cap-weigering en gescheiden
+capaciteiten zonder providerrequest. De worker controleert de actuele
+capability-instellingen opnieuw wanneer een queued run start en tussen chunks;
+een ingetrokken toestemming, providerconfiguratie, budget of `emergency_stop`
+annuleert de run vóór een request. De nieuwe async regressie test dit met
+`Http::preventStrayRequests()`. Geen echte spend.
+7. **Multi-user resultaten/review**: de globale review-index filtert nu op de
+eigenaar voor gebruikers zonder `assets.publish`; de nieuwe regressie controleert
+de paginatortotalen en dat cross-user accept/reject 403 blijft en geen status
+wijzigt. De bestaande foto- en operation-resultaattests blijven de overige
+autorisatiepaden dekken.
+8. **HTTPS/reverse proxy**: de bestaande configuratie vertrouwt uitsluitend de
+expliciet ingestelde `TRUSTED_PROXIES`, gebruikt de exacte HTTPS-`APP_URL` voor
+passkey origin en ondersteunt secure cookies. Unit/featuretests dekken
+HTTPS-origin, wrong-origin-denial, malformed client data en replay denial;
+er is geen willekeurige proxy-headervertrouwensregel toegevoegd. Productietopologie
+en echte proxyacceptatie zijn geblokkeerd: exact publiek origin,
+proxy-IP/CIDR, `SESSION_SECURE_COOKIE=true` en een testhost zijn vereist.
+9. **Passkeys op echt apparaat**: malformed, wrong-origin en single-use/replay
+flows zijn geautomatiseerd. Hardware is niet bewezen; de operator moet op de
+uiteindelijke HTTPS-origin een matrix uitvoeren met iOS Safari, Android Chrome,
+desktop browser, platformauthenticator en een tweede roaming authenticator, en
+per combinatie enrollment, login, verkeerde-origin-afwijzing en replay
+vastleggen.
+10. **Veilige Docker-upgrade**: de bestaande backup/restore-tests bewijzen
+streamed tar-preservatie, checksum-/padvalidatie en weigering vóór overschrijven;
+`upgrade-compose.sh` weigert ontbrekende of niet-verifieerbare backups en een
+ongetagde image. Een echte upgrade van een ondersteunde vorige image is
+geblokkeerd omdat Docker/een aparte deploymenthost ontbreekt. Niet uitgevoerd:
+Compose-commando's, live volumes of gebruikersdata.
+
+### English
+
+This batch is prepared and tested locally with safe SQLite/fake fixtures; the
+version remains `0.9.51`, and no push, release, or production installation was
+performed.
+
+6. **AI budgets, consent, and kill switch**: the existing ledger tests prove
+reserve, consume, release, cap refusal, and separate capabilities without a
+provider request. The worker rechecks current capability settings when a queued
+run starts and between chunks; withdrawn consent, provider configuration, budget,
+or `emergency_stop` cancels the run before a request. The new async regression
+uses `Http::preventStrayRequests()`. No real spend occurred.
+7. **Multi-user results/review**: the global review index now scopes to the
+owner for users without `assets.publish`; the new regression checks paginator
+totals and that cross-user accept/reject remains 403 without changing status.
+Existing photo and operation-result tests continue to cover the other
+authorization paths.
+8. **HTTPS/reverse proxy**: existing configuration trusts only explicitly
+configured `TRUSTED_PROXIES`, uses the exact HTTPS `APP_URL` for passkey origin,
+and supports secure cookies. Unit/feature tests cover HTTPS origin,
+wrong-origin denial, malformed client data, and replay denial; no arbitrary
+proxy-header trust rule was added. Production topology and real proxy
+acceptance are blocked: the exact public origin, proxy IP/CIDR,
+`SESSION_SECURE_COOKIE=true`, and a test host are required.
+9. **Passkeys on a real device**: malformed, wrong-origin, and single-use/replay
+flows are automated. Hardware is not proven; the operator must run a matrix on
+the final HTTPS origin with iOS Safari, Android Chrome, a desktop browser, a
+platform authenticator, and a second roaming authenticator, recording enrollment,
+login, wrong-origin rejection, and replay for each combination.
+10. **Safe Docker upgrade**: existing backup/restore tests prove streamed tar
+preservation, checksum/path validation, and refusal before overwrite;
+`upgrade-compose.sh` refuses missing or unverifiable backups and an untagged
+image. A real upgrade from a supported previous image is blocked because Docker
+and a separate deployment host are unavailable. No Compose command, live volume,
+or user data was touched.
+
+Operator matrix prerequisite: final public HTTPS origin, exact reverse-proxy
+IP/CIDR, secure-cookie setting, two real authenticators, a disposable
+previous-version stack, verified backup destination, and permission to perform
+an empty-target restore and rollback. These are acceptance prerequisites, not
+claims that the blocked checks ran.

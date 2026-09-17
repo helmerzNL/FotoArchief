@@ -27,6 +27,9 @@ class AiSuggestionReviewController extends Controller
         $suggestions = AiSuggestion::query()
             ->with(['asset', 'assetFile', 'run'])
             ->where('review_status', AiSuggestion::REVIEW_PENDING)
+            ->when(! $user->hasPermission('assets.publish'), function ($query) use ($user): void {
+                $query->whereHas('asset', fn ($assetQuery) => $assetQuery->where('created_by_user_id', $user->id));
+            })
             ->latest('created_at')
             ->paginate(25);
 

@@ -6,6 +6,7 @@ namespace App\Modules\Ai\Services;
 
 use App\Models\User;
 use App\Modules\Ai\Models\AiSetting;
+use App\Modules\ArchiveOperations\Models\OperationRun;
 use Illuminate\Validation\ValidationException;
 
 class AiConfigurationService
@@ -110,6 +111,30 @@ class AiConfigurationService
         );
 
         return $settings;
+    }
+
+    public function cancelQueuedRunIfUnavailable(OperationRun $run, string $capability, string $provider): bool
+    {
+        $settings = $this->effective();
+        $enabledKey = $capability === 'embeddings' ? 'embeddings_enabled' : 'image_analysis_enabled';
+        $providerKey = $capability === 'embeddings' ? 'embeddings_provider' : 'image_analysis_provider';
+        $available = (bool) ($settings['active'] ?? false)
+            && (bool) ($settings[$enabledKey] ?? false)
+            && (string) ($settings[$providerKey] ?? '') === $provider
+            && (bool) ($settings[$capability.'_ready'] ?? false);
+
+        if ($available) {
+            return true;
+        }
+
+        $run->forceFill([
+            'status' => OperationRun::STATUS_CANCELLED,
+            'claim_token' => null,
+            'finished_at' => now(),
+            'error_message' => 'AI-taak geannuleerd: toestemming, providerconfiguratie, budget of de algemene AI-stop is ingetrokken voordat de wachtrij deze taak uitvoerde.',
+        ])->save();
+
+        return false;
     }
 
     /**

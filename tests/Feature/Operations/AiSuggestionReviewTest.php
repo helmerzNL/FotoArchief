@@ -70,6 +70,57 @@ function aiSuggestion(string $type, string $value): AiSuggestion
     ]);
 }
 
+it('scopes the review index and review actions to the current owners', function (): void {
+    $this->user->roles()->sync([Role::query()->where('key', 'volunteer')->firstOrFail()->id]);
+    $otherUser = User::query()->create([
+        'name' => 'Other Reviewer',
+        'email' => 'other-reviewer@example.test',
+        'password' => Hash::make('secret12345'),
+    ]);
+    $otherUser->roles()->attach(Role::query()->where('key', 'volunteer')->firstOrFail());
+    $otherAsset = Asset::query()->create([
+        'accession_number' => 'AI-OTHER-'.(string) str()->ulid(),
+        'title' => 'Other review contract',
+        'created_by_user_id' => $otherUser->id,
+    ])->fresh();
+    $otherFile = AssetFile::query()->create([
+        'asset_id' => $otherAsset->id,
+        'storage_disk' => 'local',
+        'storage_key' => 'originals/other-review.jpg',
+        'sha256' => str_repeat('c', 64),
+        'media_type' => 'image/jpeg',
+        'byte_size' => 100,
+        'ingest_status' => 'ready_private',
+        'scanner_status' => 'clean',
+        'is_primary' => true,
+    ]);
+    $otherSuggestion = AiSuggestion::query()->create([
+        'ai_run_id' => $this->run->id,
+        'asset_id' => $otherAsset->id,
+        'asset_file_id' => $otherFile->id,
+        'source_asset_lock_version' => $otherAsset->lock_version,
+        'source_file_sha256' => $otherFile->sha256,
+        'suggestion_type' => AiSuggestion::TYPE_DESCRIPTION,
+        'value' => 'Andere eigenaar',
+    ]);
+    $ownSuggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Eigenaar zichtbaar');
+
+    $this->actingAs($this->user)->get(route('admin.operations.ai.suggestions.index'))
+        ->assertOk()
+        ->assertSee('Eigenaar zichtbaar', false)
+        ->assertDontSee('Andere eigenaar', false)
+        ->assertViewHas('suggestions', fn ($suggestions): bool => $suggestions->total() === 1);
+
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.reject', $otherSuggestion), [
+        'review_note' => 'Niet mijn foto',
+    ])->assertForbidden();
+    expect($otherSuggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING);
+
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.reject', $ownSuggestion), [
+        'review_note' => 'Controleren',
+    ])->assertRedirect(route('admin.operations.ai.suggestions.index'));
+});
+
 it('renders pending AI suggestions for reviewers', function (): void {
     aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Een beschrijving ter controle.');
 

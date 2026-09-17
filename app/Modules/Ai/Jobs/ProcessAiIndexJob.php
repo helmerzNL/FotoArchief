@@ -8,6 +8,7 @@ use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiOperationAuditService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
@@ -44,7 +45,14 @@ class ProcessAiIndexJob extends OperationJob
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'embeddings') : 0;
 
+        if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'embeddings', $provider)) {
+            return ['processed' => 0, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+        }
+
         foreach ($slice as $assetId) {
+            if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'embeddings', $provider)) {
+                return ['processed' => $processed, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+            }
             $asset = null;
             $file = null;
             try {
