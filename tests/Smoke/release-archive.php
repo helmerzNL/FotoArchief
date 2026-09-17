@@ -19,7 +19,7 @@ for ($index = 0; $index < $zip->numFiles; $index++) {
         throw new RuntimeException('Unsafe archive path.');
     }
     if (in_array(explode('/', $name)[0], ['.git', 'tests', 'node_modules', '.github'], true)
-        || $name === '.env' || str_starts_with($name, '.env.')
+        || $name === '.env' || (str_starts_with($name, '.env.') && $name !== '.env.example')
         || str_starts_with($name, 'vendor/pestphp/')
         || str_starts_with($name, 'storage/app/installation/')
         || str_starts_with($name, 'storage/app/private/')

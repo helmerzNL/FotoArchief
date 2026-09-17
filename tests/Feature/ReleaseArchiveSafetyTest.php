@@ -18,6 +18,7 @@ function createReleaseArchiveFixture(string $path, array $extraFiles = []): void
         'BUILD.json' => json_encode(['version' => '0.9.51', 'revision' => str_repeat('a', 40)], JSON_THROW_ON_ERROR),
         'DEPENDENCY-LICENSES.json' => '[]',
         'VERSION' => '0.9.51',
+        '.env.example' => 'APP_KEY=',
         'scripts/upgrade-compose.sh' => '#!/bin/sh',
         'composer.lock' => json_encode(['packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
         'vendor/composer/installed.json' => json_encode(['dev' => false, 'packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
@@ -88,13 +89,18 @@ it('accepts production archives and refuses private installed-instance state', f
         expect($status)->not->toBe(0)
             ->and($stdout.$stderr)->toContain('Unexpected private/development artifact: storage/app/installation/state.json');
 
-        $privateEnvironment = $directory.'/private-env.zip';
-        createReleaseArchiveFixture($privateEnvironment, [
-            '.env.production' => 'APP_KEY=base64:private',
-        ]);
-        [$status, $stdout, $stderr] = runReleaseArchiveValidator($privateEnvironment);
-        expect($status)->not->toBe(0)
-            ->and($stdout.$stderr)->toContain('Unexpected private/development artifact: .env.production');
+        foreach (['.env', '.env.production', '.env.example.backup'] as $index => $name) {
+            $privateEnvironment = $directory.'/private-env-'.$index.'.zip';
+            createReleaseArchiveFixture($privateEnvironment, [
+                $name => 'APP_KEY=base64:private',
+            ]);
+            [$status, $stdout, $stderr] = runReleaseArchiveValidator($privateEnvironment);
+            expect($status)->not->toBe(0)
+                ->and($stdout.$stderr)->toContain('Unexpected private/development artifact: '.$name);
+            [$status, $stdout, $stderr] = runWebhostingUpgradeValidator($privateEnvironment);
+            expect($status)->not->toBe(0)
+                ->and($stdout.$stderr)->toContain('Release archive contains private installed-instance state: '.$name);
+        }
     } finally {
         File::deleteDirectory($directory);
     }

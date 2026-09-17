@@ -41,7 +41,7 @@ function copyTreePreservingInstallation(string $source, string $target): void
 
         $relative = str_replace('\\', '/', substr($entry->getPathname(), strlen($source) + 1));
         if ($relative === '.env'
-            || str_starts_with($relative, '.env.')
+            || (str_starts_with($relative, '.env.') && $relative !== '.env.example')
             || str_starts_with($relative, 'storage/app/installation/')
             || str_starts_with($relative, 'storage/app/private/')
             || str_starts_with($relative, 'storage/logs/') && $relative !== 'storage/logs/.gitignore') {
