@@ -4,7 +4,7 @@
     <p class="eyebrow">Collectie</p>
     <h1>{{ $collection->title }}</h1>
     @if($collection->description)<p class="intro">{{ $collection->description }}</p>@endif
-    <section class="gallery" aria-label="Foto’s in deze collectie">
+    <section class="gallery" aria-label="{{ __('publication.generated.t_e478c368772600a8') }}">
         @forelse($publications as $publication)
             @php($asset = $publication->asset)
             @php($file = $asset->files->first())
@@ -17,10 +17,10 @@
                 </a>
             </article>
         @empty
-            <p>Deze collectie heeft nog geen publieke foto’s.</p>
+            <p>{{ __('publication.generated.t_497c399970c13538') }}</p>
         @endforelse
     </section>
     @if($nextCursor)
-        <a class="button secondary" href="{{ route('public.collections.show', [$collection, 'cursor' => $nextCursor]) }}">Volgende pagina</a>
+        <a class="button secondary" href="{{ route('public.collections.show', [$collection, 'cursor' => $nextCursor]) }}">{{ __('publication.generated.t_78904cbff656c1f8') }}</a>
     @endif
 @endsection

@@ -39,7 +39,7 @@ class SystemHeartbeatService
                 ],
             );
         } catch (Throwable $exception) {
-            Log::warning('System heartbeat could not be recorded.', [
+            Log::warning(__('operations.generated.t_590478b801f2296f'), [
                 'role' => $role,
                 'state' => $state,
                 'exception' => $exception::class,
@@ -91,7 +91,7 @@ class SystemHeartbeatService
                 ];
             }
         } catch (Throwable $exception) {
-            Log::warning('System heartbeat snapshot could not be read.', [
+            Log::warning(__('operations.generated.t_e2b91d15397e405d'), [
                 'exception' => $exception::class,
             ]);
         }

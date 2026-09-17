@@ -18,7 +18,7 @@
         </div>
         <div class="actions">
             <a href="{{ route('catalogue.collections.edit', $collection) }}" class="button secondary">Bewerken</a>
-            <a href="{{ route('catalogue.collections.create', ['parent_id' => $collection->id]) }}" class="button secondary">+ Subcollectie toevoegen</a>
+            <a href="{{ route('catalogue.collections.create', ['parent_id' => $collection->id]) }}" class="button secondary">{{ __('catalogue.generated.t_753f1fa3884ccc46') }}</a>
         </div>
     </div>
 
@@ -29,14 +29,14 @@
 
 @if($collection->children->isNotEmpty())
 <div class="card">
-    <h2>Subcollecties &amp; Albums ({{ $collection->children->count() }})</h2>
+    <h2>{{ __('catalogue.generated.t_38597146058b2bed') }}{{ $collection->children->count() }})</h2>
     <x-catalogue-table>
     <table style="width: 100%; border-collapse: collapse; margin-top: .5rem;">
         <thead>
             <tr style="border-bottom: 2px solid var(--border); text-align: left;">
                 <th style="padding: .5rem;">Titel</th>
                 <th style="padding: .5rem;">Type</th>
-                <th style="padding: .5rem; text-align: right;">Foto’s</th>
+                <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_437769185346f168') }}</th>
                 <th style="padding: .5rem; text-align: right;">Acties</th>
             </tr>
         </thead>
@@ -61,11 +61,11 @@
 
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <h2>Foto’s in deze collectie ({{ $assets->count() }})</h2>
+        <h2>{{ __('catalogue.generated.t_8390953710831ed4') }}{{ $assets->count() }})</h2>
     </div>
 
     @if($assets->isEmpty())
-        <p style="color: var(--muted); margin-top: .5rem;">Er zijn nog geen foto’s aan deze collectie gekoppeld.</p>
+        <p style="color: var(--muted); margin-top: .5rem;">{{ __('catalogue.generated.t_e91598875b89d94f') }}</p>
     @else
         <form method="post" action="{{ route('catalogue.collections.reorder', $collection) }}" style="margin-top: 1rem;">
             @csrf
@@ -98,7 +98,7 @@
                                     <form method="post" action="{{ route('catalogue.collections.assets.move', [$collection, $asset]) }}" style="display: inline-flex; gap: .25rem; align-items: center;">
                                         @csrf
                                         <select name="target_collection_id" style="width: auto; padding: .2rem .4rem; font-size: .85rem;" required>
-                                            <option value="">Verplaats naar...</option>
+                                            <option value="">{{ __('catalogue.generated.t_cc838e85da8b9df0') }}</option>
                                             @foreach($allOtherCollections as $otherCol)
                                                 <option value="{{ $otherCol->id }}">{{ $otherCol->title }}</option>
                                             @endforeach
@@ -123,23 +123,23 @@
     @endif
 
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-        <h3>Foto toevoegen aan deze collectie</h3>
+        <h3>{{ __('catalogue.generated.t_f3f78dfa5337d670') }}</h3>
         <form method="post" action="{{ route('catalogue.collections.assets.add', $collection) }}" style="margin-top: 1rem;">
             @csrf
             <div class="grid">
                 <div>
-                    <label for="accession_number">Aanwinstnummer of Foto-ID *</label>
-                    <input type="text" id="accession_number" name="accession_number" placeholder="bijv. FA-01J..." required>
+                    <label for="accession_number">{{ __('catalogue.generated.t_defde4bbc85eec4e') }}</label>
+                    <input type="text" id="accession_number" name="accession_number" placeholder="{{ __('catalogue.generated.t_1af3ddcb66fd405d') }}" required>
                 </div>
                 <div>
-                    <label for="asset_position">Positie in collectie</label>
-                    <input type="number" id="asset_position" name="position" min="1" placeholder="Automatisch achteraan">
+                    <label for="asset_position">{{ __('catalogue.generated.t_a2d0c2b25329667e') }}</label>
+                    <input type="number" id="asset_position" name="position" min="1" placeholder="{{ __('catalogue.generated.t_bff403a355c9105b') }}">
                 </div>
             </div>
-            <label for="asset_note">Notitie / bijschrift in context van collectie</label>
-            <input type="text" id="asset_note" name="note" placeholder="bijv. Pagina 1, openingsfoto">
+            <label for="asset_note">{{ __('catalogue.generated.t_06b8ef6bc5cd859d') }}</label>
+            <input type="text" id="asset_note" name="note" placeholder="{{ __('catalogue.generated.t_f18592cdcb60dddf') }}">
 
-            <button type="submit">Foto toevoegen</button>
+            <button type="submit">{{ __('catalogue.generated.t_401454b2dd1651f0') }}</button>
         </form>
     </div>
 </div>

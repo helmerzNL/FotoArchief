@@ -56,6 +56,6 @@ class DuplicateDossierController extends Controller
 
         return redirect()
             ->route('admin.assets.show', $targetAsset)
-            ->with('status', 'Duplicaat succesvol gekoppeld en herkomst verrijkt. Er is geen tweede origineel aangemaakt.');
+            ->with('status', __('operations.generated.t_fcfe6d66a330defe'));
     }
 }

@@ -49,7 +49,7 @@ abstract class AbstractNativeProvider implements ConnectionProbe
             'anthropic' => 'https://api.anthropic.com',
             'gemini' => 'https://generativelanguage.googleapis.com',
             'openrouter' => 'https://openrouter.ai/api/v1',
-            default => throw new \InvalidArgumentException("Onbekende native AI-provider: {$provider}."),
+            default => throw new \InvalidArgumentException(__('ai.errors.unknown_native_provider', ['provider' => $provider])),
         };
     }
 
@@ -70,7 +70,7 @@ abstract class AbstractNativeProvider implements ConnectionProbe
     {
         $key = (string) ($this->nativeConfig()['api_key'] ?? '');
         if ($key === '') {
-            throw new AiProviderException($this->providerLabel().': geen API-sleutel geconfigureerd in de private omgeving.');
+            throw new AiProviderException(__('ai.provider_errors.native_missing_key', ['provider' => $this->providerLabel()]));
         }
 
         return $key;
@@ -100,14 +100,14 @@ abstract class AbstractNativeProvider implements ConnectionProbe
         try {
             $response = $request->timeout($timeoutSeconds)->acceptJson()->asJson()->post($url, $body);
         } catch (ConnectionException) {
-            throw new AiProviderException($this->providerLabel().': verzoek verliep (timeout of verbindingsfout).');
+            throw new AiProviderException(__('ai.provider_errors.native_connection', ['provider' => $this->providerLabel()]));
         }
 
         $this->assertSuccessful($response);
 
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException($this->providerLabel().': antwoord was geen geldige JSON.');
+            throw new AiProviderException(__('ai.provider_errors.native_invalid_json', ['provider' => $this->providerLabel()]));
         }
 
         return $payload;
@@ -121,14 +121,14 @@ abstract class AbstractNativeProvider implements ConnectionProbe
         try {
             $response = $request->timeout(15)->acceptJson()->get($url);
         } catch (ConnectionException) {
-            throw new AiProviderException($this->providerLabel().': verzoek verliep (timeout of verbindingsfout).');
+            throw new AiProviderException(__('ai.provider_errors.native_connection', ['provider' => $this->providerLabel()]));
         }
 
         $this->assertSuccessful($response);
 
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException($this->providerLabel().': antwoord was geen geldige JSON.');
+            throw new AiProviderException(__('ai.provider_errors.native_invalid_json', ['provider' => $this->providerLabel()]));
         }
 
         return $payload;
@@ -170,11 +170,11 @@ abstract class AbstractNativeProvider implements ConnectionProbe
         $status = $response->status();
         $label = $this->providerLabel();
         $message = match (true) {
-            $status === 401 => "{$label}: ongeldige of ontbrekende API-sleutel (401).",
-            $status === 403 => "{$label}: toegang geweigerd, controleer modelrechten (403).",
-            $status === 429 => "{$label}: ratelimiet bereikt (429)".$this->retryAfterSuffix($response),
-            $status >= 500 => "{$label}: providerserverfout ({$status}).",
-            default => "{$label}: verzoek mislukt met status {$status}.",
+            $status === 401 => __('ai.provider_errors.native_401', ['provider' => $label]),
+            $status === 403 => __('ai.provider_errors.native_403', ['provider' => $label]),
+            $status === 429 => __('ai.provider_errors.native_429', ['provider' => $label, 'retry_after' => $this->retryAfterSuffix($response)]),
+            $status >= 500 => __('ai.provider_errors.native_5xx', ['provider' => $label, 'status' => $status]),
+            default => __('ai.provider_errors.native_status', ['provider' => $label, 'status' => $status]),
         };
 
         throw new AiProviderException($message);
@@ -203,7 +203,7 @@ abstract class AbstractNativeProvider implements ConnectionProbe
         $decoded = json_decode(trim($clean), true);
 
         if (! is_array($decoded) || ! is_string($decoded['description'] ?? null) || trim($decoded['description']) === '' || ! is_array($decoded['tags'] ?? null)) {
-            throw new AiProviderException($this->providerLabel().': leverde geen geldige JSON-analyse (description/tags verwacht).');
+            throw new AiProviderException(__('ai.provider_errors.native_analysis_json', ['provider' => $this->providerLabel()]));
         }
 
         return [

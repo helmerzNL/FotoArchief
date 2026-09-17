@@ -103,6 +103,15 @@ it('resolves visible photo numbers and case variants before dispatch and process
         ->and($run->fresh()->processed_items)->toBe(1)
         ->and(AiRun::query()->sole()->asset_id)->toBe($this->asset->id);
     Http::assertSentCount(1);
+    $this->get(route('admin.operations.runs.ai-results', $run))->assertOk()
+        ->assertSee(route('admin.assets.show', $this->asset).'#ai-results');
+    $response = $this->get(route('admin.assets.show', $this->asset))->assertOk()->assertSee('AI-resultaten');
+    if ($action === 'analyze') {
+        $response->assertSee('Een testfoto.')->assertSee('local-reference-proof')->assertSee('Te beoordelen');
+    } else {
+        $response->assertSee('reference-proof-space')->assertSee('Zoekindex');
+    }
+    Http::assertSentCount(1);
 })->with('ai reference surfaces');
 
 it('rejects the entire batch and preserves form input when one reference is invalid', function (string $action): void {

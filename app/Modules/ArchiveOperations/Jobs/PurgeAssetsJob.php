@@ -32,7 +32,7 @@ class PurgeAssetsJob extends OperationJob
             return ['processed' => 0, 'failed' => 0, 'finished' => true];
         }
 
-        $reason = is_string($payload['reason'] ?? null) ? $payload['reason'] : 'Definitieve verwijdering.';
+        $reason = is_string($payload['reason'] ?? null) ? $payload['reason'] : __('operations.generated.t_c136f5ec715e3b24');
         $assetId = is_string($payload['asset_id'] ?? null) ? $payload['asset_id'] : null;
 
         if ($assetId !== null) {

@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'AI-instellingen')
+@section('title', __('ai.settings.title'))
 
 @section('content')
-    <h1>AI-instellingen</h1>
-    <p>AI staat standaard uit. Schakel alleen capabilities in waarvoor de capability-proof en privacykeuze zijn afgerond.</p>
+    <h1>{{ __('ai.settings.title') }}</h1>
+    <p>{{ __('ai.settings.intro') }}</p>
 
     @include('operations._nav')
 
@@ -14,7 +14,7 @@
 
     @if($errors->any())
         <div class="card" role="alert">
-            <strong>Controleer de AI-instellingen.</strong>
+            <strong>{{ __('ai.settings.validation_failed') }}</strong>
             <ul>
                 @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -24,68 +24,68 @@
     @endif
 
     <section class="card">
-        <h2>Status</h2>
+        <h2>{{ __('ai.settings.status.title') }}</h2>
         <dl>
-            <dt>Actief</dt>
-            <dd>{{ $settings['active'] ? 'ja' : 'nee' }}</dd>
-            <dt>Lokale/eigen provider klaar</dt>
-            <dd>{{ $settings['local_ready'] ? 'ja' : 'nee' }}</dd>
-            <dt>Externe provider klaar</dt>
-            <dd>{{ $settings['external_ready'] ? 'ja' : 'nee' }}</dd>
+            <dt>{{ __('ai.settings.status.active') }}</dt>
+            <dd>{{ $settings['active'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
+            <dt>{{ __('ai.settings.status.local_ready') }}</dt>
+            <dd>{{ $settings['local_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
+            <dt>{{ __('ai.settings.status.external_ready') }}</dt>
+            <dd>{{ $settings['external_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
             @foreach(\App\Modules\Ai\Services\AiConfigurationService::NATIVE_PROVIDERS as $native)
-                <dt>{{ ucfirst($native) }} geconfigureerd / klaar</dt>
-                <dd>{{ $settings["{$native}_configured"] ? 'ja' : 'nee' }} / {{ $settings["{$native}_ready"] ? 'ja' : 'nee' }}</dd>
+                <dt>{{ __('ai.settings.status.native_ready', ['provider' => ucfirst($native)]) }}</dt>
+                <dd>{{ $settings["{$native}_configured"] ? __('ai.common.yes') : __('ai.common.no') }} / {{ $settings["{$native}_ready"] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
             @endforeach
-            <dt>Beeldanalyse gereed (provider + model + toestemming)</dt>
-            <dd>{{ $settings['image_analysis_ready'] ? 'ja' : 'nee' }}</dd>
-            <dt>Embeddings gereed (provider + model + toestemming)</dt>
-            <dd>{{ $settings['embeddings_ready'] ? 'ja' : 'nee' }}</dd>
+            <dt>{{ __('ai.settings.status.image_ready') }}</dt>
+            <dd>{{ $settings['image_analysis_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
+            <dt>{{ __('ai.settings.status.embeddings_ready') }}</dt>
+            <dd>{{ $settings['embeddings_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
         </dl>
-        <p>"Geconfigureerd" betekent dat de database een versleutelde API-sleutel en een positief budget bevat. De sleutel wordt nooit getoond, teruggegeven, gelogd of geserialiseerd.</p>
+        <p>{{ __('ai.settings.status.configured_notice') }}</p>
     </section>
 
     <section class="card">
-        <h2>Providers / Providers</h2>
-        <p>Stel modellen, kosten en maandbudgetten per provider in. Native endpoints zijn vast; alleen de custom externe provider gebruikt een door de beheerder ingesteld publiek HTTPS-endpoint.</p>
+        <h2>{{ __('ai.settings.providers.title') }}</h2>
+        <p>{{ __('ai.settings.providers.intro') }}</p>
         @foreach($providerStatuses as $provider)
             <article class="card">
                 <h3>{{ ucfirst($provider['provider']) }}</h3>
                 <dl>
-                    <dt>Status sleutel</dt><dd>{{ $provider['has_api_key'] ? 'ingesteld' : 'niet ingesteld' }}</dd>
-                    <dt>{{ $provider['provider'] === 'external' ? 'Endpoint' : 'Vaste base-URL' }}</dt><dd><code>{{ $provider['base_url'] ?: 'niet ingesteld' }}</code></dd>
+                    <dt>{{ __('ai.settings.providers.key_status') }}</dt><dd>{{ $provider['has_api_key'] ? __('ai.settings.status.key_set') : __('ai.settings.status.key_missing') }}</dd>
+                    <dt>{{ $provider['provider'] === 'external' ? __('ai.settings.providers.endpoint') : __('ai.settings.providers.fixed_base_url') }}</dt><dd><code>{{ $provider['base_url'] ?: __('ai.common.unset') }}</code></dd>
                     @if($provider['api_version'])
-                        <dt>Vaste API-versie</dt><dd>{{ $provider['api_version'] }}</dd>
+                        <dt>{{ __('ai.settings.providers.fixed_api_version') }}</dt><dd>{{ $provider['api_version'] }}</dd>
                     @endif
                     @if($provider['embedding_model_allowlist'])
-                        <dt>Vaste OpenRouter-allowlist</dt><dd>{{ implode(', ', $provider['embedding_model_allowlist']) }}</dd>
+                        <dt>{{ __('ai.settings.providers.openrouter_allowlist') }}</dt><dd>{{ implode(', ', $provider['embedding_model_allowlist']) }}</dd>
                     @endif
                 </dl>
                 <form method="POST" action="{{ route('admin.operations.ai.provider.update', $provider['provider']) }}">
                     @csrf
-                    <label><input type="checkbox" name="enabled" value="1" @checked($provider['enabled'])> Provider toestaan</label>
-                    <label>Visionmodel <input type="text" name="vision_model" value="{{ $provider['vision_model'] }}"></label>
-                    <label>Embeddingmodel <input type="text" name="embedding_model" value="{{ $provider['embedding_model'] }}"></label>
+                    <label><input type="checkbox" name="enabled" value="1" @checked($provider['enabled'])> {{ __('ai.settings.providers.allow_provider') }}</label>
+                    <label>{{ __('ai.settings.providers.vision_model') }} <input type="text" name="vision_model" value="{{ $provider['vision_model'] }}"></label>
+                    <label>{{ __('ai.settings.providers.embedding_model') }} <input type="text" name="embedding_model" value="{{ $provider['embedding_model'] }}"></label>
                     @if($provider['provider'] === 'external')
-                        <label>Publiek HTTPS-endpoint <input type="url" name="endpoint" value="{{ $provider['endpoint'] }}" required></label>
-                        <label>Providerregio <input type="text" name="provider_region" value="{{ $provider['provider_region'] }}" required></label>
-                        <label>Retentie/training-notitie <textarea name="retention_notice" rows="3" required>{{ $provider['retention_notice'] }}</textarea></label>
+                        <label>{{ __('ai.settings.providers.public_https_endpoint') }} <input type="url" name="endpoint" value="{{ $provider['endpoint'] }}" required></label>
+                        <label>{{ __('ai.settings.providers.provider_region') }} <input type="text" name="provider_region" value="{{ $provider['provider_region'] }}" required></label>
+                        <label>{{ __('ai.settings.providers.retention_notice') }} <textarea name="retention_notice" rows="3" required>{{ $provider['retention_notice'] }}</textarea></label>
                     @endif
-                    <label>Kosten beeldanalyse (centen) <input type="number" min="0" name="cost_cents_per_image" value="{{ $provider['cost_cents_per_image'] }}"></label>
-                    <label>Kosten embedding (centen) <input type="number" min="0" name="cost_cents_per_embedding" value="{{ $provider['cost_cents_per_embedding'] }}"></label>
-                    <label>Maandbudget (centen) <input type="number" min="0" name="monthly_budget_cents" value="{{ $provider['monthly_budget_cents'] }}"></label>
-                    <button type="submit">Providerinstellingen opslaan</button>
+                    <label>{{ __('ai.settings.providers.image_cost') }} <input type="number" min="0" name="cost_cents_per_image" value="{{ $provider['cost_cents_per_image'] }}"></label>
+                    <label>{{ __('ai.settings.providers.embedding_cost') }} <input type="number" min="0" name="cost_cents_per_embedding" value="{{ $provider['cost_cents_per_embedding'] }}"></label>
+                    <label>{{ __('ai.settings.providers.monthly_budget') }} <input type="number" min="0" name="monthly_budget_cents" value="{{ $provider['monthly_budget_cents'] }}"></label>
+                    <button type="submit">{{ __('ai.settings.providers.save') }}</button>
                 </form>
                 <form method="POST" action="{{ route('admin.operations.ai.provider.key.set', $provider['provider']) }}">
                     @csrf
-                    <label>API-sleutel instellen/vervangen <input type="password" name="api_key" autocomplete="new-password" required></label>
-                    <button type="submit">Sleutel opslaan</button>
+                    <label>{{ __('ai.settings.providers.set_key') }} <input type="password" name="api_key" autocomplete="new-password" required></label>
+                    <button type="submit">{{ __('ai.settings.providers.save_key') }}</button>
                 </form>
                 @if($provider['has_api_key'])
                     <form method="POST" action="{{ route('admin.operations.ai.provider.key.delete', $provider['provider']) }}">
                         @csrf
                         @method('DELETE')
-                        <label><input type="checkbox" name="confirm_delete" value="1" required> Ik bevestig dat deze API-sleutel definitief moet worden verwijderd.</label>
-                        <button type="submit">API-sleutel expliciet verwijderen</button>
+                        <label><input type="checkbox" name="confirm_delete" value="1" required> {{ __('ai.settings.providers.delete_confirm') }}</label>
+                        <button type="submit">{{ __('ai.settings.providers.delete_key') }}</button>
                     </form>
                 @endif
             </article>
@@ -93,118 +93,123 @@
     </section>
 
     @if(session('connection_test'))
-        @php($test = session('connection_test'))
+        @php
+            $test = session('connection_test');
+        @endphp
         <section class="card" role="status">
-            <h2>Verbindingstest resultaat: {{ ucfirst($test['provider']) }} / {{ $test['capability'] === 'embeddings' ? 'embeddings' : 'beeldanalyse' }}</h2>
+            <h2>{{ __('ai.settings.connection.result_title', ['provider' => ucfirst($test['provider']), 'capability' => $test['capability'] === 'embeddings' ? __('ai.common.embeddings') : __('ai.common.image_analysis')]) }}</h2>
             <p>{{ $test['message'] }}</p>
             @if($test['status'] === 'ok' && array_key_exists('models_count', $test))
-                <p>Zichtbare modellen voor deze sleutel: {{ $test['models_count'] }}. Geconfigureerd model "{{ $test['model_configured'] }}" gevonden: {{ $test['model_found'] ? 'ja' : 'nee' }}.</p>
+                <p>{{ __('ai.settings.connection.models_visible', ['count' => $test['models_count'], 'model' => $test['model_configured'], 'found' => $test['model_found'] ? __('ai.common.yes') : __('ai.common.no')]) }}</p>
             @endif
         </section>
     @endif
 
     <section class="card">
-        <h2>Verbindingstest (kosteloos)</h2>
-        <p>Test alleen of de sleutel geldig is en welke modellen zichtbaar zijn. Dit voert nooit een betaalde beeldanalyse of embedding uit. Een echte beeldanalyse-proof gebeurt uitsluitend via de "Beeldanalyse starten" actie hieronder, met een echte budgetreservering.</p>
+        <h2>{{ __('ai.settings.connection.title') }}</h2>
+        <p>{{ __('ai.settings.connection.intro') }}</p>
         <form method="POST" action="{{ route('admin.operations.ai.test-connection') }}">
             @csrf
-            <label>Provider
+            <label>{{ __('ai.common.provider') }}
                 <select name="test_provider">
                     @foreach(\App\Modules\Ai\Services\AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS as $providerOption)
                         <option value="{{ $providerOption }}">{{ ucfirst($providerOption) }}</option>
                     @endforeach
                 </select>
             </label>
-            <label>Capability
+            <label>{{ __('ai.common.capability') }}
                 <select name="test_capability">
-                    <option value="image_analysis">Beeldanalyse</option>
-                    <option value="embeddings">Embeddings</option>
+                    <option value="image_analysis">{{ __('ai.common.image_analysis') }}</option>
+                    <option value="embeddings">{{ __('ai.common.embeddings') }}</option>
                 </select>
             </label>
-            <button type="submit">Verbinding testen</button>
+            <button type="submit">{{ __('ai.settings.connection.submit') }}</button>
         </form>
     </section>
 
     <form method="POST" action="{{ route('admin.operations.ai.update') }}" class="card">
         @csrf
-        <h2>AI-functies en noodstop</h2>
-        @foreach([
-            'global_enabled' => 'AI globaal inschakelen',
-            'emergency_stop' => 'Noodstop actief houden',
-            'image_analysis_enabled' => 'Beeldanalyse toestaan',
-            'embeddings_enabled' => 'Multimodale embeddings toestaan',
-            'local_provider_enabled' => 'Lokale/eigen provider toestaan',
-            'external_processing_allowed' => 'Doorgifte naar custom externe provider toestaan',
-        ] as $field => $label)
+        <h2>{{ __('ai.settings.features.title') }}</h2>
+        @php
+            $featureLabels = [
+                'global_enabled' => __('ai.settings.features.global_enabled'),
+                'emergency_stop' => __('ai.settings.features.emergency_stop'),
+                'image_analysis_enabled' => __('ai.settings.features.image_analysis_enabled'),
+                'embeddings_enabled' => __('ai.settings.features.embeddings_enabled'),
+                'local_provider_enabled' => __('ai.settings.features.local_provider_enabled'),
+                'external_processing_allowed' => __('ai.settings.features.external_processing_allowed'),
+            ];
+        @endphp
+        @foreach($featureLabels as $field => $label)
             <label style="display:block;margin:0.5rem 0;">
                 <input type="checkbox" name="{{ $field }}" value="1" @checked(old($field, $settings[$field]) === true || old($field, $settings[$field]) === '1')>
                 {{ $label }}
             </label>
         @endforeach
-        <p>Native providers sturen de geselecteerde afgeleide (beeldanalyse) of zoektekst (embeddings) rechtstreeks naar de eigen API van OpenAI, Anthropic, Google Gemini of OpenRouter. Er vindt nooit automatische failover tussen providers plaats: elke capability gebruikt precies de hieronder gekozen provider.</p>
+        <p>{{ __('ai.settings.features.native_notice') }}</p>
 
-        <h2>Beeldanalyse: provider, model en toestemming</h2>
-        <label>Provider voor beeldanalyse
+        <h2>{{ __('ai.settings.image.title') }}</h2>
+        <label>{{ __('ai.settings.image.provider') }}
             <select name="image_analysis_provider">
-                <option value="">(geen)</option>
+                <option value="">{{ __('ai.common.none') }}</option>
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS as $provider)
                     <option value="{{ $provider }}" @selected(old('image_analysis_provider', $settings['image_analysis_provider']) === $provider)>{{ ucfirst($provider) }}</option>
                 @endforeach
             </select>
         </label>
-        <p>Voor databaseproviders wordt het beeldanalysemodel uit de providersectie gebruikt. Alleen de lokale/eigen provider gebruikt hier nog zijn capabilitymodel.</p>
-        <label>Lokaal model voor beeldanalyse <input type="text" name="image_analysis_model" value="{{ old('image_analysis_model', $settings['image_analysis_model']) }}"></label>
+        <p>{{ __('ai.settings.image.database_model_notice') }}</p>
+        <label>{{ __('ai.settings.image.local_model') }} <input type="text" name="image_analysis_model" value="{{ old('image_analysis_model', $settings['image_analysis_model']) }}"></label>
         <label style="display:block;margin:0.5rem 0;">
             <input type="checkbox" name="image_analysis_native_consent" value="1" @checked(old('image_analysis_native_consent', $settings['image_analysis_native_consent']) === true || old('image_analysis_native_consent', $settings['image_analysis_native_consent']) === '1')>
-            Ik geef expliciet toestemming dat de geselecteerde afgeleide (max 1024px, metadata verwijderd) naar de gekozen native provider wordt verstuurd voor beeldanalyse.
+            {{ __('ai.settings.image.native_consent') }}
         </label>
 
-        <h2>Embeddings: provider, model en toestemming</h2>
-        <p>Alleen aantoonbaar multimodale, gedeelde tekst/beeld-vectorruimtes worden aangeboden: OpenAI-tekstembeddings en Anthropic bieden dat niet native, dus die staan hier niet in de lijst.</p>
-        <label>Provider voor embeddings
+        <h2>{{ __('ai.settings.embeddings.title') }}</h2>
+        <p>{{ __('ai.settings.embeddings.multimodal_notice') }}</p>
+        <label>{{ __('ai.settings.embeddings.provider') }}
             <select name="embeddings_provider">
-                <option value="">(geen)</option>
+                <option value="">{{ __('ai.common.none') }}</option>
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::EMBEDDINGS_PROVIDERS as $provider)
                     <option value="{{ $provider }}" @selected(old('embeddings_provider', $settings['embeddings_provider']) === $provider)>{{ ucfirst($provider) }}</option>
                 @endforeach
             </select>
         </label>
-        <p>Voor databaseproviders wordt het embeddingmodel uit de providersectie gebruikt.</p>
-        <label>Lokaal embeddingmodel <input type="text" name="embeddings_model" value="{{ old('embeddings_model', $settings['embeddings_model']) }}"></label>
+        <p>{{ __('ai.settings.embeddings.database_model_notice') }}</p>
+        <label>{{ __('ai.settings.embeddings.local_model') }} <input type="text" name="embeddings_model" value="{{ old('embeddings_model', $settings['embeddings_model']) }}"></label>
         <label style="display:block;margin:0.5rem 0;">
             <input type="checkbox" name="embeddings_native_consent" value="1" @checked(old('embeddings_native_consent', $settings['embeddings_native_consent']) === true || old('embeddings_native_consent', $settings['embeddings_native_consent']) === '1')>
-            Ik geef expliciet toestemming dat afgeleiden en zoektekst naar de gekozen native embeddingsprovider worden verstuurd. Bij OpenRouter routeert de zoektekst via een door mij gekozen upstream-model met diens eigen privacy-/retentiebeleid, dat deze app niet kan afdwingen.
+            {{ __('ai.settings.embeddings.native_consent') }}
         </label>
-        <p>Een modelwissel (andere provider, model of dimensies) vereist een nieuwe indexgeneratie. Bestaande en nieuwe embeddings worden nooit in dezelfde vectorruimte gemengd.</p>
+        <p>{{ __('ai.settings.embeddings.model_change_notice') }}</p>
 
-        <h2>Endpoints en privacy</h2>
-        <label>Lokale/eigen endpoint
-            <input type="url" name="local_endpoint" value="{{ old('local_endpoint', $settings['local_endpoint']) }}" placeholder="http://ai-service:8080 of https://ai.example.org">
+        <h2>{{ __('ai.settings.endpoints.title') }}</h2>
+        <label>{{ __('ai.settings.endpoints.local_endpoint') }}
+            <input type="url" name="local_endpoint" value="{{ old('local_endpoint', $settings['local_endpoint']) }}" placeholder="{{ __('ai.settings.endpoints.placeholder') }}">
         </label>
 
-        <h2>Numerieke limieten</h2>
-        <label>Max assets per AI-batch
+        <h2>{{ __('ai.settings.limits.title') }}</h2>
+        <label>{{ __('ai.settings.limits.max_assets') }}
             <input type="number" min="1" max="25" name="max_assets_per_batch" value="{{ old('max_assets_per_batch', $settings['max_assets_per_batch']) }}">
         </label>
-        <label>Max afbeeldingsrand voor AI-afgeleide
+        <label>{{ __('ai.settings.limits.max_derivative_edge') }}
             <input type="number" min="256" max="1024" name="derivative_max_pixels" value="{{ old('derivative_max_pixels', $settings['derivative_max_pixels']) }}">
         </label>
-        <label>Provider timeout seconden
+        <label>{{ __('ai.settings.limits.timeout') }}
             <input type="number" min="5" max="60" name="request_timeout_seconds" value="{{ old('request_timeout_seconds', $settings['request_timeout_seconds']) }}">
         </label>
-        <p>API-sleutels worden hierboven ingesteld/vervangen of expliciet verwijderd; ze worden versleuteld opgeslagen en nooit ingevuld in een formulier.</p>
-        <button type="submit">AI-instellingen opslaan</button>
+        <p>{{ __('ai.settings.limits.key_notice') }}</p>
+        <button type="submit">{{ __('ai.settings.save') }}</button>
     </form>
 
     <form method="POST" action="{{ route('admin.operations.ai.analyze') }}" class="card">
         @csrf
-        <h2>Beeldanalyse starten</h2>
-        <p>Analyseert de geselecteerde, gescande primaire bestanden. Elke run levert menselijk te beoordelen suggesties op (accepteren/afwijzen) en wijzigt nooit rechtstreeks een asset. Volg de voortgang, en stop of herstart indien nodig, op de <a href="{{ route('admin.operations.runs.index') }}">runs-pagina</a>.</p>
-        <label>Fotonummers of interne IDs
-            <textarea name="asset_ids" rows="3" placeholder="FA-… of interne ULID; gescheiden door komma's of regels">{{ old('asset_ids') }}</textarea>
+        <h2>{{ __('ai.settings.image.dispatch_title') }}</h2>
+        <p>{!! __('ai.settings.image.dispatch_intro', ['runs_link' => '<a href="'.e(route('admin.operations.runs.index')).'">'.e(__('ai.settings.image.runs_page')).'</a>']) !!}</p>
+        <label>{{ __('ai.settings.batch.references') }}
+            <textarea name="asset_ids" rows="3" placeholder="{{ __('ai.settings.batch.references_placeholder') }}">{{ old('asset_ids') }}</textarea>
         </label>
-        <p>Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.</p>
-        <label>Provider
+        <p>{{ __('ai.settings.batch.references_help') }}</p>
+        <label>{{ __('ai.common.provider') }}
             <select name="provider">
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::IMAGE_ANALYSIS_PROVIDERS as $provider)
                     <option value="{{ $provider }}" @selected($settings['image_analysis_provider'] === $provider)>{{ ucfirst($provider) }}</option>
@@ -212,20 +217,20 @@
             </select>
         </label>
         @unless($settings['image_analysis_ready'])
-            <p role="alert">Beeldanalyse is nog niet gereed: kies hierboven een provider/model en geef toestemming.</p>
+            <p role="alert">{{ __('ai.settings.image.not_ready') }}</p>
         @endunless
-        <button type="submit" @disabled(! $settings['image_analysis_ready'])>Beeldanalyse starten</button>
+        <button type="submit" @disabled(! $settings['image_analysis_ready'])>{{ __('ai.settings.image.submit') }}</button>
     </form>
 
     <form method="POST" action="{{ route('admin.operations.ai.index') }}" class="card">
         @csrf
-        <h2>Embeddingindex bouwen</h2>
-        <p>Indexeer alleen geselecteerde, gescande primaire bestanden. De worker vraagt beeldembeddings op; tekstqueries moeten later hetzelfde model_space gebruiken.</p>
-        <label>Fotonummers of interne IDs
-            <textarea name="asset_ids" rows="3" placeholder="FA-… of interne ULID; gescheiden door komma's of regels">{{ old('asset_ids') }}</textarea>
+        <h2>{{ __('ai.settings.embeddings.dispatch_title') }}</h2>
+        <p>{{ __('ai.settings.embeddings.dispatch_intro') }}</p>
+        <label>{{ __('ai.settings.batch.references') }}
+            <textarea name="asset_ids" rows="3" placeholder="{{ __('ai.settings.batch.references_placeholder') }}">{{ old('asset_ids') }}</textarea>
         </label>
-        <p>Gebruik het volledige fotonummer, inclusief FA-. Alle foto's worden vooraf gecontroleerd; bij ongeldige invoer start de hele batch niet. Dubbele verwijzingen naar dezelfde foto tellen eenmaal.</p>
-        <label>Provider
+        <p>{{ __('ai.settings.batch.references_help') }}</p>
+        <label>{{ __('ai.common.provider') }}
             <select name="provider">
                 @foreach(\App\Modules\Ai\Services\AiConfigurationService::EMBEDDINGS_PROVIDERS as $provider)
                     <option value="{{ $provider }}" @selected($settings['embeddings_provider'] === $provider)>{{ ucfirst($provider) }}</option>
@@ -233,8 +238,8 @@
             </select>
         </label>
         @unless($settings['embeddings_ready'])
-            <p role="alert">Embeddings zijn nog niet gereed: kies hierboven een provider/model en geef toestemming.</p>
+            <p role="alert">{{ __('ai.settings.embeddings.not_ready') }}</p>
         @endunless
-        <button type="submit" @disabled(! $settings['embeddings_ready'])>Embeddingindex starten</button>
+        <button type="submit" @disabled(! $settings['embeddings_ready'])>{{ __('ai.settings.embeddings.submit') }}</button>
     </form>
 @endsection

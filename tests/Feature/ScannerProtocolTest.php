@@ -34,6 +34,32 @@ it('uses framed INSTREAM bytes and accepts only explicit scanner confirmation', 
     ['unexpected: OK', RuntimeException::class],
 ]);
 
+it('fails closed when the configured ClamAV daemon is unavailable', function (): void {
+    $listener = stream_socket_server('tcp://127.0.0.1:0', $errno, $errstr);
+    expect($listener)->not->toBeFalse($errstr);
+    $name = stream_socket_get_name($listener, false);
+    expect($name)->toBeString();
+    $port = (int) substr($name, strrpos($name, ':') + 1);
+    fclose($listener);
+
+    config([
+        'ingest.scanner' => 'clamav',
+        'ingest.clamav_host' => '127.0.0.1',
+        'ingest.clamav_port' => $port,
+        'ingest.clamav_timeout' => 1,
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'scanner-outage-');
+    file_put_contents($path, 'bytes that must not be accepted without ClamAV');
+
+    try {
+        expect(fn () => app(MalwareScanner::class)->scan($path))
+            ->toThrow(RuntimeException::class, 'Scanner connection unavailable.');
+    } finally {
+        unlink($path);
+    }
+});
+
 it('accepts clean bytes and blocks EICAR against a real ClamAV daemon', function (): void {
     $host = getenv('FOTOARCHIEF_TEST_CLAMAV_HOST');
     $port = (int) (getenv('FOTOARCHIEF_TEST_CLAMAV_PORT') ?: 3310);

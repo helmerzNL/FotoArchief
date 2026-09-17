@@ -66,17 +66,17 @@ class IntegrityVerificationService
 
         // 1. Check original presence
         if (! $disk->exists($file->storage_key)) {
-            $this->recordCheck($file, 'missing_original', null, ['message' => 'Origineel archiefbestand ontbreekt op opslagschijf.']);
+            $this->recordCheck($file, 'missing_original', null, ['message' => __('operations.generated.t_a1c0ebe48b014473')]);
 
-            return ['status' => 'missing_original', 'message' => 'Origineel archiefbestand ontbreekt.'];
+            return ['status' => 'missing_original', 'message' => __('operations.generated.t_9df71e954270244e')];
         }
 
         // 2. Read stream and verify SHA-256
         $stream = $disk->readStream($file->storage_key);
         if (! is_resource($stream)) {
-            $this->recordCheck($file, 'missing_original', null, ['message' => 'Origineel bestand niet leesbaar.']);
+            $this->recordCheck($file, 'missing_original', null, ['message' => __('operations.generated.t_58f30d4027ae9217')]);
 
-            return ['status' => 'missing_original', 'message' => 'Origineel bestand niet leesbaar.'];
+            return ['status' => 'missing_original', 'message' => __('operations.generated.t_58f30d4027ae9217')];
         }
 
         $ctx = hash_init('sha256');
@@ -94,10 +94,10 @@ class IntegrityVerificationService
             $this->recordCheck($file, 'corrupt_checksum', $actualSha, [
                 'expected' => $file->sha256,
                 'actual' => $actualSha,
-                'message' => 'Checksum komt niet overeen met het geregistreerde onveranderlijke origineel.',
+                'message' => __('operations.generated.t_1291e48aec6f6025'),
             ]);
 
-            return ['status' => 'corrupt_checksum', 'message' => 'Checksum mismatch (bestand beschadigd).'];
+            return ['status' => 'corrupt_checksum', 'message' => __('operations.generated.t_023f1b311e5d884a')];
         }
 
         // 3. Check derivatives presence
@@ -113,17 +113,17 @@ class IntegrityVerificationService
         if ($missingDerivatives !== []) {
             $this->recordCheck($file, 'missing_derivative', $actualSha, [
                 'missing' => $missingDerivatives,
-                'message' => 'Een of meer afgeleide weergaven (previews) ontbreken.',
+                'message' => __('operations.generated.t_6960268775f04bad'),
             ]);
 
-            return ['status' => 'missing_derivative', 'message' => 'Afgeleide weergaven ontbreken. Herbouw vereist.'];
+            return ['status' => 'missing_derivative', 'message' => __('operations.generated.t_1be9b78445afc873')];
         }
 
         // 4. Clean pass
         $this->resolvePriorIssues($file);
-        $this->recordCheck($file, 'ok', $actualSha, ['message' => 'Bestand, checksum en weergaven zijn geverifieerd intact.']);
+        $this->recordCheck($file, 'ok', $actualSha, ['message' => __('operations.generated.t_747693d523f64f75')]);
 
-        return ['status' => 'ok', 'message' => 'Integriteit geverifieerd.'];
+        return ['status' => 'ok', 'message' => __('operations.generated.t_86090dbe86093a9d')];
     }
 
     /**

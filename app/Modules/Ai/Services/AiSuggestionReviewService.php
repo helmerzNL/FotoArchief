@@ -35,7 +35,7 @@ class AiSuggestionReviewService
                     $asset->tags()->attach($tag->id, ['id' => (string) Str::ulid()]);
                 }
             } else {
-                throw ValidationException::withMessages(['suggestion' => 'Dit type AI-suggestie kan nog niet automatisch worden toegepast.']);
+                throw ValidationException::withMessages(['suggestion' => __('ai.errors.unsupported_suggestion_type')]);
             }
 
             $asset->lock_version = (int) $asset->lock_version + 1;
@@ -65,7 +65,7 @@ class AiSuggestionReviewService
         return DB::transaction(function () use ($suggestion, $user, $note): AiSuggestion {
             $suggestion = AiSuggestion::query()->lockForUpdate()->with('asset')->findOrFail($suggestion->id);
             if ($suggestion->review_status !== AiSuggestion::REVIEW_PENDING) {
-                throw ValidationException::withMessages(['suggestion' => 'Deze AI-suggestie is al beoordeeld.']);
+                throw ValidationException::withMessages(['suggestion' => __('ai.errors.suggestion_reviewed')]);
             }
             $suggestion->forceFill([
                 'review_status' => AiSuggestion::REVIEW_REJECTED,
@@ -91,13 +91,13 @@ class AiSuggestionReviewService
     {
         $errors = [];
         if ($suggestion->review_status !== AiSuggestion::REVIEW_PENDING) {
-            $errors['suggestion'] = 'Deze AI-suggestie is al beoordeeld.';
+            $errors['suggestion'] = __('ai.errors.suggestion_reviewed');
         }
         if ($expectedLockVersion !== $currentLockVersion) {
-            $errors['lock_version'] = 'Deze foto is tussentijds gewijzigd. Vernieuw de pagina en controleer de suggestie opnieuw.';
+            $errors['lock_version'] = __('ai.errors.photo_changed');
         }
         if ((int) $suggestion->source_asset_lock_version !== $currentLockVersion || $suggestion->source_file_sha256 !== $currentSha) {
-            $errors['suggestion'] = 'Deze AI-suggestie hoort bij een oudere bronversie en is ongeldig gemaakt.';
+            $errors['suggestion'] = __('ai.errors.stale_suggestion');
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -116,7 +116,7 @@ class AiSuggestionReviewService
         ) {
             $suggestion->forceFill(['review_status' => AiSuggestion::REVIEW_SUPERSEDED])->save();
             throw ValidationException::withMessages([
-                'suggestion' => 'Deze AI-suggestie hoort bij een oudere bronversie en is ongeldig gemaakt.',
+                'suggestion' => __('ai.errors.stale_suggestion'),
             ]);
         }
     }

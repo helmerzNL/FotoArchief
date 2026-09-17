@@ -60,7 +60,7 @@ class ContributorController extends Controller
         $contributor = Contributor::query()->create($data);
 
         return redirect()->route('catalogue.contributors.show', $contributor)
-            ->with('status', 'Schenker/bijdrager succesvol geregistreerd.');
+            ->with('status', __('catalogue.generated.t_2918018ee464b415'));
     }
 
     public function show(Request $request, Contributor $contributor): View
@@ -92,7 +92,7 @@ class ContributorController extends Controller
         $contributor->update($data);
 
         return redirect()->route('catalogue.contributors.show', $contributor)
-            ->with('status', 'Gegevens bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_8477f90e69ea3c1e'));
     }
 
     public function destroy(Request $request, Contributor $contributor): RedirectResponse
@@ -105,7 +105,7 @@ class ContributorController extends Controller
         });
 
         return redirect()->route('catalogue.contributors.index')
-            ->with('status', 'Schenker/bijdrager verwijderd.');
+            ->with('status', __('catalogue.generated.t_43e14ec1b0897208'));
     }
 
     public function addAsset(Request $request, Contributor $contributor): RedirectResponse
@@ -125,13 +125,13 @@ class ContributorController extends Controller
 
         if ($asset === null) {
             throw ValidationException::withMessages([
-                'asset_id' => 'De opgegeven foto kon niet worden gevonden.',
+                'asset_id' => __('catalogue.generated.t_535f3aaae9765ff2'),
             ]);
         }
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te koppelen.');
+            abort(403, __('catalogue.generated.t_2159d6168feb9347'));
         }
 
         $existing = DB::table('asset_contributors')
@@ -158,7 +158,7 @@ class ContributorController extends Controller
         }
 
         return redirect()->route('catalogue.contributors.show', $contributor)
-            ->with('status', 'Foto succesvol gekoppeld.');
+            ->with('status', __('catalogue.generated.t_5c5977d644e3cedd'));
     }
 
     public function removeAsset(Request $request, Contributor $contributor, Asset $asset): RedirectResponse
@@ -167,7 +167,7 @@ class ContributorController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te ontkoppelen.');
+            abort(403, __('catalogue.generated.t_01f6c1ce25102b10'));
         }
 
         $relationshipType = $request->query('relationship_type');
@@ -182,14 +182,14 @@ class ContributorController extends Controller
         }
 
         return redirect()->route('catalogue.contributors.show', $contributor)
-            ->with('status', 'Fotokoppeling verwijderd.');
+            ->with('status', __('catalogue.generated.t_2dfe5d4490877d08'));
     }
 
     private function checkManagePermission(Request $request): void
     {
         $user = $request->user();
         if ($user === null || (! $user->hasPermission('catalogue.manage') && ! $user->hasPermission('assets.update'))) {
-            abort(403, 'Onvoldoende rechten om bijdragers te beheren.');
+            abort(403, __('catalogue.generated.t_68e4850343171653'));
         }
     }
 }

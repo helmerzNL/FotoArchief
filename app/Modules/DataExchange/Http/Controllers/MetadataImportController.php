@@ -24,7 +24,7 @@ class MetadataImportController extends ExchangeController
         $import = $service->accept($data['file'], $user, $data['write_mode']);
 
         return redirect()->route('exchange.imports.show', $import)
-            ->with('status', 'Bestand ontvangen. Er is nog niets gewijzigd: controleer eerst het voorbeeld.');
+            ->with('status', __('exchange.generated.t_7d62e880b07be383'));
     }
 
     public function show(Request $request, MetadataImport $import): View
@@ -41,7 +41,7 @@ class MetadataImportController extends ExchangeController
         $data = $request->validate(['write_mode' => ['required', Rule::in(['fill_empty', 'overwrite'])]]);
         $service->reanalyse($import, $data['write_mode']);
 
-        return redirect()->route('exchange.imports.show', $import)->with('status', 'Controle opnieuw uitgevoerd. Er is nog niets gewijzigd.');
+        return redirect()->route('exchange.imports.show', $import)->with('status', __('exchange.generated.t_ed54b7211d1299f8'));
     }
 
     public function confirm(Request $request, MetadataImport $import, MetadataImportService $service): RedirectResponse
@@ -53,7 +53,7 @@ class MetadataImportController extends ExchangeController
         $service->confirm($import, $user, $data['checksum']);
 
         return redirect()->route('exchange.imports.show', $import)
-            ->with('status', 'Import bevestigd en ingepland. Een actieve worker voert de wijzigingen uit.');
+            ->with('status', __('exchange.generated.t_bb574a4f20077e52'));
     }
 
     private function owned(Request $request, MetadataImport $import): void

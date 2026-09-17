@@ -9,6 +9,7 @@ use App\Modules\ArchiveOperations\Jobs\StorageCleanupJob;
 use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\StorageMigration;
+use App\Modules\ArchiveOperations\Services\OperationRunService;
 use App\Modules\ArchiveOperations\Services\StorageMigrationService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
@@ -173,4 +174,78 @@ test('starting a migration only queues work and the job copies and verifies ever
     $migration = StorageMigration::query()->latest('id')->firstOrFail();
     expect($migration->status)->toBe('verified');
     expect($migration->verified_files)->toBe(1);
+});
+
+test('interrupted storage migration can be retried without source loss or premature cutover', function (): void {
+    $asset = Asset::create([
+        'title' => 'Interrupted Migration Asset',
+        'accession_number' => 'FA-MIG-003',
+        'created_by_user_id' => $this->admin->id,
+    ]);
+
+    $readyContent = 'ready archival bytes';
+    $missingContent = 'bytes that appear before retry';
+    $readyKey = 'originals/retry-ready.jpg';
+    $missingKey = 'originals/retry-missing.jpg';
+    Storage::disk('local')->put($readyKey, $readyContent);
+
+    AssetFile::create([
+        'asset_id' => $asset->id,
+        'storage_key' => $readyKey,
+        'sha256' => hash('sha256', $readyContent),
+        'media_type' => 'image/jpeg',
+        'byte_size' => strlen($readyContent),
+        'original_filename' => 'retry-ready.jpg',
+        'derivatives' => [],
+        'is_primary' => true,
+    ]);
+    AssetFile::create([
+        'asset_id' => $asset->id,
+        'storage_key' => $missingKey,
+        'sha256' => hash('sha256', $missingContent),
+        'media_type' => 'image/jpeg',
+        'byte_size' => strlen($missingContent),
+        'original_filename' => 'retry-missing.jpg',
+        'derivatives' => [],
+        'is_primary' => false,
+    ]);
+
+    $migration = app(StorageMigrationService::class)->prepareMigration('local', 's3', $this->admin);
+    $run = app(OperationRunService::class)->dispatchRun(
+        StorageCopyJob::class,
+        StorageCopyJob::TYPE,
+        $this->admin,
+        ['migration_id' => $migration->id],
+        $migration->total_files,
+    );
+
+    $run = OperationRunDriver::drive($run);
+    $migration->refresh();
+
+    expect($run->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($migration->status)->toBe('failed_verification')
+        ->and($migration->verified_files)->toBe(1)
+        ->and($migration->failed_files)->toBe(1)
+        ->and(Storage::disk('local')->exists($readyKey))->toBeTrue()
+        ->and(Storage::disk('s3')->get($readyKey))->toBe($readyContent);
+    expect(fn () => app(StorageMigrationService::class)->cutover($migration, $this->admin))
+        ->toThrow(RuntimeException::class, 'Alleen volledig geverifieerde migraties kunnen omgezet worden');
+
+    Storage::disk('local')->put($missingKey, $missingContent);
+    $retry = app(OperationRunService::class)->retryRun($run, StorageCopyJob::class, $this->admin);
+    $retry = OperationRunDriver::drive($retry);
+    $migration->refresh();
+
+    expect($retry->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($migration->status)->toBe('verified')
+        ->and($migration->verified_files)->toBe(2)
+        ->and($migration->failed_files)->toBe(0)
+        ->and(Storage::disk('local')->exists($readyKey))->toBeTrue()
+        ->and(Storage::disk('local')->exists($missingKey))->toBeTrue()
+        ->and(Storage::disk('s3')->get($readyKey))->toBe($readyContent)
+        ->and(Storage::disk('s3')->get($missingKey))->toBe($missingContent);
+
+    app(StorageMigrationService::class)->cutover($migration, $this->admin);
+    expect(Storage::disk('local')->exists($readyKey))->toBeTrue()
+        ->and(Storage::disk('local')->exists($missingKey))->toBeTrue();
 });

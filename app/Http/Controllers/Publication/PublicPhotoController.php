@@ -42,7 +42,7 @@ class PublicPhotoController extends Controller
     {
         abort_unless(in_array($size, self::SIZES, true), 404);
         $download = $request->boolean('download');
-        abort_unless(! $download || ($publication->download_policy === 'preview_only' && $size === 'preview2000'), 403, 'Downloaden is niet toegestaan voor deze foto.');
+        abort_unless(! $download || ($publication->download_policy === 'preview_only' && $size === 'preview2000'), 403, __('publication.generated.t_2490ef68f1b83953'));
         // Same canonical file the predicate and viewer already agreed on
         // (see Asset::currentPublicFile()) - never re-derive eligibility
         // independently here, or the media stream could diverge from what
@@ -53,7 +53,7 @@ class PublicPhotoController extends Controller
         $key = $file->derivatives[$size] ?? null;
         abort_unless(is_string($key), 404);
         $stream = Storage::disk($file->storage_disk)->readStream($key);
-        abort_unless(is_resource($stream), 503, 'Voorbeeld tijdelijk niet beschikbaar.');
+        abort_unless(is_resource($stream), 503, __('publication.generated.t_194a9c2224822d03'));
         $headers = ['Content-Type' => 'image/jpeg', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private'];
         if ($download) {
             $headers['Content-Disposition'] = 'attachment; filename="'.($publication->permalink_slug ?? 'foto').'.jpg"';

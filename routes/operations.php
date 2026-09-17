@@ -35,6 +35,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');
+        Route::get('/{run}/ai-results', [OperationRunController::class, 'aiResults'])->name('ai-results');
         Route::post('/{run}/retry', [OperationRunController::class, 'retry'])->name('retry');
         Route::post('/{run}/cancel', [OperationRunController::class, 'cancel'])->name('cancel');
     });

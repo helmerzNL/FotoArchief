@@ -7,9 +7,12 @@
 Linux Quality run `35051355300` built and accepted the PHP 8.5.10 / Apache
 image, including real Dockhand v1.0.48 API import/start and onboarding.
 It also verified queued photo processing, restart persistence and a separate
-backup/restore stack. Komodo UI import has not been executed. Use the versioned
-test-release artifacts rather than inferring a registry tag from an example;
-see the [acceptance ledger](RELEASE_ACCEPTANCE.md). The template supports the
+backup/restore stack. The Quality workflow now additionally contains a
+managed-stack upgrade-preservation gate; see the
+[acceptance ledger](RELEASE_ACCEPTANCE.md) for whether that exact revision has
+run. Komodo UI import has not been executed. Use the versioned test-release
+artifacts rather than inferring a registry tag from an example; see the
+[acceptance ledger](RELEASE_ACCEPTANCE.md). The template supports the
 implemented first-start onboarding contract: the web container boots without an
 environment `APP_KEY`, application database credentials, Redis/Valkey, or S3
 credentials. It quietly prepares private installation state on the shared
@@ -36,6 +39,16 @@ PostgreSQL password, then import/deploy it from Komodo. Keep
 `auto_update=false` for FotoArchief release tags; use `poll_for_updates=true`
 only as a visible manager update indicator unless you deliberately operate a
 rolling tag with a tested rollback path.
+Safe Komodo acceptance needs a disposable Komodo Core/Periphery target and must
+record: Komodo version, target server name, resolved stack fields above,
+resolved `APP_IMAGE`, port mapping, `APP_URL`, `TRUSTED_PROXIES`,
+`SESSION_SECURE_COOKIE`, completed onboarding, processed photo preview,
+anonymous denial, pre-upgrade backup checksum, `storage/app/installation`
+state hash before/after upgrade, app-key hash before/after upgrade, closed
+`/setup` after upgrade and the post-upgrade account/photo smoke result. Do not
+call undocumented/private Komodo endpoints; if the documented UI/API is not
+available, record Komodo as blocked rather than substituting Dockhand or a
+Compose parse.
 
 **Dockhand:** first enable authentication under Settings > Authentication and
 configure the Docker environment. Keep this administrative interface on a LAN
@@ -166,8 +179,8 @@ without deleting volumes.
 For either manager, the acceptance evidence is the same as direct Compose:
 the stack is created by the manager, onboarding completes, a photo is processed
 by the worker, a redeploy preserves volumes, and an upgrade run preserves the
-installer lock, administrator, photo files and application key. A Compose parse
-alone is only a template syntax check.
+installer lock, administrator, photo files, shared storage volume and
+application key. A Compose parse alone is only a template syntax check.
 
 ### Safe Compose upgrade helper
 
@@ -189,6 +202,16 @@ then restarts workers/scheduler. It does not delete volumes, regenerate keys,
 reopen setup or run `docker compose down --volumes`. If any command fails,
 stopped background services are started again so the operator can restore from
 the verified backup.
+For a manager-owned stack, run the helper only in the manager's stack working
+directory or with the same `COMPOSE_PROJECT_NAME` and Compose file the manager
+uses. Before and after the helper, record a checksum of
+`storage/app/installation/state.json`, a checksum of the loaded `config("app.key")`,
+`GET /setup = 404`, administrator login, representative private preview access
+and anonymous preview denial.
+Set `FOTOARCHIEF_SKIP_IMAGE_PULL=1` only when the exact tested image is already
+loaded on that Docker host, for example an offline CI image archive accepted on
+the same daemon. Registry-based upgrades should leave it unset so Compose pulls
+the selected tag or digest before the app starts.
 
 ### OCR and exchange settings
 
@@ -281,9 +304,11 @@ before upgrading or moving a stack.
 The deployment template expects the implemented application onboarding contract.
 The Quality workflow now covers pending startup/key persistence, actual HTTP
 wizard completion against PostgreSQL/local storage, queued upload/JPEG delivery,
-restart after completion, and empty-target backup restoration. Its separate
-Dockhand API import creates a second stack and repeats onboarding. These are
-executable acceptance gates, not evidence that a run has passed: see the
+restart after completion, empty-target backup restoration and a disposable
+Dockhand manager import. The Dockhand path creates a second stack, repeats
+onboarding, then runs the safe upgrade helper against that existing managed
+stack and repeats the account/photo/anonymous-denial smoke. These are executable
+acceptance gates, not evidence that a run has passed: see the
 [acceptance ledger](RELEASE_ACCEPTANCE.md) for actual results. Komodo UI import,
 S3 storage and a production HTTPS origin require their own acceptance; neither
 Compose parsing nor a Dockhand API run proves those paths.

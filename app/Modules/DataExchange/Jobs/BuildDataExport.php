@@ -52,7 +52,7 @@ class BuildDataExport implements ShouldQueue
     {
         $export = DataExport::query()->find($this->exportId);
         if ($export instanceof DataExport) {
-            app(DataExportService::class)->markFailed($export, 'Samenstellen mislukt. Controleer de worker en probeer opnieuw.');
+            app(DataExportService::class)->markFailed($export, __('exchange.generated.t_4ec11498de5d2e39'));
         }
     }
 }

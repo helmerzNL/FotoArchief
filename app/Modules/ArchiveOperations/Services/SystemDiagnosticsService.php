@@ -81,7 +81,7 @@ class SystemDiagnosticsService
             'sapi' => PHP_SAPI,
             'os' => PHP_OS,
             'opcache_enabled' => $opcacheEnabled,
-            'remediation' => $isSupported ? null : 'PHP 8.3 of hoger wordt aanbevolen voor optimale prestaties en beveiliging.',
+            'remediation' => $isSupported ? null : __('operations.generated.t_d44e23e421712b91'),
         ];
     }
 
@@ -91,14 +91,14 @@ class SystemDiagnosticsService
     public function getExtensionDiagnostics(): array
     {
         $required = [
-            'pdo' => 'Vereist voor databasekoppeling.',
-            'gd' => 'Vereist voor afbeeldingsverwerking en afgeleide weergaven.',
-            'exif' => 'Vereist voor oriëntatie en EXIF-extractie.',
-            'fileinfo' => 'Vereist voor MIME-type detectie.',
-            'intl' => 'Vereist voor lokalisatie en datumopmaak.',
-            'mbstring' => 'Vereist voor UTF-8 tekenreeksverwerking.',
-            'openssl' => 'Vereist voor veilige communicatie en sleutelgeneratie.',
-            'zip' => 'Vereist voor exportpakketten en release-acceptatie.',
+            'pdo' => __('operations.generated.t_a2e585b6dfd5816a'),
+            'gd' => __('operations.generated.t_dd0d995222fc62d5'),
+            'exif' => __('operations.generated.t_3e87a15d69c3e421'),
+            'fileinfo' => __('operations.generated.t_0ea2708a5161c027'),
+            'intl' => __('operations.generated.t_66afe7f55fc6eaf7'),
+            'mbstring' => __('operations.generated.t_629c9fdafec45419'),
+            'openssl' => __('operations.generated.t_2389d52a47da0715'),
+            'zip' => __('operations.generated.t_0dcddc4a6730e208'),
         ];
 
         $results = [];
@@ -130,7 +130,7 @@ class SystemDiagnosticsService
             'status' => count($missing) === 0 ? 'ok' : 'critical',
             'extensions' => $results,
             'missing' => $missing,
-            'remediation' => count($missing) === 0 ? null : 'Installeer en activeer de ontbrekende PHP-extensies: '.implode(', ', $missing).'.',
+            'remediation' => count($missing) === 0 ? null : __('operations.generated.t_45180088e2cd3028').implode(', ', $missing).'.',
         ];
     }
 
@@ -163,7 +163,7 @@ class SystemDiagnosticsService
                     'driver' => 's3',
                     'accessible' => false,
                     'read_write_verified' => false,
-                    'error' => 'S3 bucket is niet geconfigureerd.',
+                    'error' => __('operations.generated.t_cdf83711e80abf05'),
                 ];
                 $hasError = true;
 
@@ -186,7 +186,7 @@ class SystemDiagnosticsService
                     'driver' => (string) ($diskConfig['driver'] ?? $diskName),
                     'accessible' => $accessible,
                     'read_write_verified' => $accessible,
-                    'error' => $accessible ? null : 'Lees- of schrijftest mislukt.',
+                    'error' => $accessible ? null : __('operations.generated.t_14a972ea2535b462'),
                 ];
             } catch (Throwable $e) {
                 $hasError = true;
@@ -194,7 +194,7 @@ class SystemDiagnosticsService
                     'driver' => (string) ($diskConfig['driver'] ?? $diskName),
                     'accessible' => false,
                     'read_write_verified' => false,
-                    'error' => 'Toegang tot opslagschijf mislukt: '.$this->sanitizeErrorMessage($e->getMessage()),
+                    'error' => __('operations.generated.t_a2a2333063f38cf0').$this->sanitizeErrorMessage($e->getMessage()),
                 ];
             }
         }
@@ -202,7 +202,7 @@ class SystemDiagnosticsService
         return [
             'status' => $hasError ? 'critical' : 'ok',
             'disks' => $diskResults,
-            'remediation' => $hasError ? 'Controleer bestandsrechten op opslagmappen of S3 bucket permissies en netwerkverbinding.' : null,
+            'remediation' => $hasError ? __('operations.generated.t_ce564d91aac14b7b') : null,
         ];
     }
 
@@ -249,7 +249,7 @@ class SystemDiagnosticsService
             'pending_migrations' => $pendingMigrations,
             'error' => $error,
             'remediation' => ! $connected
-                ? 'Controleer database-host, poort, credentials en firewall instellingen.'
+                ? __('operations.generated.t_aa9e92361ca9ad19')
                 : ($pendingMigrations > 0 ? "Er zijn {$pendingMigrations} niet-uitgevoerde migraties. Voer 'php artisan migrate' uit." : null),
         ];
     }
@@ -303,8 +303,8 @@ class SystemDiagnosticsService
                 'scanner' => 'none',
                 'configured' => false,
                 'active' => false,
-                'message' => 'Malware-scanner is uitgeschakeld (standaard voor ontwikkelomgevingen).',
-                'remediation' => 'Voor productieomgevingen wordt ClamAV activering aanbevolen (ingest.scanner=clamav).',
+                'message' => __('operations.generated.t_7bbf722392639bc2'),
+                'remediation' => __('operations.generated.t_e73bef3c69b3c2ef'),
             ];
         }
 
@@ -336,9 +336,9 @@ class SystemDiagnosticsService
                 'configured' => true,
                 'active' => $online,
                 'endpoint' => $this->maskHost($host).':'.$port,
-                'message' => $online ? 'ClamAV daemon reageert correct op PING.' : 'ClamAV daemon is niet bereikbaar.',
+                'message' => $online ? __('operations.generated.t_9a68252d96aa61b9') : __('operations.generated.t_7a96d1c4a9c27aa1'),
                 'error' => $error,
-                'remediation' => $online ? null : 'Controleer of de ClamAV daemon draait en bereikbaar is op de geconfigureerde host en poort.',
+                'remediation' => $online ? null : __('operations.generated.t_8521855962d2f33f'),
             ];
         }
 
@@ -347,8 +347,8 @@ class SystemDiagnosticsService
             'scanner' => $scanner,
             'configured' => true,
             'active' => false,
-            'message' => 'Onbekende scanner-configuratie.',
-            'remediation' => 'Stel ingest.scanner in op "clamav" of "none".',
+            'message' => __('operations.generated.t_ab00efe649570df6'),
+            'remediation' => __('operations.generated.t_3f971adc78734589'),
         ];
     }
 
@@ -405,7 +405,7 @@ class SystemDiagnosticsService
             'stale_roles' => $stale,
             'remediation' => $status === 'ok'
                 ? null
-                : 'Laat de scheduler elke minuut lopen en start minstens een ingest-worker; diagnostics gebruikt echte heartbeats in plaats van alleen configuratie.',
+                : __('operations.generated.t_77b755b35fc5154d'),
         ];
     }
 
@@ -431,7 +431,7 @@ class SystemDiagnosticsService
         $msg = (string) preg_replace('/password=[^;\s&]+/i', 'password=********', $msg);
         $msg = (string) preg_replace('/secret=[^;\s&]+/i', 'secret=********', $msg);
         $msg = (string) preg_replace('/key=[^;\s&]+/i', 'key=********', $msg);
-        $msg = (string) preg_replace('/Bearer\s+[A-Za-z0-9\-_.]+/i', 'Bearer ********', $msg);
+        $msg = (string) preg_replace('/Bearer\s+[A-Za-z0-9\-_.]+/i', __('operations.generated.t_ed75247ec0caf785'), $msg);
 
         return $msg;
     }

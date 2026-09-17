@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Tag: ' . $tag->name . ' - FotoArchief')
 @section('content')
-<p class="eyebrow"><a href="{{ route('catalogue.tags.index') }}">← Alle Tags</a></p>
+<p class="eyebrow"><a href="{{ route('catalogue.tags.index') }}">{{ __('catalogue.generated.t_0f6045c9712448ab') }}</a></p>
 <h1>Tag: {{ $tag->name }}</h1>
 
 @if(session('status'))
@@ -18,24 +18,24 @@
         <p><strong>Beschrijving:</strong> {{ $tag->description }}</p>
     @endif
     @if($tag->synonyms->isNotEmpty())
-        <p><strong>Synoniemen &amp; varianten:</strong> {{ $tag->synonyms->pluck('name')->join(', ') }}</p>
+        <p><strong>{{ __('catalogue.generated.t_e6183734c911218f') }}</strong> {{ $tag->synonyms->pluck('name')->join(', ') }}</p>
     @endif
 
     <div class="actions" style="margin-top: 1rem;">
-        <a href="{{ route('catalogue.tags.edit', $tag) }}" class="button">Bewerken / Samenvoegen</a>
+        <a href="{{ route('catalogue.tags.edit', $tag) }}" class="button">{{ __('catalogue.generated.t_12d170979f6825f7') }}</a>
     </div>
 </section>
 
 @if($otherTags->isNotEmpty())
 <section class="card">
-    <h2>Samenvoegen met andere tag</h2>
+    <h2>{{ __('catalogue.generated.t_63ddb7458cde07ad') }}</h2>
     <form method="post" action="{{ route('catalogue.tags.merge', $tag) }}">
         @csrf
         <div class="grid">
             <div>
-                <label for="target_tag_id">Doeltag kiezen</label>
+                <label for="target_tag_id">{{ __('catalogue.generated.t_a23fa136f0fc2075') }}</label>
                 <select id="target_tag_id" name="target_tag_id" required>
-                    <option value="">-- Kies doeltag --</option>
+                    <option value="">{{ __('catalogue.generated.t_d0a416c0e2e0f185') }}</option>
                     @foreach($otherTags as $ot)
                         <option value="{{ $ot->id }}">{{ $ot->name }}</option>
                     @endforeach
@@ -50,7 +50,7 @@
 @endif
 
 <section class="card">
-    <h2>Gekoppelde foto’s ({{ $assets->count() }})</h2>
+    <h2>{{ __('catalogue.generated.t_9084c0e65cc71fa7') }}{{ $assets->count() }})</h2>
     <ul class="asset-list">
         @forelse($assets as $asset)
             @php($file = $asset->files->first())
@@ -65,7 +65,7 @@
                 </small>
             </li>
         @empty
-            <li>Geen foto’s direct aan deze tag gekoppeld binnen jouw toegang.</li>
+            <li>{{ __('catalogue.generated.t_db3159dc31a1eed2') }}</li>
         @endforelse
     </ul>
 </section>

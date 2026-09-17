@@ -8,6 +8,7 @@ use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
 use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
@@ -127,6 +128,83 @@ it('processes AI analysis in the worker and stores only pending suggestions', fu
         ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.analysis.item_succeeded')->count())->toBe(1);
 });
 
+it('processes OpenAI analysis through the worker with the safe review chain and no live provider calls', function (): void {
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true,
+        'vision_model' => 'gpt-4.1-mini',
+    ], $this->user);
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1',
+        'image_analysis_enabled' => '1',
+        'embeddings_enabled' => '1',
+        'local_provider_enabled' => '1',
+        'local_endpoint' => 'http://127.0.0.1:8088',
+        'external_processing_allowed' => '0',
+        'image_analysis_native_consent' => '1',
+        'image_analysis_provider' => 'openai',
+        'max_assets_per_batch' => 10,
+        'derivative_max_pixels' => 512,
+        'request_timeout_seconds' => 15,
+    ], $this->user);
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true,
+        'vision_model' => 'gpt-4.1-mini',
+        'cost_cents_per_image' => 1,
+        'monthly_budget_cents' => 100,
+    ], $this->user);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'test-openai-secret', $this->user);
+    Http::fake([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
+            'model' => 'gpt-4.1-mini-2026-09-17',
+            'choices' => [[
+                'message' => [
+                    'content' => '{"description":"Een veilige OpenAI fixturebeschrijving.","tags":["Archief","Controle"],"confidence":0.91}',
+                ],
+            ]],
+        ]),
+    ]);
+
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'openai', 'model' => 'gpt-4.1-mini', 'cursor' => 0],
+        'total_items' => 1,
+    ]);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    Http::assertSent(function ($request): bool {
+        $payload = $request->data();
+        $imageUrl = $payload['messages'][0]['content'][1]['image_url']['url'] ?? null;
+
+        return $request->url() === 'https://api.openai.com/v1/chat/completions'
+            && $request->hasHeader('Authorization', 'Bearer test-openai-secret')
+            && ($payload['model'] ?? null) === 'gpt-4.1-mini'
+            && ($payload['response_format']['type'] ?? null) === 'json_object'
+            && is_string($imageUrl)
+            && str_starts_with($imageUrl, 'data:image/jpeg;base64,')
+            && ! str_contains($imageUrl, 'safe-derived-image-bytes');
+    });
+
+    $aiRun = $this->asset->aiRuns()->firstOrFail();
+    $auditPayload = json_encode(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->get()->toArray(), JSON_THROW_ON_ERROR);
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($this->asset->fresh()->description)->toBeNull()
+        ->and($aiRun->provider_kind)->toBe('openai')
+        ->and($aiRun->provider_name)->toBe('native-openai')
+        ->and($aiRun->model_id)->toBe('gpt-4.1-mini')
+        ->and($aiRun->model_version)->toBe('gpt-4.1-mini-2026-09-17')
+        ->and($aiRun->input_contract)->toMatchArray([
+            'metadata_stripped' => true,
+            'automatic_metadata_write' => false,
+        ])
+        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->where('review_status', AiSuggestion::REVIEW_PENDING)->pluck('value')->all())
+        ->toBe(['Een veilige OpenAI fixturebeschrijving.', 'archief', 'controle'])
+        ->and($auditPayload)->not->toContain('test-openai-secret')
+        ->and($auditPayload)->not->toContain('data:image/jpeg');
+});
+
 it('reports an explicit failure when an existing source file was never malware scanned', function (): void {
     $this->file->forceFill(['scanner_status' => 'unscanned'])->save();
     config(['ingest.scanner' => 'none']);
@@ -196,6 +274,98 @@ it('refuses AI batches above the configured limit', function (): void {
 
     expect(fn () => app(AiDispatchService::class)->dispatchImageAnalysis($ids, 'local', $this->user))
         ->toThrow(ValidationException::class, 'Selecteer 1 tot 10 assets');
+});
+
+it('cancels a queued AI run after the emergency stop is enabled without contacting a provider', function (): void {
+    Http::preventStrayRequests();
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'local', 'cursor' => 0],
+        'total_items' => 1,
+    ]);
+
+    $settings = app(AiConfigurationService::class)->effective();
+    app(AiConfigurationService::class)->update(array_merge($settings, ['emergency_stop' => true]), $this->user);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_CANCELLED)
+        ->and($run->fresh()->processed_items)->toBe(0)
+        ->and($run->fresh()->error_message)->toContain('AI-taak geannuleerd')
+        ->and(AiSuggestion::query()->count())->toBe(0);
+});
+
+it('preserves processed and failed counters for items already completed before a mid-chunk cancellation, without overwriting the cancelled status or claim', function (): void {
+    $calls = 0;
+    Http::fake([
+        'http://127.0.0.1:8088/v1/analyze-image' => function () use (&$calls) {
+            $calls++;
+            if ($calls > 1) {
+                throw new RuntimeException('No second provider request expected once the run is cancelled mid-chunk.');
+            }
+
+            // Simulate the capability going unavailable while this first item is
+            // still in flight, so the second item is never attempted.
+            $settings = app(AiConfigurationService::class)->effective();
+            app(AiConfigurationService::class)->update(array_merge($settings, ['emergency_stop' => true]), $this->user);
+
+            return Http::response([
+                'description' => 'Eerste veilige testfoto.',
+                'tags' => ['Eerste'],
+                'model_id' => 'local-caption-proof',
+                'model_space' => 'local-caption-proof',
+                'confidence' => 0.8,
+            ]);
+        },
+    ]);
+
+    $secondAsset = Asset::query()->create([
+        'accession_number' => 'AI-ASYNC-SECOND-'.(string) str()->ulid(),
+        'title' => 'Async AI contract second item',
+        'created_by_user_id' => $this->user->id,
+    ])->fresh();
+    Storage::disk('local')->put('originals/async-ai-second.jpg', 'safe-derived-image-bytes-second');
+    $secondImage = imagecreatetruecolor(800, 600);
+    imagefill($secondImage, 0, 0, 0xCCBBAA);
+    ob_start();
+    imagejpeg($secondImage, null, 90);
+    $secondDerivative = ob_get_clean();
+    imagedestroy($secondImage);
+    Storage::disk('local')->put('derivatives/async-ai-second-preview-1200.jpg', $secondDerivative);
+    $secondFile = AssetFile::query()->create([
+        'asset_id' => $secondAsset->id,
+        'storage_disk' => 'local',
+        'storage_key' => 'originals/async-ai-second.jpg',
+        'sha256' => hash('sha256', 'safe-derived-image-bytes-second'),
+        'media_type' => 'image/jpeg',
+        'byte_size' => 12345,
+        'ingest_status' => 'ready_private',
+        'scanner_status' => 'clean',
+        'derivatives' => ['preview1200' => 'derivatives/async-ai-second-preview-1200.jpg'],
+        'is_primary' => true,
+    ]);
+
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id, $secondAsset->id], 'provider' => 'local', 'cursor' => 0],
+        'total_items' => 2,
+    ]);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    $run->refresh();
+    expect($run->status)->toBe(OperationRun::STATUS_CANCELLED)
+        ->and($run->processed_items)->toBe(1)
+        ->and($run->failed_items)->toBe(0)
+        ->and($run->claim_token)->toBeNull()
+        ->and($run->error_message)->toContain('AI-taak geannuleerd')
+        ->and($calls)->toBe(1)
+        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->count())->toBeGreaterThan(0)
+        ->and(AiSuggestion::query()->where('asset_id', $secondAsset->id)->count())->toBe(0);
 });
 
 it('restarts a legacy failed AI run from the first item with clean counters', function (): void {

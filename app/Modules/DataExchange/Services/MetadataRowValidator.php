@@ -45,7 +45,7 @@ class MetadataRowValidator
                 continue;
             }
             if (mb_strlen($values[$field]) > $max) {
-                $errors[] = 'Kolom '.$field.' mag maximaal '.$max.' tekens bevatten.';
+                $errors[] = 'Kolom '.$field.__('exchange.generated.t_1e4c47c229556e2c').$max.__('exchange.generated.t_7bb370a8abe5c269');
 
                 continue;
             }
@@ -58,7 +58,7 @@ class MetadataRowValidator
                 ->filter(fn (string $tag): bool => $tag !== '')
                 ->unique()->values();
             if ($tags->count() > 20 || $tags->contains(fn (string $tag): bool => mb_strlen($tag) > 100)) {
-                $errors[] = 'Gebruik maximaal 20 trefwoorden van maximaal 100 tekens.';
+                $errors[] = __('exchange.generated.t_ef0b187f8ac75e17');
             } else {
                 $out['tags'] = $tags->all();
             }
@@ -68,7 +68,7 @@ class MetadataRowValidator
             $status = mb_strtolower($values['rights_status']);
             $status = self::RIGHTS_ALIASES[$status] ?? $status;
             if (! in_array($status, self::RIGHTS_STATUSES, true)) {
-                $errors[] = 'Kolom rights_status moet unverified, verified of disputed zijn.';
+                $errors[] = __('exchange.generated.t_aebb37d47fd0a280');
             } else {
                 $out['rights_status'] = $status;
             }
@@ -92,22 +92,22 @@ class MetadataRowValidator
         if ($precision === null) {
             return $earliest === null && $latest === null
                 ? []
-                : ['Vul kolom date_precision in zodra date_earliest of date_latest een waarde heeft.'];
+                : [__('exchange.generated.t_b7a207c0531b121a')];
         }
         $precision = mb_strtolower($precision);
         $precision = self::PRECISION_ALIASES[$precision] ?? $precision;
         if (! in_array($precision, self::PRECISIONS, true)) {
-            return ['Kolom date_precision moet een van: '.implode(', ', self::PRECISIONS).'.'];
+            return [__('exchange.generated.t_4b3d2fd02eb86330').implode(', ', self::PRECISIONS).'.'];
         }
         $needsYear = in_array($precision, ['year', 'decade'], true);
         $earliest = $earliest === null ? null : $this->parseDate($earliest, $needsYear);
         $latest = $latest === null ? null : $this->parseDate($latest, $needsYear);
         if ($earliest === false || $latest === false) {
-            return ['Gebruik datums in het formaat JJJJ-MM-DD'.($needsYear ? ' of JJJJ' : '').'.'];
+            return [__('exchange.generated.t_2a623edb3e97ac37').($needsYear ? __('exchange.generated.t_c8be061990ef0c7b') : '').'.'];
         }
         if ($precision === 'unknown') {
             if ($earliest !== null || $latest !== null) {
-                return ['Bij date_precision "unknown" moeten de datumkolommen leeg blijven.'];
+                return [__('exchange.generated.t_b6b371fd69746b1d')];
             }
             $out['date_precision'] = 'unknown';
             $out['date_earliest'] = null;
@@ -116,10 +116,10 @@ class MetadataRowValidator
             return [];
         }
         if ($precision === 'before' ? $latest === null : $earliest === null) {
-            return ['Deze datering vereist een datum'.($precision === 'before' ? ' in date_latest.' : ' in date_earliest.')];
+            return [__('exchange.generated.t_4753e5115c2b8838').($precision === 'before' ? __('exchange.generated.t_fcb3372904aab7a3') : __('exchange.generated.t_3cb622f9c1ea462b'))];
         }
         if ($precision === 'range' && $latest === null) {
-            return ['Een bereik vereist zowel date_earliest als date_latest.'];
+            return [__('exchange.generated.t_3458b35f8b553b39')];
         }
         if ($needsYear) {
             $year = (int) substr((string) $earliest, 0, 4);
@@ -127,21 +127,21 @@ class MetadataRowValidator
                 $year = intdiv($year, 10) * 10;
             }
             if ($year < 1 || $year > ($precision === 'decade' ? 9990 : 9999)) {
-                return ['Dit jaar valt buiten het ondersteunde bereik.'];
+                return [__('exchange.generated.t_efeb1e0a30087ed7')];
             }
             $earliest = sprintf('%04d-01-01', $year);
             $latest = sprintf('%04d-12-31', $year + ($precision === 'decade' ? 9 : 0));
         }
         if ($precision === 'exact') {
             if ($latest !== null && $latest !== $earliest) {
-                return ['Bij een exacte datum moeten date_earliest en date_latest gelijk zijn.'];
+                return [__('exchange.generated.t_8a5100ec3aba9c2d')];
             }
             $latest = $earliest;
         }
         if (($earliest !== null && $latest !== null && $earliest > $latest)
             || ($precision === 'before' && $earliest !== null)
             || ($precision === 'after' && $latest !== null)) {
-            return ['Datumbereik is niet geldig voor deze datering.'];
+            return [__('exchange.generated.t_782c5d380a998eb0')];
         }
         $out['date_precision'] = $precision;
         $out['date_earliest'] = $earliest;

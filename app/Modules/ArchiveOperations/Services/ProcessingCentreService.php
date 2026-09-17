@@ -76,7 +76,7 @@ class ProcessingCentreService
             $stale = $locked->status === 'running' && $locked->started_at?->lt(now()->subMinutes(4));
 
             if (! in_array($locked->status, ['failed', 'rejected'], true) && ! $stale) {
-                throw new RuntimeException('Alleen mislukte, afgewezen of vastgelopen taken kunnen opnieuw worden aangeboden.');
+                throw new RuntimeException(__('operations.generated.t_690ea86211184d99'));
             }
 
             $locked->update([
@@ -116,7 +116,7 @@ class ProcessingCentreService
 
             $locked->update([
                 'status' => 'failed',
-                'failure_reason' => 'Handmatig geannuleerd door beheerder.',
+                'failure_reason' => __('operations.generated.t_3753e6b8a8f4e781'),
                 'claim_token' => null,
             ]);
 

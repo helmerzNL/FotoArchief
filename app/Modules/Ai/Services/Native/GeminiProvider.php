@@ -44,7 +44,7 @@ class GeminiProvider extends AbstractNativeProvider implements EmbeddingProvider
             ? $context['model']
             : (string) ($this->nativeConfig()['vision_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('Gemini: geen visionmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_vision_model', ['provider' => 'Gemini']));
         }
 
         $request = $this->http->withHeaders(['x-goog-api-key' => $this->apiKey()]);
@@ -60,7 +60,7 @@ class GeminiProvider extends AbstractNativeProvider implements EmbeddingProvider
 
         $text = Arr::get($payload, 'candidates.0.content.parts.0.text');
         if (! is_string($text) || trim($text) === '') {
-            throw new AiProviderException('Gemini: geen tekstinhoud in het antwoord.');
+            throw new AiProviderException(__('ai.provider_errors.missing_text', ['provider' => 'Gemini']));
         }
 
         $analysis = $this->parseAnalysisJson($text);
@@ -101,7 +101,7 @@ class GeminiProvider extends AbstractNativeProvider implements EmbeddingProvider
             ? $context['model']
             : (string) ($this->nativeConfig()['embedding_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('Gemini: geen embeddingmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_embedding_model', ['provider' => 'Gemini']));
         }
 
         $request = $this->http->withHeaders(['x-goog-api-key' => $this->apiKey()]);
@@ -111,7 +111,7 @@ class GeminiProvider extends AbstractNativeProvider implements EmbeddingProvider
 
         $values = Arr::get($payload, 'embedding.values');
         if (! is_array($values) || $values === []) {
-            throw new AiProviderException('Gemini: antwoord miste embedding.values.');
+            throw new AiProviderException(__('ai.provider_errors.gemini_embedding_values'));
         }
 
         $embedding = array_values(array_map(static fn (mixed $v): float => (float) $v, $values));

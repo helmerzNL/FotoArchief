@@ -2,28 +2,28 @@
 @section('title', 'Locaties — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">&larr; Catalogus</a></div>
+    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">{{ __('catalogue.generated.t_50589dc3880be794') }}</a></div>
     <h1>Locaties</h1>
-    <p class="intro">Geografische hiërarchie, historische plaatsnamen, straten en monumenten.</p>
+    <p class="intro">{{ __('catalogue.generated.t_77e73cdaf16e944f') }}</p>
     <div class="actions">
-        <a href="{{ route('catalogue.locations.create') }}" class="button">+ Nieuwe locatie</a>
+        <a href="{{ route('catalogue.locations.create') }}" class="button">{{ __('catalogue.generated.t_720aa6360031bc36') }}</a>
     </div>
 </div>
 
 <div class="card">
     <form method="get" action="{{ route('catalogue.locations.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
         <div style="flex: 2; min-width: 200px;">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Zoek op locatie of historische naam...">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="{{ __('catalogue.generated.t_7fde3c4225a264c0') }}">
         </div>
         <div style="flex: 1; min-width: 150px;">
             <select name="location_type" onchange="this.form.submit()">
-                <option value="">Alle niveaus</option>
+                <option value="">{{ __('catalogue.generated.t_a42e671b3e18ee84') }}</option>
                 <option value="country" {{ request('location_type') === 'country' ? 'selected' : '' }}>Land</option>
                 <option value="province" {{ request('location_type') === 'province' ? 'selected' : '' }}>Provincie</option>
                 <option value="municipality" {{ request('location_type') === 'municipality' ? 'selected' : '' }}>Gemeente</option>
-                <option value="city" {{ request('location_type') === 'city' ? 'selected' : '' }}>Plaats / Stad / Dorp</option>
+                <option value="city" {{ request('location_type') === 'city' ? 'selected' : '' }}>{{ __('catalogue.generated.t_8ca4aa0733c02e1e') }}</option>
                 <option value="street" {{ request('location_type') === 'street' ? 'selected' : '' }}>Straat</option>
-                <option value="building" {{ request('location_type') === 'building' ? 'selected' : '' }}>Gebouw / Monument</option>
+                <option value="building" {{ request('location_type') === 'building' ? 'selected' : '' }}>{{ __('catalogue.generated.t_3bf9824f0ffb1a60') }}</option>
             </select>
         </div>
         <div>
@@ -35,17 +35,17 @@
     </form>
 
     @if($locations->isEmpty())
-        <p>Geen locaties gevonden.</p>
+        <p>{{ __('catalogue.generated.t_8d1cfd32a90ec81f') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
-                    <th style="padding: .5rem;">Naam &amp; Pad</th>
+                    <th style="padding: .5rem;">{{ __('catalogue.generated.t_f96284adeb57d662') }}</th>
                     <th style="padding: .5rem;">Type</th>
                     <th style="padding: .5rem; text-align: right;">Aliassen</th>
                     <th style="padding: .5rem; text-align: right;">Sublocaties</th>
-                    <th style="padding: .5rem; text-align: right;">Gekoppelde foto’s</th>
+                    <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_9d945313bfdd8bfa') }}</th>
                     <th style="padding: .5rem; text-align: right;">Acties</th>
                 </tr>
             </thead>

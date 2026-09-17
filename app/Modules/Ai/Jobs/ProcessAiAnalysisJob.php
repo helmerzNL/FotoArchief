@@ -7,6 +7,7 @@ namespace App\Modules\Ai\Jobs;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiOperationAuditService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
@@ -44,13 +45,20 @@ class ProcessAiAnalysisJob extends OperationJob
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'image_analysis') : 0;
 
+        if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
+            return ['processed' => 0, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+        }
+
         foreach ($slice as $assetId) {
+            if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
+                return ['processed' => $processed, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+            }
             $asset = null;
             $file = null;
             try {
                 $candidate = Asset::query()->with('files')->find($assetId);
                 if (! $candidate instanceof Asset) {
-                    throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
+                    throw new RuntimeException(__('ai.errors.asset_missing', ['asset' => $assetId]));
                 }
                 $asset = $candidate;
                 ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
@@ -79,7 +87,7 @@ class ProcessAiAnalysisJob extends OperationJob
                 $asset->refresh();
                 $file->refresh()->load('asset');
                 if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                    throw new RuntimeException("Foto {$assetId} is tijdens de AI-analyse gewijzigd. Probeer de taak opnieuw.");
+                    throw new RuntimeException(__('ai.errors.asset_changed_analysis', ['asset' => $assetId]));
                 }
 
                 $aiRun = AiRun::query()->firstOrCreate(

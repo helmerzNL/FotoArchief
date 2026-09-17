@@ -2,24 +2,24 @@
 @section('title', 'Personen & Organisaties — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">&larr; Catalogus</a></div>
-    <h1>Personen &amp; Organisaties</h1>
-    <p class="intro">Beheer herbruikbare identiteiten, biografische gegevens, historische aliassen en rollen bij foto’s.</p>
+    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">{{ __('catalogue.generated.t_50589dc3880be794') }}</a></div>
+    <h1>{{ __('catalogue.generated.t_57e6c76d611f6dff') }}</h1>
+    <p class="intro">{{ __('catalogue.generated.t_fde87d53cad2c46e') }}</p>
     <div class="actions">
-        <a href="{{ route('catalogue.people.create') }}" class="button">+ Nieuwe persoon / organisatie</a>
+        <a href="{{ route('catalogue.people.create') }}" class="button">{{ __('catalogue.generated.t_ab654dad260b9610') }}</a>
     </div>
 </div>
 
 <div class="card">
     <form method="get" action="{{ route('catalogue.people.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
         <div style="flex: 2; min-width: 200px;">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Zoek op naam of alias...">
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="{{ __('catalogue.generated.t_6b03d2f87b548260') }}">
         </div>
         <div style="flex: 1; min-width: 150px;">
             <select name="entity_type" onchange="this.form.submit()">
-                <option value="">Alle types</option>
-                <option value="person" {{ request('entity_type') === 'person' ? 'selected' : '' }}>Enkel personen</option>
-                <option value="organisation" {{ request('entity_type') === 'organisation' ? 'selected' : '' }}>Enkel organisaties</option>
+                <option value="">{{ __('catalogue.generated.t_448b8c66e76bba81') }}</option>
+                <option value="person" {{ request('entity_type') === 'person' ? 'selected' : '' }}>{{ __('catalogue.generated.t_d850c8adb2ea4071') }}</option>
+                <option value="organisation" {{ request('entity_type') === 'organisation' ? 'selected' : '' }}>{{ __('catalogue.generated.t_99d32bc5a647de66') }}</option>
             </select>
         </div>
         <div>
@@ -31,7 +31,7 @@
     </form>
 
     @if($people->isEmpty())
-        <p>Geen personen of organisaties gevonden.</p>
+        <p>{{ __('catalogue.generated.t_1cea98bd4dda9cf0') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse;">
@@ -40,7 +40,7 @@
                     <th style="padding: .5rem;">Naam</th>
                     <th style="padding: .5rem;">Type</th>
                     <th style="padding: .5rem; text-align: right;">Aliassen</th>
-                    <th style="padding: .5rem; text-align: right;">Gekoppelde foto’s</th>
+                    <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_9d945313bfdd8bfa') }}</th>
                     <th style="padding: .5rem; text-align: right;">Acties</th>
                 </tr>
             </thead>

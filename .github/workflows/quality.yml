@@ -94,6 +94,18 @@ jobs:
         if: steps.scripts.outputs.test == 'true'
         run: composer test
 
+      - name: Run isolated encrypted-backup and local-AI contract smoke checks
+        if: steps.project.outputs.exists == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh tests/Smoke/encrypted-backup-copy.sh
+          php tests/Smoke/local-ai-http-contract.php
+          fixture="$(mktemp -d)"
+          trap 'rm -rf "$fixture"' EXIT
+          touch "$fixture/.fotoarchief-disposable-ai-load"
+          FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1 php tests/Smoke/ai-image-load.php --fixture-dir="$fixture" --images=2
+
   postgres:
     name: PostgreSQL fresh installation and forward upgrade
     runs-on: ubuntu-latest
@@ -361,6 +373,24 @@ jobs:
           docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat storage/app/installation/setup-code.txt > "$SMOKE_SETUP_CODE_FILE"
           php tests/Smoke/http-onboarding.php
           rm "$SMOKE_SETUP_CODE_FILE"
+      - name: Accept managed-stack upgrade preservation
+        env:
+          FOTOARCHIEF_DISPOSABLE_MANAGER: "1"
+          COMPOSE_PROJECT_NAME: fotoarchief-managed
+          APP_HTTP_PORT: "8082"
+          SMOKE_URL: http://127.0.0.1:8082
+          SMOKE_RESTORE: "1"
+        run: |
+          before_state="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          before_key="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("app.key");' | sha256sum | awk '{print $1}')"
+          sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
+          FOTOARCHIEF_SKIP_IMAGE_PULL=1 APP_IMAGE="$APP_IMAGE" sh scripts/upgrade-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
+          after_state="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
+          after_key="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("app.key");' | sha256sum | awk '{print $1}')"
+          test "$before_state" = "$after_state"
+          test "$before_key" = "$after_key"
+          test "$(curl --silent -o /dev/null -w '%{http_code}' "$SMOKE_URL/setup")" = 404
+          php tests/Smoke/http-onboarding.php
       - name: Collect failure logs
         if: failure()
         run: |
@@ -397,6 +427,7 @@ jobs:
       - name: Verify uploadable package without development dependencies
         run: |
           php tests/Smoke/release-archive.php dist/*-webhosting.zip
+          FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE=1 php tests/Smoke/webhosting-upgrade.php dist/*-webhosting.zip
           mkdir "$RUNNER_TEMP/webhosting"
           unzip -q dist/*-webhosting.zip -d "$RUNNER_TEMP/webhosting"
           cd "$RUNNER_TEMP/webhosting"

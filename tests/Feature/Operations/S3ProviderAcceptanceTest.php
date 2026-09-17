@@ -6,11 +6,13 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use App\Modules\Catalogue\Models\License;
 use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
 use App\Modules\Ingest\Services\QuarantineUploadService;
 use App\Modules\Installation\InstallationSettings;
 use App\Modules\Installation\InstallationStorage;
+use App\Modules\Publication\Models\Publication;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -76,6 +78,49 @@ function s3AcceptanceUser(): User
     return $user;
 }
 
+function s3AnonymousUrl(InstallationSettings $settings, string $key): string
+{
+    $endpoint = rtrim($settings->endpoint, '/');
+    $path = implode('/', array_map('rawurlencode', explode('/', $key)));
+
+    if ($settings->pathStyle) {
+        return $endpoint.'/'.rawurlencode($settings->bucket).'/'.$path;
+    }
+
+    $parts = parse_url($endpoint);
+    if (! is_array($parts) || ! isset($parts['scheme'], $parts['host'])) {
+        throw new RuntimeException('FOTOARCHIEF_TEST_S3_ENDPOINT must be an absolute HTTP(S) endpoint.');
+    }
+    $authority = $settings->bucket.'.'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+
+    return $parts['scheme'].'://'.$authority.'/'.$path;
+}
+
+function s3AnonymousStatus(string $url): int
+{
+    $curl = curl_init($url);
+    if ($curl === false) {
+        throw new RuntimeException('Cannot initialize anonymous S3 request.');
+    }
+    curl_setopt_array($curl, [
+        CURLOPT_NOBODY => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => 15,
+        CURLOPT_FOLLOWLOCATION => false,
+    ]);
+    $result = curl_exec($curl);
+    if ($result === false) {
+        $message = curl_error($curl);
+        curl_close($curl);
+        throw new RuntimeException('Anonymous S3 request failed: '.$message);
+    }
+    $status = curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    curl_close($curl);
+
+    return (int) $status;
+}
+
 it('proves installation probe and ingest against a real private S3 compatible bucket', function (): void {
     $settings = s3AcceptanceSettings();
     if (! $settings instanceof InstallationSettings) {
@@ -113,10 +158,31 @@ it('proves installation probe and ingest against a real private S3 compatible bu
             ->and($file->storage_disk)->toBe('s3')
             ->and($file->scanner_status)->toBe('unscanned')
             ->and(Storage::disk('s3')->exists($file->storage_key))->toBeTrue();
+        expect(Storage::disk('s3')->visibility($file->storage_key))->toBe('private');
 
         foreach ($file->derivatives as $derivative) {
-            expect(Storage::disk('s3')->exists($derivative))->toBeTrue();
+            expect(Storage::disk('s3')->exists($derivative))->toBeTrue()
+                ->and(Storage::disk('s3')->visibility($derivative))->toBe('private')
+                ->and(s3AnonymousStatus(s3AnonymousUrl($settings, $derivative)))->toBeIn([401, 403, 404]);
         }
+
+        expect(s3AnonymousStatus(s3AnonymousUrl($settings, $file->storage_key)))->toBeIn([401, 403, 404]);
+
+        $file->forceFill(['scanner_status' => 'clean', 'scanned_at' => now()])->save();
+        $license = License::query()->firstOrCreate(['code' => 's3-acceptance'], ['name' => 'S3 acceptance', 'url' => 'https://example.test/s3-acceptance']);
+        $asset->rights()->create(['verification_status' => 'verified', 'rights_holder' => 'S3 acceptance', 'license_id' => $license->id]);
+        $publication = Publication::query()->create([
+            'asset_id' => $asset->id,
+            'status' => 'published',
+            'privacy_cleared' => true,
+            'published_lock_version' => $asset->lock_version,
+            'permalink_slug' => 's3-'.str()->slug((string) str()->ulid()),
+            'download_policy' => 'preview_only',
+        ]);
+        $this->get(route('public.photo.media', [$publication, 'preview300']))->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $publication->update(['status' => 'revoked', 'revoked_at' => now(), 'revoked_reason' => 'S3 denial check']);
+        $this->get('/foto/'.$publication->permalink_slug.'/media/preview300')->assertNotFound();
     } finally {
         if ($createdKeys !== []) {
             Storage::disk('s3')->delete(array_values(array_unique($createdKeys)));

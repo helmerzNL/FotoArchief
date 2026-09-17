@@ -43,7 +43,7 @@ class DuplicateDossierService
 
         $targetAsset = $upload->duplicateOfAsset;
         if (! $targetAsset instanceof Asset) {
-            throw new RuntimeException('Doel-asset voor duplicaat is niet gevonden.');
+            throw new RuntimeException(__('operations.generated.t_17009eb555f225cf'));
         }
 
         return [
@@ -63,7 +63,7 @@ class DuplicateDossierService
 
         if ($upload->status !== 'rejected') {
             throw ValidationException::withMessages([
-                'duplicate' => 'Alleen afgewezen duplicaten kunnen worden gekoppeld.',
+                'duplicate' => __('operations.generated.t_e7ac5c3bc95354b6'),
             ]);
         }
 
@@ -74,7 +74,7 @@ class DuplicateDossierService
             $provenanceNote = trim((string) ($enrichment['provenance_note'] ?? ''));
             if ($provenanceNote !== '') {
                 $existingDesc = (string) ($lockedTarget->description ?? '');
-                $addition = "\n[Herkomst verrijking via duplicaat ".($upload->original_filename ?? $upload->id).']: '.$provenanceNote;
+                $addition = __('operations.generated.t_e03aeeaa06f775b3').($upload->original_filename ?? $upload->id).']: '.$provenanceNote;
                 $lockedTarget->description = trim($existingDesc.$addition);
             }
 
@@ -115,7 +115,7 @@ class DuplicateDossierService
             // 4. Mark quarantine upload as resolved without adding any AssetFile
             $upload->update([
                 'status' => 'resolved_duplicate',
-                'failure_reason' => 'Gekoppeld aan bestaand dossier '.$lockedTarget->accession_number.' zonder tweede origineel.',
+                'failure_reason' => __('operations.generated.t_a3b5f636e667a7f5').$lockedTarget->accession_number.__('operations.generated.t_e03c9d9196388d1f'),
             ]);
 
             // 5. Clean up duplicate file from storage if present

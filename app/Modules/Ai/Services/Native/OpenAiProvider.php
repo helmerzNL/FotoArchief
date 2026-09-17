@@ -39,7 +39,7 @@ class OpenAiProvider extends AbstractNativeProvider implements ImageAnalysisProv
             ? $context['model']
             : (string) ($this->nativeConfig()['vision_model'] ?? '');
         if ($model === '') {
-            throw new AiProviderException('OpenAI: geen visionmodel geconfigureerd.');
+            throw new AiProviderException(__('ai.provider_errors.missing_vision_model', ['provider' => 'OpenAI']));
         }
 
         $request = $this->http->withToken($this->apiKey());
@@ -58,7 +58,7 @@ class OpenAiProvider extends AbstractNativeProvider implements ImageAnalysisProv
 
         $text = Arr::get($payload, 'choices.0.message.content');
         if (! is_string($text) || trim($text) === '') {
-            throw new AiProviderException('OpenAI: geen tekstinhoud in het antwoord.');
+            throw new AiProviderException(__('ai.provider_errors.missing_text', ['provider' => 'OpenAI']));
         }
 
         $analysis = $this->parseAnalysisJson($text);

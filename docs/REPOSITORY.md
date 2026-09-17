@@ -56,6 +56,17 @@ Build all formats from the same tested commit and dependency lock.
 Keep container registry location configurable; do not embed a private registry
 or a company-specific domain into application behavior.
 
+For a PHP/webhosting upgrade, unpack the new `fotoarchief-vX.Y.Z-webhosting.zip`
+into a disposable staging directory first, verify its checksum and run the
+release archive validator. The package must not contain `.env`, `.env.*`,
+`storage/app/installation/`, `storage/app/private/` or runtime logs. When
+copying it over an existing hosting account, preserve the existing `.env`,
+`storage/app/installation/state.json`, `storage/app/installation/setup-code.txt`
+and private archive bytes exactly; never regenerate `APP_KEY`, reopen setup or
+delete private storage to recover from a failed upgrade. The CI
+`tests/Smoke/webhosting-upgrade.php` harness exercises this only against a
+disposable fixture, not a user installation.
+
 ## Public-readiness gate
 
 Before changing repository visibility:

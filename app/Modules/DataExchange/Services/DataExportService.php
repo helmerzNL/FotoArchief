@@ -38,24 +38,24 @@ class DataExportService
     public function request(User $user, string $type, string $scope, array $assetIds): DataExport
     {
         if (! in_array($type, self::TYPES, true)) {
-            throw ValidationException::withMessages(['export_type' => 'Kies een geldig exportformaat.']);
+            throw ValidationException::withMessages(['export_type' => __('exchange.generated.t_159a8cd838f578d2')]);
         }
         if (! $user->hasPermission('exports.create')) {
-            throw ValidationException::withMessages(['export_type' => 'Je hebt geen rechten om te exporteren.']);
+            throw ValidationException::withMessages(['export_type' => __('exchange.generated.t_01c0835a16ae0b70')]);
         }
         $maximum = (int) config('exchange.max_export_assets');
         $assets = $scope === 'all'
             ? $this->visibleQuery($user)->limit($maximum + 1)->get()
             : Asset::query()->whereIn('id', array_slice(array_values(array_unique($assetIds)), 0, $maximum + 1))->get();
         if ($assets->isEmpty()) {
-            throw ValidationException::withMessages(['asset_ids' => 'Selecteer minstens één foto die je mag inzien.']);
+            throw ValidationException::withMessages(['asset_ids' => __('exchange.generated.t_3c79e74a8cd74b74')]);
         }
         if ($assets->count() > $maximum) {
-            throw ValidationException::withMessages(['asset_ids' => 'Een export bevat maximaal '.$maximum.' foto’s. Maak een kleinere selectie.']);
+            throw ValidationException::withMessages(['asset_ids' => __('exchange.generated.t_c8b9a0c5bca3888e').$maximum.__('exchange.generated.t_9ec1d097db47baf5')]);
         }
         foreach ($assets as $asset) {
             if (! Gate::forUser($user)->allows('view', $asset)) {
-                throw ValidationException::withMessages(['asset_ids' => 'Eén of meer geselecteerde foto’s vallen buiten jouw toegang.']);
+                throw ValidationException::withMessages(['asset_ids' => __('exchange.generated.t_b1a95daceaca7548')]);
             }
         }
 
@@ -86,7 +86,7 @@ class DataExportService
         }
         $user = $export->creator;
         if (! $user instanceof User || ! $user->hasPermission('exports.create')) {
-            $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'De aanvrager heeft geen exportrechten meer.']);
+            $this->release($export, $token, ['status' => 'failed', 'failure_reason' => __('exchange.generated.t_1cdbab488102a406')]);
 
             return true;
         }
@@ -102,21 +102,21 @@ class DataExportService
                     // manifest readable; the photo is skipped either way.
                     $trashed = Asset::onlyTrashed()->whereKey($assetId)->first();
                     $skipped[] = $trashed instanceof Asset
-                        ? ['accession_number' => (string) $trashed->accession_number, 'reason' => 'Foto staat in de prullenbak en is niet meegenomen.']
-                        : ['accession_number' => $assetId, 'reason' => 'Foto bestaat niet meer.'];
+                        ? ['accession_number' => (string) $trashed->accession_number, 'reason' => __('exchange.generated.t_35f07e9aa45c3f61')]
+                        : ['accession_number' => $assetId, 'reason' => __('exchange.generated.t_fedc86c73cfee54d')];
 
                     continue;
                 }
                 // Access is re-checked here, not trusted from the request that queued the export.
                 if (! Gate::forUser($user)->allows('view', $asset)) {
-                    $skipped[] = ['accession_number' => (string) $asset->accession_number, 'reason' => 'Geen toegang meer tot deze foto.'];
+                    $skipped[] = ['accession_number' => (string) $asset->accession_number, 'reason' => __('exchange.generated.t_76634d1e83adeb3d')];
 
                     continue;
                 }
                 $authorized[] = $asset;
             }
             if ($authorized === []) {
-                $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'Geen enkele geselecteerde foto valt nog binnen jouw toegang.']);
+                $this->release($export, $token, ['status' => 'failed', 'failure_reason' => __('exchange.generated.t_c988363f4a5e19b4')]);
 
                 return true;
             }
@@ -146,8 +146,8 @@ class DataExportService
                 }
             });
         } catch (Throwable $exception) {
-            Log::error('Export build failed.', ['export_id' => $export->id, 'exception_type' => $exception::class]);
-            $this->release($export, $token, ['status' => 'failed', 'failure_reason' => 'Samenstellen mislukt. Controleer opslag en worker en probeer opnieuw.']);
+            Log::error(__('exchange.generated.t_5817c029bd59d421'), ['export_id' => $export->id, 'exception_type' => $exception::class]);
+            $this->release($export, $token, ['status' => 'failed', 'failure_reason' => __('exchange.generated.t_99ff79cefdfe1752')]);
         }
 
         return true;
@@ -157,7 +157,7 @@ class DataExportService
     {
         $this->assertOwner($export, $user);
         if ($export->status !== 'failed') {
-            throw ValidationException::withMessages(['export_type' => 'Alleen een mislukte export kan opnieuw worden samengesteld.']);
+            throw ValidationException::withMessages(['export_type' => __('exchange.generated.t_5145404c508d0462')]);
         }
         DB::transaction(function () use ($export): void {
             $export->update(['status' => 'queued', 'failure_reason' => null, 'claim_token' => null]);
@@ -191,7 +191,7 @@ class DataExportService
         $this->assertOwner($export, $user);
         $this->assertDownloadable($export);
         if (! $export->hasValidDownloadToken($token)) {
-            abort(403, 'Deze downloadlink is verlopen. Vraag een nieuwe link aan.');
+            abort(403, __('exchange.generated.t_11810354ad4f78a6'));
         }
         $this->assertStillAuthorized($export, $user);
         $export->update(['download_count' => $export->download_count + 1, 'last_downloaded_at' => now()]);
@@ -240,7 +240,7 @@ class DataExportService
             $released = DataExport::query()->whereKey($export->id)->where('status', 'running')->where('started_at', '<', $cutoff)
                 ->update([
                     'status' => 'failed',
-                    'failure_reason' => 'Samenstellen is afgebroken: de worker is gestopt voordat de export klaar was. Probeer het opnieuw.',
+                    'failure_reason' => __('exchange.generated.t_c0732644cc474ddf'),
                     'claim_token' => null,
                 ]);
             $recovered += $released;
@@ -269,7 +269,7 @@ class DataExportService
     {
         if (! $user->hasPermission('exports.create')) {
             $this->revoke($export);
-            abort(403, 'Je hebt geen exportrechten meer. Deze export is ingetrokken.');
+            abort(403, __('exchange.generated.t_b83d459a9b938244'));
         }
         $assets = Asset::query()->whereIn('id', $export->assetIds())->get()->keyBy('id');
         foreach ($export->assetIds() as $assetId) {
@@ -277,7 +277,7 @@ class DataExportService
             // A future trash/soft-delete feature must also treat a trashed asset as unavailable here.
             if (! $asset instanceof Asset || ! Gate::forUser($user)->allows('view', $asset)) {
                 $this->revoke($export);
-                abort(403, 'De toegang tot een van deze foto’s is gewijzigd. Deze export is ingetrokken; maak een nieuwe export.');
+                abort(403, __('exchange.generated.t_52616c9e14c312ae'));
             }
         }
     }
@@ -303,7 +303,7 @@ class DataExportService
     private function assertDownloadable(DataExport $export): void
     {
         if (! $export->isDownloadable()) {
-            abort(410, 'Dit exportbestand is niet meer beschikbaar. Maak een nieuwe export.');
+            abort(410, __('exchange.generated.t_91fef2a91eb89638'));
         }
     }
 

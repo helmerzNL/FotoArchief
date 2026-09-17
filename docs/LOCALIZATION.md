@@ -2,73 +2,65 @@
 
 ## Nederlands
 
-Deze batch extraheert de eerste, gedeelde Nederlandstalige gebruikersinterface
-naar conventionele Laravel-bestanden onder `lang/nl/`:
+De Nederlandstalige gebruikersinterface is gecentraliseerd in conventionele
+Laravel-catalogi onder `lang/nl/`. Nederlands blijft de enige huidige
+UI-locale; deze extractie voegt geen taalkeuze of Engelstalige interface toe.
 
-- `shell.php`: merknaam, navigatie, sessiemeldingen en footer uit de gedeelde
-  applicatieschil.
-- `auth.php`: loginformulier, herstelcodeblok, passkey-statussen en
-  authenticatiefouten.
-- `onboarding.php`: eerste-installatiewizard, installatiecontrole,
-  installatieplatformfouten en het eerste beheerdersdashboard.
+De catalogi dekken:
 
-Er zijn bewust geen andere talen, taalkeuze of fallback-UI toegevoegd. De
-Nederlandse uitvoer blijft leidend; HTML in bestaande uitlegteksten is alleen
-naar vertaalwaarden verplaatst wanneer die markup al onderdeel was van de
-gebruikerscopy.
+- `shell.php`, `auth.php`, `identity.php` en `onboarding.php`: gedeelde
+  applicatieschil, authenticatie, identiteit en installatie;
+- `ai.php`: AI-instellingen, providerstatus, resultaten, review en fouten;
+- `operations.php`: diagnose, verwerking, integriteit, OCR, opslag,
+  bestandsversies, prullenbak en achtergrondtaken;
+- `catalogue.php`: upload, fotodetail, catalogusreferenties, collecties,
+  werklijsten en bulkacties;
+- `publication.php`: publieke portal, publicatiebeheer en bezoekerssuggesties;
+- `exchange.php`: import- en exportschermen;
+- `shared.php`: resterende gebruikers- en operatorberichten uit jobs,
+  services en consolecommando's.
 
-De resterende gebruikerszichtbare tekst staat machineleesbaar in
-`docs/localization/text-inventory.remaining.json`. De inventaris gebruikt
-relatieve paden, regelnummers, tekstsoort en een voorgestelde extractiebatch.
-De regressietest vergelijkt dit bestand met de scanner zodat nieuwe of
-verplaatste resterende teksten expliciet zichtbaar worden.
+De bestaande Nederlandse uitvoer, escaping, bindings, markup en toegankelijke
+labels blijven behouden. Stabiele machinecodes, SQL, query-aliassen,
+HTTP-headers, provider/API-tokens en statische Artisan-commandmetadata worden
+niet vertaald. De scanner verwijdert Blade-comments en negeert alleen expliciet
+benoemde technische waarden en herkenbare parserfragmenten; complete bestanden
+worden niet via `EXTRACTED_FILES` verborgen.
 
-Aanbevolen vervolgbatches op basis van de huidige inventaris:
-
-| Batch | Aantal inventarisregels | Scope |
-|---|---:|---|
-| `catalogue` | 474 | Catalogusreferenties, werksets, bulkacties en tabelcomponenten. |
-| `shared_remaining` | 408 | Console-/jobmeldingen en gedeelde backendservices buiten de eerste shell. |
-| `operations` | 226 | Operationele dashboards, integriteit, verwerking, OCR, opslag en prullenbak. |
-| `ai` | 158 | AI-instellingen, suggesties, reviewstatussen en semantisch zoeken. |
-| `asset_admin` | 82 | Upload, detailweergave en assetbeheer. |
-| `public_portal` | 64 | Publieke ontdekking, fotodetailpagina's, collecties en sitemaps. |
-| `exchange` | 64 | Import/exportschermen en uitwisselingsstatussen. |
-| `identity` | 55 | Gebruikersbeheer, uitnodigingen, passkeys en herstelcodes buiten login. |
-| `publication_admin` | 20 | Publicatiebeheer en publieke suggestiebeoordeling. |
+`docs/localization/text-inventory.remaining.json` is opnieuw gegenereerd met
+`UserVisibleTextScanner` en bevat **0 resterende gebruikerszichtbare regels**.
+De regressietest vergelijkt het bestand met de scanner en vereist een lege
+inventaris. Nieuwe ruwe gebruikerscopy laat die test daardoor falen.
 
 ## English
 
-This batch extracts the first shared Dutch user interface into conventional
-Laravel files under `lang/nl/`:
+The Dutch user interface is centralized in conventional Laravel catalogues
+under `lang/nl/`. Dutch remains the only current UI locale; this extraction
+does not add a language selector or an English interface.
 
-- `shell.php`: brand name, navigation, session notices and footer from the
-  shared application shell.
-- `auth.php`: login form, recovery-code block, passkey statuses and
-  authentication errors.
-- `onboarding.php`: first-start setup wizard, installation checks,
-  installation platform errors and the initial administrator dashboard.
+The catalogues cover:
 
-No other languages, language selector or fallback UI were added. Dutch output
-remains authoritative; HTML in existing explanatory text was only moved into
-translation values where that markup was already part of the user-facing copy.
+- `shell.php`, `auth.php`, `identity.php`, and `onboarding.php`: shared shell,
+  authentication, identity, and installation;
+- `ai.php`: AI settings, provider status, results, review, and errors;
+- `operations.php`: diagnostics, processing, integrity, OCR, storage, file
+  versions, trash, and background jobs;
+- `catalogue.php`: upload, photo detail, catalogue references, collections,
+  worklists, and bulk actions;
+- `publication.php`: public portal, publication administration, and visitor
+  suggestions;
+- `exchange.php`: import and export screens;
+- `shared.php`: remaining user/operator messages from jobs, services, and
+  console commands.
 
-The remaining user-visible text is tracked in machine-readable form at
-`docs/localization/text-inventory.remaining.json`. The inventory uses relative
-paths, line numbers, text kind and a proposed extraction batch. The regression
-test compares this file with the scanner so newly added or moved remaining text
-is made explicit.
+Existing Dutch rendering, escaping, bindings, markup, and accessible labels
+remain unchanged. Stable machine codes, SQL, query aliases, HTTP headers,
+provider/API tokens, and static Artisan command metadata are not translated.
+The scanner removes Blade comments and ignores only explicitly named technical
+values and recognizable parser fragments; complete files are not hidden via
+`EXTRACTED_FILES`.
 
-Recommended follow-up batches based on the current inventory:
-
-| Batch | Inventory entries | Scope |
-|---|---:|---|
-| `catalogue` | 474 | Catalogue references, worklists, bulk actions and table components. |
-| `shared_remaining` | 408 | Console/job messages and shared backend services outside the first shell. |
-| `operations` | 226 | Operational dashboards, integrity, processing, OCR, storage and trash. |
-| `ai` | 158 | AI settings, suggestions, review statuses and semantic search. |
-| `asset_admin` | 82 | Upload, detail views and asset administration. |
-| `public_portal` | 64 | Public discovery, photo detail pages, collections and sitemaps. |
-| `exchange` | 64 | Import/export screens and exchange statuses. |
-| `identity` | 55 | User management, invitations, passkeys and recovery codes outside login. |
-| `publication_admin` | 20 | Publication administration and public suggestion review. |
+`docs/localization/text-inventory.remaining.json` was regenerated with
+`UserVisibleTextScanner` and contains **0 remaining user-visible entries**. The
+regression test compares the file with the scanner and requires an empty
+inventory, so newly introduced raw user copy fails the test.

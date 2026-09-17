@@ -23,26 +23,26 @@ class CsvReader
         $maxBytes = (int) config('exchange.max_import_bytes');
         $contents = stream_get_contents($stream, $maxBytes + 1);
         if ($contents === false) {
-            throw new RuntimeException('CSV stream unreadable.');
+            throw new RuntimeException(__('exchange.generated.t_93dc6fe7615c2bd5'));
         }
         if (strlen($contents) > $maxBytes) {
-            $this->fail('Het CSV-bestand is groter dan '.number_format($maxBytes / 1048576, 1).' MiB en wordt niet gelezen.');
+            $this->fail(__('exchange.generated.t_7934639756ce7ec6').number_format($maxBytes / 1048576, 1).__('exchange.generated.t_43a5315f48a0be58'));
         }
         $contents = preg_replace('/^\xEF\xBB\xBF/', '', $contents) ?? $contents;
         if ($contents === '' || trim($contents) === '') {
-            $this->fail('Het CSV-bestand is leeg.');
+            $this->fail(__('exchange.generated.t_92460416e85e8d0a'));
         }
         if (! mb_check_encoding($contents, 'UTF-8')) {
-            $this->fail('Het CSV-bestand is geen geldige UTF-8. Exporteer opnieuw als UTF-8.');
+            $this->fail(__('exchange.generated.t_4294f3d025472757'));
         }
         if (str_contains($contents, "\0")) {
-            $this->fail('Het CSV-bestand bevat binaire tekens en wordt niet verwerkt.');
+            $this->fail(__('exchange.generated.t_0c12fe49157b4bf6'));
         }
 
         $delimiter = $this->detectDelimiter($contents);
         $handle = fopen('php://temp', 'r+b');
         if ($handle === false) {
-            throw new RuntimeException('CSV buffer unavailable.');
+            throw new RuntimeException(__('exchange.generated.t_3bef17122f05ca39'));
         }
 
         try {
@@ -62,7 +62,7 @@ class CsvReader
                 $cells = array_map(fn ($cell) => $this->clean(is_string($cell) ? $cell : '', $maxCell), $cells);
                 if ($header === null) {
                     if (count($cells) > $maxColumns) {
-                        $this->fail('Het CSV-bestand heeft meer dan '.$maxColumns.' kolommen.');
+                        $this->fail(__('exchange.generated.t_1a09b992465e17a8').$maxColumns.' kolommen.');
                     }
                     $header = array_values($cells);
 
@@ -72,12 +72,12 @@ class CsvReader
                     continue;
                 }
                 if (count($rows) >= $maxRows) {
-                    $this->fail('Het CSV-bestand bevat meer dan '.$maxRows.' rijen. Splits het bestand.');
+                    $this->fail(__('exchange.generated.t_780004b4d256092c').$maxRows.__('exchange.generated.t_05176b800005e19b'));
                 }
                 $rows[$lineNumber] = array_values($cells);
             }
             if ($header === null || $header === [] || implode('', $header) === '') {
-                $this->fail('De eerste regel moet kolomnamen bevatten.');
+                $this->fail(__('exchange.generated.t_a6534cc7c2548de1'));
             }
 
             return ['delimiter' => $delimiter, 'header' => $header, 'rows' => $rows];
@@ -102,7 +102,7 @@ class CsvReader
     {
         $value = trim(str_replace(["\r\n", "\r"], "\n", $value));
         if (mb_strlen($value) > $maxCell) {
-            $this->fail('Een cel bevat meer dan '.$maxCell.' tekens.');
+            $this->fail(__('exchange.generated.t_96d30dae799b98a5').$maxCell.' tekens.');
         }
 
         return $this->unescapeFormulaGuard($value);

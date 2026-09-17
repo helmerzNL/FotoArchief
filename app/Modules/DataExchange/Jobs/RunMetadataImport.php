@@ -33,7 +33,7 @@ class RunMetadataImport implements ShouldQueue
     public function __construct(public readonly string $importId, public readonly string $mode)
     {
         if (! in_array($mode, ['analyse', 'apply'], true)) {
-            throw new InvalidArgumentException('Unsupported import mode.');
+            throw new InvalidArgumentException(__('exchange.generated.t_79ec9055ef6b4f0e'));
         }
         $this->timeout = (int) config('exchange.job_timeout_seconds');
     }
@@ -57,7 +57,7 @@ class RunMetadataImport implements ShouldQueue
     {
         $import = MetadataImport::query()->find($this->importId);
         if ($import instanceof MetadataImport) {
-            app(MetadataImportService::class)->markFailed($import, 'Verwerking mislukt. Controleer de worker en probeer opnieuw.');
+            app(MetadataImportService::class)->markFailed($import, __('exchange.generated.t_803a491d39e7a54e'));
         }
     }
 }

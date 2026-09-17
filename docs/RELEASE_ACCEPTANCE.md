@@ -343,3 +343,658 @@ Run `php tests/Performance/seed.php`, then serve
 `php tests/Performance/measure.php`. Stop the test server afterward. The fixture
 refuses a non-empty database and never reads a developer environment file.
 Its disposable account and testing router must never be deployed publicly.
+
+## Batch 1 acceptance evidence for AI result visibility and operations safeguards
+
+### Nederlands
+
+Deze batch bundelt items 1-5 en wordt niet als losse release geclaimd. De
+versie blijft `0.9.51` voor de hele batcheserie.
+
+1. **Opgeslagen AI-resultaten op de fotopagina**: de bestaande hotfix voegt het
+   paneel `AI-resultaten` toe aan private fotopagina's, toont opgeslagen
+   analyse-/embeddinghistorie zonder providerrequest, linkt AI-taken naar
+   succesvol verwerkte toegankelijke foto's en houdt acceptatie/afwijzing achter
+   bestaande autorisatie-, revisie- en checksumcontroles. De tijdelijke preview
+   is alleen een lokale fixture en geen productiecode.
+2. **OpenAI veilige keten**: HTTP-fakes bewijzen de volledige
+   form-worker-results-review-keten zonder echte provider, echte foto's of
+   kosten. De worker bouwt een metadata-gestripte JPEG-data-URL, gebruikt het
+   geconfigureerde model, bewaart alleen reviewvoorstellen, schrijft geen
+   metadata automatisch en lekt geen API-sleutel of beeldpayload in auditdata.
+3. **ClamAV**: `quality.yml` start al het Compose-profiel `clamav` en voert in
+   de container een echte clean/EICAR-scan uit. Unit-/featuretests dekken het
+   INSTREAM-protocol, clean, EICAR, onverwachte antwoorden en een onbereikbare
+   daemon die fail-closed eindigt.
+4. **Worker/scheduler heartbeats**: diagnostics gebruikt echte
+   `system_heartbeats`. Tests dekken ontbrekende, verouderde en herstelde
+   scheduler-/workerheartbeats; een verse heartbeat brengt de activity-status
+   terug naar `ok`.
+5. **Operationele alerts**: tests dekken dry-run, disabled/log-only zonder
+   webhookcall, enabled webhooksend, herhaald verzenden zolang incidenten actief
+   blijven, webhookfouten en redactie van payloads. Er zijn geen echte webhooks
+   aangeroepen.
+
+Live controles die op deze host geblokkeerd blijven: visuele desktop/mobile
+browseracceptatie van de echte AI-resultaatroutes, echte OpenAI-providerproof
+met goedgekeurde testbeelden en budget, hostdeployment met ClamAV, echte
+worker/schedulerprocessen over tijd en het instellen van een echt
+alertkanaal/webhook. Deze blijven releaseblokkades totdat de gebruikershost de
+benodigde services, credentials en toestemming levert.
+
+### English
+
+This batch covers items 1-5 and is not claimed as a standalone release. The
+version remains `0.9.51` for the whole batch series.
+
+1. **Stored AI results on the photo page**: the existing hotfix adds the
+   `AI-resultaten` panel to private photo pages, shows stored analysis/embedding
+   history without a provider request, links AI tasks to successfully processed
+   accessible photos, and keeps accept/reject behind existing authorization,
+   revision, and checksum guards. The temporary preview is a local fixture only,
+   not production code.
+2. **OpenAI safe chain**: HTTP fakes prove the full
+   form-worker-results-review chain without a real provider, real photos, or
+   spend. The worker builds a metadata-stripped JPEG data URL, uses the
+   configured model, stores only review suggestions, never writes metadata
+   automatically, and does not leak the API key or image payload into audit data.
+3. **ClamAV**: `quality.yml` already starts the Compose profile `clamav` and
+   performs a real clean/EICAR scan in the container. Unit/feature tests cover
+   the INSTREAM protocol, clean, EICAR, unexpected replies, and an unavailable
+   daemon that fails closed.
+4. **Worker/scheduler heartbeats**: diagnostics uses real
+   `system_heartbeats`. Tests cover missing, stale, and restored
+   scheduler/worker heartbeats; a fresh heartbeat returns the activity status to
+   `ok`.
+5. **Operational alerts**: tests cover dry-run, disabled/log-only without a
+   webhook call, enabled webhook send, repeated sends while incidents remain
+   active, webhook failures, and payload redaction. No real webhooks were
+   called.
+
+Live checks still blocked on this host: visual desktop/mobile browser acceptance
+of the real AI result routes, real OpenAI provider proof with approved test
+images and budget, host deployment with ClamAV, real worker/scheduler processes
+over time, and setup of a real alert channel/webhook. These remain release
+blockers until the user host provides the required services, credentials, and
+permission.
+
+## Batch 2 acceptance evidence for items 6-10
+
+### Nederlands
+
+Deze batch is lokaal voorbereid en getest met veilige SQLite-/fake-fixtures; de
+versie blijft `0.9.51` en er is geen push, release of productie-installatie
+uitgevoerd.
+
+6. **AI-budgetten, toestemming en noodstop**: de bestaande ledger-tests
+bewijzen reserveren, verbruiken, vrijgeven, cap-weigering en gescheiden
+capaciteiten zonder providerrequest. De worker controleert de actuele
+capability-instellingen opnieuw wanneer een queued run start en tussen chunks;
+een ingetrokken toestemming, providerconfiguratie, budget of `emergency_stop`
+annuleert de run vóór een request. De nieuwe async regressie test dit met
+`Http::preventStrayRequests()`. Geen echte spend.
+7. **Multi-user resultaten/review**: de globale review-index filtert nu op de
+eigenaar voor gebruikers zonder `assets.publish`; de nieuwe regressie controleert
+de paginatortotalen en dat cross-user accept/reject 403 blijft en geen status
+wijzigt. De bestaande foto- en operation-resultaattests blijven de overige
+autorisatiepaden dekken.
+8. **HTTPS/reverse proxy**: de bestaande configuratie vertrouwt uitsluitend de
+expliciet ingestelde `TRUSTED_PROXIES`, gebruikt de exacte HTTPS-`APP_URL` voor
+passkey origin en ondersteunt secure cookies. Unit/featuretests dekken
+HTTPS-origin, wrong-origin-denial, malformed client data en replay denial;
+er is geen willekeurige proxy-headervertrouwensregel toegevoegd. Productietopologie
+en echte proxyacceptatie zijn geblokkeerd: exact publiek origin,
+proxy-IP/CIDR, `SESSION_SECURE_COOKIE=true` en een testhost zijn vereist.
+9. **Passkeys op echt apparaat**: malformed, wrong-origin en single-use/replay
+flows zijn geautomatiseerd. Hardware is niet bewezen; de operator moet op de
+uiteindelijke HTTPS-origin een matrix uitvoeren met iOS Safari, Android Chrome,
+desktop browser, platformauthenticator en een tweede roaming authenticator, en
+per combinatie enrollment, login, verkeerde-origin-afwijzing en replay
+vastleggen.
+10. **Veilige Docker-upgrade**: de bestaande backup/restore-tests bewijzen
+streamed tar-preservatie, checksum-/padvalidatie en weigering vóór overschrijven;
+`upgrade-compose.sh` weigert ontbrekende of niet-verifieerbare backups en een
+ongetagde image. Een echte upgrade van een ondersteunde vorige image is
+geblokkeerd omdat Docker/een aparte deploymenthost ontbreekt. Niet uitgevoerd:
+Compose-commando's, live volumes of gebruikersdata.
+
+### English
+
+This batch is prepared and tested locally with safe SQLite/fake fixtures; the
+version remains `0.9.51`, and no push, release, or production installation was
+performed.
+
+6. **AI budgets, consent, and kill switch**: the existing ledger tests prove
+reserve, consume, release, cap refusal, and separate capabilities without a
+provider request. The worker rechecks current capability settings when a queued
+run starts and between chunks; withdrawn consent, provider configuration, budget,
+or `emergency_stop` cancels the run before a request. The new async regression
+uses `Http::preventStrayRequests()`. No real spend occurred.
+7. **Multi-user results/review**: the global review index now scopes to the
+owner for users without `assets.publish`; the new regression checks paginator
+totals and that cross-user accept/reject remains 403 without changing status.
+Existing photo and operation-result tests continue to cover the other
+authorization paths.
+8. **HTTPS/reverse proxy**: existing configuration trusts only explicitly
+configured `TRUSTED_PROXIES`, uses the exact HTTPS `APP_URL` for passkey origin,
+and supports secure cookies. Unit/feature tests cover HTTPS origin,
+wrong-origin denial, malformed client data, and replay denial; no arbitrary
+proxy-header trust rule was added. Production topology and real proxy
+acceptance are blocked: the exact public origin, proxy IP/CIDR,
+`SESSION_SECURE_COOKIE=true`, and a test host are required.
+9. **Passkeys on a real device**: malformed, wrong-origin, and single-use/replay
+flows are automated. Hardware is not proven; the operator must run a matrix on
+the final HTTPS origin with iOS Safari, Android Chrome, a desktop browser, a
+platform authenticator, and a second roaming authenticator, recording enrollment,
+login, wrong-origin rejection, and replay for each combination.
+10. **Safe Docker upgrade**: existing backup/restore tests prove streamed tar
+preservation, checksum/path validation, and refusal before overwrite;
+`upgrade-compose.sh` refuses missing or unverifiable backups and an untagged
+image. A real upgrade from a supported previous image is blocked because Docker
+and a separate deployment host are unavailable. No Compose command, live volume,
+or user data was touched.
+
+Operator matrix prerequisite: final public HTTPS origin, exact reverse-proxy
+IP/CIDR, secure-cookie setting, two real authenticators, a disposable
+previous-version stack, verified backup destination, and permission to perform
+an empty-target restore and rollback. These are acceptance prerequisites, not
+claims that the blocked checks ran.
+
+## Batch 3 acceptance evidence for items 11-15
+
+### Nederlands
+
+Deze batch is lokaal voorbereid zonder productie-installatie, providergeheimen,
+Docker, externe workflow of kosten. De versie blijft `0.9.51`; Dockhand- en
+webhosting-archivechecks die een gebouwde package of Docker daemon vereisen
+blijven pending tot de parent Quality-run.
+
+11. **ZIP/webhosting veilige upgrade**: `tests/Smoke/release-archive.php`
+weigert nu ook `.env.*` naast `.env` en blijft installatiepad,
+private storage en logstate uit release-ZIP's weigeren.
+`tests/Feature/ReleaseArchiveSafetyTest.php` bouwt fixture-ZIP's en bewijst
+acceptatie van een productiepackage plus weigering van
+`storage/app/installation/state.json` en `.env.production`.
+`tests/Smoke/webhosting-upgrade.php` is een opt-in disposable harness; CI voert
+het uit tegen de echte webhosting-ZIP en bewijst dat APP_KEY, wizardsettings,
+installer lock en private archiefbytes bij een package-overlay behouden blijven.
+Het harness weigert buiten `FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE=1` en
+werkt nooit op een gebruikersinstallatie.
+12. **Komodo import + upgrade**: de bestaande placeholder blijft bewust een
+template/protocol omdat er geen disposable Komodo Core/Periphery beschikbaar is.
+Er is geen private of onbekende Komodo API gefabriceerd. De operatorprocedure in
+`DEPLOYMENT_STACKS.md` noemt de exacte schema-/veldcontrole, importstappen,
+upgradechecks en te bewaren bewijzen. Live Komodo-acceptatie blijft
+**GEBLOKKEERD** tot een disposable Komodo-doel met versie, server/Periphery,
+private stackomgeving en toestemming om te deployen beschikbaar is.
+13. **Managed-stack upgrade-helper preservatie-smoke (niet de Dockhand-UI-
+upgrade)**: `quality.yml` start nog steeds Dockhand v1.0.48 digest-pinned op
+een disposable GitHub-runner en importeert de echte Compose/template via de
+gedocumenteerde API, tegen dezelfde image die deze run zelf bouwde
+(`FOTOARCHIEF_SKIP_IMAGE_PULL=1`, geen versiewissel). De stap maakt daarna een
+geverifieerde backup van de manager-stack en draait `scripts/upgrade-compose.sh`
+op diezelfde stack en hetzelfde image, vergelijkt de hash van
+`storage/app/installation/state.json` en de geladen APP_KEY, controleert dat
+`/setup` gesloten blijft en herhaalt de account/fotopreview/anonieme-denial
+smoke. Dit bewijst dat de upgrade-helper de bestaande installatie ongemoeid
+laat wanneer image en versie gelijk blijven; het is uitdrukkelijk geen bewijs
+van een door Dockhand geïnitieerde upgrade van een eerdere naar een nieuwe
+versie via de manager-UI. Die echte vorige-naar-nieuwe-versie-manager-flow
+blijft **GEBLOKKEERD** tot een disposable Dockhand-doel met twee daadwerkelijk
+verschillende, gepubliceerde image-versies beschikbaar is. Lokaal niet
+uitgevoerd omdat Docker niet beschikbaar is; bewijs blijft **pending CI**.
+14. **S3/Hetzner live provision**: de opt-in real-provider test blijft
+environment-gated en vraagt geen geheimen. Wanneer `FOTOARCHIEF_TEST_S3_*`
+aanwezig is, controleert de test installatieprobe, ingest, originele en
+derivative objecten met private visibility, anonieme HTTP HEAD denial
+(`401/403/404`), applicatie-publicatie via de eigen route en directe 404 na
+revocation. Echte S3/Hetzner-acceptatie is **GEBLOKKEERD** tot een lege private
+bucket, testcredentials, endpoint/region/path-style en opruimtoestemming
+beschikbaar zijn.
+15. **Storage migration interruption**:
+`tests/Feature/Operations/StorageMigrationTest.php` bevat nu een deterministische
+onderbrekingscase: een bestand kopieert en verifieert, een tweede ontbreekt,
+cutover wordt geweigerd, daarna wordt de bron hersteld en dezelfde
+operation-run herstart zonder bronverlies, zonder dubbele telling en met
+checksumbehoud. `OperationRunService::retryRun()` reset alleen storage-copy
+cursor/fouttelling en laat reeds geverifieerde relocaties intact; succesvolle
+retry wist de per-file foutmelding. Een echte S3-outage blijft
+**GEBLOKKEERD** zonder provideromgeving en toestemming.
+
+Lokaal geverifieerd: `vendor/bin/pest
+tests/Feature/ReleaseArchiveSafetyTest.php
+tests/Feature/Operations/StorageMigrationTest.php
+tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` met
+**5 passing / 106 assertions** en **2 environment-gated skips** voor live S3.
+
+### English
+
+This batch was prepared locally without a production installation, provider
+secrets, Docker, external workflow execution, or spend. The version remains
+`0.9.51`; Dockhand and webhosting archive checks that need a built package or a
+Docker daemon remain pending until the parent Quality run.
+
+11. **ZIP/webhosting safe upgrade**: `tests/Smoke/release-archive.php` now
+rejects `.env.*` as well as `.env` and continues to refuse installation paths,
+private storage and log state in release ZIPs.
+`tests/Feature/ReleaseArchiveSafetyTest.php` builds fixture ZIPs and proves
+acceptance of a production package plus refusal of
+`storage/app/installation/state.json` and `.env.production`.
+`tests/Smoke/webhosting-upgrade.php` is an opt-in disposable harness; CI runs it
+against the real webhosting ZIP and proves that APP_KEY, wizard settings,
+installer lock and private archive bytes survive a package overlay. The harness
+refuses to run without `FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE=1` and never
+operates on a user installation.
+12. **Komodo import + upgrade**: the existing placeholder intentionally remains
+a template/protocol because no disposable Komodo Core/Periphery is available.
+No private or unknown Komodo API was fabricated. The operator procedure in
+`DEPLOYMENT_STACKS.md` lists the exact schema/field check, import steps,
+upgrade checks and evidence to keep. Live Komodo acceptance remains
+**BLOCKED** until a disposable Komodo target with version, server/Periphery,
+private stack environment and permission to deploy is available.
+13. **Managed-stack upgrade-helper preservation smoke (not the Dockhand UI
+upgrade)**: `quality.yml` still starts digest-pinned Dockhand v1.0.48 on a
+disposable GitHub runner and imports the real Compose/template through the
+documented API, against the same image this run itself built
+(`FOTOARCHIEF_SKIP_IMAGE_PULL=1`, no version change). The step then creates a
+verified backup of that managed stack and runs `scripts/upgrade-compose.sh`
+against the same stack and the same image, compares the hash of
+`storage/app/installation/state.json` and the loaded APP_KEY, checks `/setup`
+remains closed and repeats the account/photo preview/anonymous-denial smoke.
+This proves the upgrade helper leaves an existing installation untouched when
+the image and version stay the same; it is explicitly not evidence of a
+Dockhand-initiated upgrade from a previous to a new version through the
+manager UI. That real previous-to-new-version manager flow remains
+**BLOCKED** until a disposable Dockhand target with two genuinely different,
+published image versions is available. Not run locally because Docker is
+unavailable; evidence remains **pending CI**.
+14. **S3/Hetzner live provision**: the opt-in real-provider test remains
+environment-gated and requests no secrets. When `FOTOARCHIEF_TEST_S3_*` is
+present, the test checks the installation probe, ingest, original and derivative
+objects with private visibility, anonymous HTTP HEAD denial (`401/403/404`),
+application publication through FotoArchief's own route and immediate 404 after
+revocation. Real S3/Hetzner acceptance is **BLOCKED** until an empty private
+bucket, test credentials, endpoint/region/path-style and cleanup permission are
+available.
+15. **Storage migration interruption**:
+`tests/Feature/Operations/StorageMigrationTest.php` now has a deterministic
+interruption case: one file copies and verifies, a second is missing, cutover is
+refused, then the source is restored and the same operation run restarts
+without source loss, double counting or checksum drift.
+`OperationRunService::retryRun()` resets only storage-copy cursor/error counts
+and keeps already verified relocations intact; a successful retry clears the
+per-file error. A real S3 outage remains **BLOCKED** without a provider
+environment and permission.
+
+Locally verified: `vendor/bin/pest
+tests/Feature/ReleaseArchiveSafetyTest.php
+tests/Feature/Operations/StorageMigrationTest.php
+tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` with
+**5 passing / 106 assertions** and **2 environment-gated skips** for live S3.
+
+## Items 16-20 backup and AI/vector acceptance provisions
+
+## Items 21-25 semantic, public, load, accessibility and localisation provisions
+
+### Nederlands
+
+21. `tests/Smoke/semantic-relevance.php` is een uitvoerbare, standaard
+uitgeschakelde evaluator. Hij accepteert uitsluitend een door de operator
+aangeleverd JSON-corpus met zoekvraag, goedgekeurde verwachte IDs en gerankte
+IDs, plus expliciete `k`, minimale precision en minimale recall. Hij rapporteert
+precision@k, recall@k en reciprocal rank en faalt onder een drempel. Hij doet
+geen providerrequest en bevat geen standaardcorpus of verzonnen succes. Echte
+Nederlandse relevantieacceptatie blijft **GEBLOKKEERD** tot corpus en drempels
+zijn aangeleverd.
+
+22. Publiek semantisch zoeken rangschikt maximaal 500 kandidaten maar past
+vervolgens uitsluitend de bestaande `publiclyVisible()` SQL-predicate toe en
+neemt daarna maximaal 24 resultaten. Hierdoor vullen ingetrokken, privacy-,
+embargo-, prullenbak- of versie-invalide kandidaten nooit een pagina. De
+featuretest bevestigt elk geval, de telling en dat een bezoeker zonder
+toestemmingsvakje geen request naar een provider veroorzaakt.
+
+23. `tests/Smoke/ai-image-load.php` is vervangen door een echte, begrensde,
+expliciet ingeschakelde binaire ingest-harness. `--images=1..25` genereert
+deterministische JPEG/PNG-bytes en bepaalt hoeveel bestanden werkelijk door
+`QuarantineUploadService`, `ProcessUpload`, derivativegeneratie en de private
+previewcontroller lopen. De harness weigert zonder markerbestand, gebruikt
+`sqlite::memory:` en een unieke fixture-opslagmap, en rapporteert uploads,
+geslaagde verwerkingen, mislukkingen, geverifieerde private previews, bytes en
+looptijd. De misleidende `--workers` optie is verwijderd: deze smoke is
+single-process en synthetisch. Een echt 50k-binaire-corpus, proxygedrag en
+concurrentieacceptatie blijven **GEBLOKKEERD** totdat representatieve bestanden
+en de gekozen runtime beschikbaar zijn.
+
+24. **Vervangt de eerdere browser-onbeschikbaarverklaring voor alleen de foto-
+en taakresultaatpagina.** De geïntegreerde browser opende echte Laravel
+HTTP-routes met een synthetische `:memory:` fixture en
+`Http::preventStrayRequests`; tijdelijke statische HTML gebruikte lokale inline
+CSS en is na afloop verwijderd. Bij 1280 px was `documentWidth=1265`. Bij
+390 px waren `documentWidth=clientWidth=375` en de fotoresultaatbreedte
+`342.67`, zonder horizontale overflow. De taak-naar-fotolink behield
+`#ai-results`; na activeren stond `resultsTop` ongeveer op 0. Toetsenbordfocus
+ging van de accepteerknop met Tab naar het gelabelde veld `review_note`.
+Screenshots bevestigden de Nederlandse beschrijving, tag, provider/model en
+reviewknoppen; de knoppen waren `53.59px` hoog op desktop en mobiel. Er is in
+de statische kopie geen formulier verzonden; acceptatie/afwijzing blijft door
+de bestaande HTTP-featuretests gedekt. Dit is geïsoleerd routebewijs, geen
+live-siteacceptatie en geen volledige WCAG-audit.
+
+25. Alle AI-instellingen, zoek-/suggestiepagina's, foto- en taakresultaten,
+AI-statuslabels, provider-/modelconfiguratie en user-facing AI service- en
+controllerfouten zijn nu gecentraliseerd in `lang/nl/ai.php`. De resterende
+raw-text inventory sluit AI-bestanden niet meer uit om ontbrekende extractie te
+verbergen. Nederlands blijft de enige huidige UI-locale; dit is volledige
+AI-lokalisatie binnen die locale, geen meertalige UI.
+
+De Quality PHP-job voert nu fail-fast zowel de versleutelde-backupkopie-smoke
+als de lokale AI HTTP-contractstub en een kleine `ai-image-load --images=2`
+binaire ingest-smoke uit. Zij gebruiken uitsluitend tijdelijke bestanden,
+loopback of een gemarkeerde fixturemap; de pgvector-provision blijft geen claim
+over het `database_json`-app-pad.
+
+### English
+
+21. `tests/Smoke/semantic-relevance.php` is an executable, opt-in evaluator.
+It accepts only operator-supplied JSON with query text, approved expected IDs,
+and ranked IDs, plus explicit `k`, minimum precision, and minimum recall. It
+reports precision@k, recall@k, and reciprocal rank and fails below a threshold.
+It makes no provider request and has no default corpus or fabricated success.
+Real Dutch relevance acceptance remains **BLOCKED** until corpus and thresholds
+are supplied.
+
+22. Public semantic search ranks at most 500 candidates, then applies only the
+existing `publiclyVisible()` SQL predicate and finally takes at most 24 results.
+Revoked, privacy, embargo, trash, and version-invalid candidates therefore
+cannot consume a page. The feature test covers every case, count, and that a
+visitor without consent causes no provider request.
+
+23. `tests/Smoke/ai-image-load.php` has been replaced with a real, bounded,
+explicitly enabled binary ingest harness. `--images=1..25` generates
+deterministic JPEG/PNG bytes and controls how many files actually pass through
+`QuarantineUploadService`, `ProcessUpload`, derivative generation, and the
+private preview controller. The harness refuses to run without the marker file,
+uses `sqlite::memory:` and a unique fixture storage directory, and reports
+uploads, successful processing, failures, verified private previews, bytes, and
+elapsed time. The misleading `--workers` option has been removed: this smoke is
+single-process and synthetic. A real 50k binary corpus, proxy behavior, and
+concurrency acceptance remain **BLOCKED** until representative files and the
+chosen runtime are available.
+
+24. **Supersedes the earlier browser-unavailable statement for the photo and
+task result pages only.** The integrated browser opened real Laravel HTTP routes
+with a synthetic `:memory:` fixture and `Http::preventStrayRequests`; temporary
+static HTML used local inline CSS and was removed afterward. At 1280px,
+`documentWidth=1265`. At 390px, `documentWidth=clientWidth=375` and the photo
+results width was `342.67`, with no horizontal overflow. Activating the
+task-to-photo link preserved `#ai-results` and placed `resultsTop` at
+approximately 0. Keyboard focus moved from the accept button via Tab to the
+labelled `review_note` field. Screenshots confirmed the Dutch description, tag,
+provider/model, and review controls; buttons were `53.59px` high on desktop and
+mobile. No form was submitted from the static copy; existing HTTP feature tests
+remain the evidence for accept/reject behavior. This is isolated route evidence,
+not live-site acceptance or a complete WCAG audit.
+
+25. All AI settings, search/suggestion pages, photo and task results, AI status
+labels, provider/model configuration, and user-facing AI service/controller
+errors are now centralized in `lang/nl/ai.php`. The remaining raw-text
+inventory no longer excludes AI files to hide missing extraction. Dutch remains
+the only current UI locale; this is complete AI localization within that locale,
+not a multilingual UI.
+
+## Items 26-30 final localization and documentation acceptance
+
+### Nederlands
+
+26. De operationele UI voor diagnose, verwerking, integriteit, OCR, opslag,
+bestandsversies, prullenbak en achtergrondtaken gebruikt `lang/nl/operations.php`.
+Ook de gedeelde operatienavigatie en compacte teller-/eenheidslabels zijn
+gecentraliseerd.
+
+27. Upload, fotodetail, collecties, personen, locaties, bronnen, bijdragers,
+tags, werklijsten, bulkacties en catalogustabellen gebruiken
+`lang/nl/catalogue.php`. Bestaande formulierbindingen, autorisatieblokken,
+escaping en markup zijn behouden.
+
+28. Publieke zoek-, collectie- en fotopagina's, publicatiebeheer en
+bezoekerssuggesties gebruiken `lang/nl/publication.php`. Stabiele HTTP-headers,
+downloadbestandsnamen, API-velden en provideridentifiers blijven technische
+waarden.
+
+29. Import/export gebruikt `lang/nl/exchange.php`; resterende
+identiteitsberichten gebruiken `lang/nl/identity.php`; gebruikers- en
+operatorberichten uit jobs, services en console-uitvoer gebruiken
+`lang/nl/shared.php`. SQL, query-aliassen, scannerprotocollen en statische
+Artisan-signatures/descriptions zijn expliciet als technische waarden
+geclassificeerd. De opnieuw gegenereerde inventaris bevat **0**
+gebruikerszichtbare regels.
+
+30. `LOCALIZATION.md`, `OPERATIONS.md`, `AI_CAPABILITY_DECISION.md` en dit
+acceptatiedocument zijn bijgewerkt. OCR, AI-indexering en import/export zijn niet
+meer als gepland beschreven; AI-providerinstellingen en versleutelde sleutels
+staan in de database en worden via de beheerinterface beheerd.
+
+**Status:** repositorychecks en volledige Pest-suite zijn lokaal uitgevoerd op
+Windows met de vastgelegde testinstellingen. Linux/Docker/PostgreSQL-CI blijft
+**PENDING** tot de ouder de uiteindelijke branch pusht. Live S3, echte provider-
+en modelproof, live `pgvector`, productie-HTTPS/passkeys, Komodo UI en volledige
+WCAG-acceptatie blijven **GEBLOKKEERD** op externe middelen; lokale fixtures
+worden daarvoor niet als bewijs gebruikt.
+
+### English
+
+26. The operations UI for diagnostics, processing, integrity, OCR, storage,
+file versions, trash, and background jobs uses `lang/nl/operations.php`. Shared
+operations navigation and compact count/unit labels are centralized as well.
+
+27. Upload, photo detail, collections, people, locations, sources,
+contributors, tags, worklists, bulk actions, and catalogue tables use
+`lang/nl/catalogue.php`. Existing form bindings, authorization blocks, escaping,
+and markup are preserved.
+
+28. Public search, collection, and photo pages, publication administration, and
+visitor suggestions use `lang/nl/publication.php`. Stable HTTP headers,
+download filenames, API fields, and provider identifiers remain technical
+values.
+
+29. Import/export uses `lang/nl/exchange.php`; remaining identity messages use
+`lang/nl/identity.php`; user/operator messages from jobs, services, and console
+output use `lang/nl/shared.php`. SQL, query aliases, scanner protocols, and
+static Artisan signatures/descriptions are explicitly classified as technical
+values. The regenerated inventory contains **0** user-visible entries.
+
+30. `LOCALIZATION.md`, `OPERATIONS.md`, `AI_CAPABILITY_DECISION.md`, and this
+acceptance document are updated. OCR, AI indexing, and import/export are no
+longer described as planned; AI provider settings and encrypted keys are stored
+in the database and managed through the administrator UI.
+
+**Status:** repository checks and the complete Pest suite were run locally on
+Windows with the committed test settings. Linux/Docker/PostgreSQL CI remains
+**PENDING** until the parent pushes the final branch. Live S3, real provider and
+model proof, live `pgvector`, production HTTPS/passkeys, Komodo UI, and complete
+WCAG acceptance remain **BLOCKED** on external resources; local fixtures are
+not presented as evidence for those gates.
+
+The Quality PHP job now fail-fast runs both the encrypted-backup-copy smoke
+check, local AI HTTP contract stub, and a small `ai-image-load --images=2`
+binary ingest smoke. They use temporary files, loopback, or a marked fixture
+directory only; pgvector provision remains no claim about the `database_json`
+app path.
+
+### Nederlands
+
+Deze batch is lokaal voorbereid zonder productie-installatie, providergeheimen,
+Docker, shellbackupuitvoering, modeldownload, externe providerrequests of
+kosten. De versie blijft `0.9.51`; live S3/key-custody, echte lokale
+modeluitvoering en echte applicatie-`pgvector` migratie blijven geblokkeerd
+totdat de operator de bijbehorende middelen levert.
+
+16. **Geplande versleutelde tweede backupkopie**:
+`scripts/backup-second-copy-scheduled.sh` en de uitgeschakelde voorbeelden in
+`deploy/fotoarchief-encrypted-second-backup.conf.example` en
+`deploy/systemd/` leveren een opt-in planning met expliciete lock, stderr-fouten
+en optionele operatorgekozen failure reporter. Er is geen standaard enablement,
+geen geraden bestemming en geen automatische retentieverwijdering; de
+retentiepolicy is verplicht maar wordt alleen geregistreerd.
+17. **Herstel tweede kopie**: `tests/Smoke/encrypted-backup-copy.sh` bouwt een
+wegwerpbackup, maakt een versleutelde kopie, herstelt die naar een nieuwe map en
+weigert tampering, verkeerde sleutel en een bestaand doel. De bestaande
+containeracceptatie voor `scripts/restore-compose.sh` blijft het bewijs voor
+restore naar lege lokale volumes/database; S3-restore is niet als live bewijs
+geclaimd.
+18. **Lokale AI-service**: `tests/Smoke/local-ai-http-contract.php` is een
+geïsoleerde HTTP-contractstub, geen modelproof. `scripts/ai-local-contract-probe.php`
+rapporteert bij handmatige opt-in provider, endpoint zonder credentials, model,
+modelversie/digest, modelruimte, dimensies en afstandsmaat zonder bytes,
+embeddings of geheimen te printen. Echte modeluitvoering blijft geblokkeerd
+zonder operatorgekozen model, licentiebeoordeling, latency-eisen en resources.
+19. **Compatibele beeld-/tekstembeddings**: de lokale capabilityprobe weigert
+tekst-alleen of modelruimte-loze providers, semantisch zoeken weigert
+modelruimte-/dimensiemismatch en OpenAI/Anthropic blijven niet-embeddingproviders.
+OpenAI tekstembeddings worden niet als visuele retrieval behandeld.
+20. **Vectorbackend en modelwijzigingen**: de huidige applicatie gebruikt nog
+`database_json`; daarom wordt `pgvector` niet als productiepad geclaimd.
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` is een opt-in echte
+PostgreSQL/`vector`-extensietest voor modelisolatie, stale filtering en rebuild
+in een disposable schema. De indexjob weigert hergebruik van een bestaande
+modelruimte met andere provider of dimensie.
+
+### English
+
+This batch was prepared locally without a production installation, provider
+secrets, Docker, shell backup execution, model download, external provider
+requests, or spend. The version remains `0.9.51`; live S3/key custody, real
+local model execution, and real application `pgvector` migration remain blocked
+until the operator supplies the corresponding resources.
+
+16. **Scheduled encrypted second backup copy**:
+`scripts/backup-second-copy-scheduled.sh` and the disabled examples in
+`deploy/fotoarchief-encrypted-second-backup.conf.example` and `deploy/systemd/`
+provide opt-in scheduling with an explicit lock, stderr failures, and an
+optional operator-chosen failure reporter. There is no default enablement, no
+guessed destination, and no automatic retention deletion; the retention policy
+is required but only recorded.
+17. **Restore second copy**: `tests/Smoke/encrypted-backup-copy.sh` builds a
+disposable backup, creates an encrypted copy, restores it into a new directory,
+and refuses tampering, a wrong key, and an existing target. The existing
+container acceptance for `scripts/restore-compose.sh` remains the proof for
+restoring into empty local volumes/database; S3 restore is not claimed as live
+evidence.
+18. **Local AI service**: `tests/Smoke/local-ai-http-contract.php` is an
+isolated HTTP contract stub, not model proof. `scripts/ai-local-contract-probe.php`
+reports provider, endpoint without credentials, model, model version/digest,
+model space, dimensions, and distance metric during manual opt-in without
+printing bytes, embeddings, or secrets. Real model execution remains blocked
+without an operator-chosen model, license review, latency requirements, and
+resources.
+19. **Compatible image/text embeddings**: the local capability probe refuses
+text-only providers or providers without a model space, semantic search refuses
+model-space/dimension mismatches, and OpenAI/Anthropic remain non-embedding
+providers. OpenAI text embeddings are not treated as visual retrieval.
+20. **Vector backend and model changes**: the current application still uses
+`database_json`; therefore `pgvector` is not claimed as the production path.
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` is an opt-in real
+PostgreSQL/`vector` extension test for model isolation, stale filtering, and
+rebuild in a disposable schema. The index job refuses reuse of an existing model
+space with a different provider or dimension.
+
+## Item 26-30 addendum: backup-copy evidence correction and pgvector scope clarification
+
+### Nederlands
+
+31. **Correctie op de eerdere versleutelde-tweedekopie-status.** Git Bash (`C:\Program Files\Git\bin\bash.exe`) is op deze host beschikbaar; `sh` staat niet in PATH maar `sh tests/Smoke/encrypted-backup-copy.sh` is via Git Bash uitgevoerd. Het faalde op de eerste `openssl enc ... -pass file:$key_file`-aanroep met exact:
+
+```
+Can't open file /tmp/fotoarchief-encrypted-backup.XXXXXX/key
+Error getting password
+*:error:*:system library:BIO_new_file:No such process:*/bss_file.c:*:calling fopen(/tmp/fotoarchief-encrypted-backup.XXXXXX/key, r)
+*:error:*:BIO routines:BIO_new_file:no such file:*/bss_file.c:*:
+```
+
+De oorzaak is geverifieerd, niet vermoed: `which openssl` in dezelfde shell wijst naar `/mingw64/bin/openssl`, een natieve Windows-build. Git Bash vertaalt MSYS-paden zoals `/tmp/...` alleen voor argumenten die het als kaal pad herkent; het samengestelde argument `-pass file:/tmp/...` wordt niet herschreven, dus `openssl.exe` roept Win32 `fopen()` aan op een letterlijk niet-bestaand pad. Dit is een geverifieerd Windows/MSYS-padprobleem met dit specifieke argument, **geen bewijs van een fout in de scripts of in de Linux-runtime**. De scripts zelf (`scripts/backup-copy-encrypted.sh`, `scripts/backup-restore-encrypted-copy.sh`) zijn ongewijzigd POSIX `sh` en op een echte Linux-runner bestaat `/tmp/...` als gewoon bestandssysteempad; daar is er geen reden om hetzelfde falen te verwachten. De definitieve, gezaghebbende proef blijft de geïsoleerde Ubuntu CI-runner die `tests/Smoke/encrypted-backup-copy.sh` daadwerkelijk uitvoert; deze lokale Windows-poging bewijst dat niet en wordt niet als zodanig gepresenteerd.
+
+32. **Scopecorrectie voor `PgvectorAcceptanceTest`.** De testnaam en het docblock zijn aangescherpt: de test bewijst uitsluitend het gedrag van de kale PostgreSQL `vector`-extensie (modelisolatie, stale filtering, rebuild) tegen synthetische tabellen in een wegwerpschema, aangemaakt en opgeruimd door de test zelf. Hij doorloopt geen enkel FotoArchief-toepassingspad: geen model, controller, job of Eloquent-laag van de applicatie wordt aangeroepen. De applicatie bewaart embeddings nog steeds via `database_json`; er bestaat geen toepassingsseigen `pgvector`-adapter of -migratie. Dit is een **resterend implementatie-issue, geen alleen-bewijs-issue**: de adapter (indexjob-opslag, zoekpad-integratie zoals beschreven onder stappen 46-48 in `AI_CAPABILITY_DECISION.md`) is **ONGEBOUWD en GEBLOKKEERD**, niet slechts ongetest. Deze test mag niet gelezen worden als acceptatie van een pgvector-backend voor de applicatie.
+
+### English
+
+31. **Correction to the earlier encrypted second-copy status.** Git Bash (`C:\Program Files\Git\bin\bash.exe`) is available on this host; `sh` is not on PATH, but `sh tests/Smoke/encrypted-backup-copy.sh` was run through Git Bash. It failed at the first `openssl enc ... -pass file:$key_file` call with exactly:
+
+```
+Can't open file /tmp/fotoarchief-encrypted-backup.XXXXXX/key
+Error getting password
+*:error:*:system library:BIO_new_file:No such process:*/bss_file.c:*:calling fopen(/tmp/fotoarchief-encrypted-backup.XXXXXX/key, r)
+*:error:*:BIO routines:BIO_new_file:no such file:*/bss_file.c:*:
+```
+
+The cause was verified, not assumed: `which openssl` in the same shell resolves to `/mingw64/bin/openssl`, a native Windows build. Git Bash only rewrites MSYS paths such as `/tmp/...` for arguments it recognizes as a bare path; the compound argument `-pass file:/tmp/...` is not rewritten, so `openssl.exe` calls Win32 `fopen()` against a path that literally does not exist. This is a confirmed Windows/MSYS path interop problem with this specific argument form, **not evidence of a defect in the scripts or in the Linux runtime**. The scripts themselves (`scripts/backup-copy-encrypted.sh`, `scripts/backup-restore-encrypted-copy.sh`) are unmodified POSIX `sh`, and on a real Linux runner `/tmp/...` is an ordinary filesystem path with no reason to expect the same failure. The final, authoritative proof remains the isolated Ubuntu CI runner actually executing `tests/Smoke/encrypted-backup-copy.sh`; this local Windows attempt does not prove that and is not presented as if it did.
+
+32. **Scope correction for `PgvectorAcceptanceTest`.** The test name and docblock have been tightened: the test proves only the raw PostgreSQL `vector` extension's behavior (model isolation, stale filtering, rebuild) against synthetic tables in a disposable schema created and torn down by the test itself. It exercises no FotoArchief application path at all: no application model, controller, job, or Eloquent layer is invoked. The application still persists embeddings through `database_json`; no application-owned `pgvector` adapter or migration exists. This is a **remaining implementation issue, not merely an evidence gap**: the adapter (index-job storage, search-path integration as described under steps 46-48 in `AI_CAPABILITY_DECISION.md`) is **UNBUILT and BLOCKED**, not just untested. This test must not be read as acceptance of a pgvector backend for the application.
+
+## Item 30 persistent backlog: tracked GitHub issues for remaining live blockers
+
+### Nederlands
+
+Na een controle op reeds bestaande open issues heeft de pakkettende partij de
+hierboven benoemde resterende live blokkades vastgelegd als aanhoudende
+GitHub-issues, zodat ze niet stilzwijgend verdwijnen zodra deze branch
+samengevoegd wordt. Dit document verwijst ernaar ter referentie; het opent,
+sluit of dupliceert ze niet, en gebruikt geen closing-keywords.
+
+- **helmerzNL/FotoArchief#14** — de daadwerkelijke applicatie-`pgvector`-adapter
+  ontbreekt nog. De applicatie bewaart embeddings vandaag via `database_json`;
+  `PgvectorAcceptanceTest` is uitsluitend een extensie-experiment (zie item 32
+  hierboven) en telt niet als bewijs dat de applicatie een pgvector-backend
+  heeft. Dit issue volgt het werkelijke bouwwerk (indexjob-opslag,
+  zoekpad-integratie), niet slechts ontbrekend bewijs.
+- **helmerzNL/FotoArchief#15** — geblokkeerde live acceptatie voor
+  installatie/provider/host/proxy/hardware/manager/S3/backup-items 2 t/m 17
+  (o.a. echte Docker-/webhosting-upgrade, Komodo-import, S3/Hetzner-provisioning
+  en de in dit document gecorrigeerde Dockhand-preservatiesmoke tegenover een
+  echte vorige-naar-nieuwe-versie manager-upgrade). Elk van deze items blijft
+  hierboven expliciet **GEBLOKKEERD** tot de genoemde disposable omgeving
+  beschikbaar is; dit issue is waar die afhankelijkheden verzameld blijven.
+- **helmerzNL/FotoArchief#16** — geblokkeerd echt bewijs voor AI-relevantie/
+  corpus, gelijktijdige belasting op 50k assets en volledige
+  toegankelijkheidsaudit voor items 18 t/m 24. De bestaande deterministische
+  `SemanticRelevanceEvaluatorTest` en de statische/kleinschalige
+  browserproeven in dit document bewijzen alleen wat ze daadwerkelijk
+  uitvoeren; ze vervangen geen echte corpusevaluatie, geen belastingtest op
+  realistische schaal en geen volledige WCAG-audit.
+
+Deze verwijzingen vervangen geen van de hierboven vastgelegde GEBLOKKEERD-
+statussen; ze zijn de plek waar de opvolging ervan buiten deze branch
+wordt bijgehouden.
+
+### English
+
+After checking for existing open issues, the integrating party recorded the
+remaining live blockers named above as persistent GitHub issues, so they do
+not silently disappear once this branch is merged. This document references
+them for traceability; it does not open, close or duplicate them, and uses no
+closing keywords.
+
+- **helmerzNL/FotoArchief#14** — the actual application `pgvector` adapter is
+  still missing. The application persists embeddings today through
+  `database_json`; `PgvectorAcceptanceTest` is an extension-only experiment
+  (see item 32 above) and does not count as evidence that the application has
+  a pgvector backend. This issue tracks the real build work (index-job
+  storage, search-path integration), not merely missing evidence.
+- **helmerzNL/FotoArchief#15** — blocked live acceptance for the
+  installation/provider/host/proxy/hardware/manager/S3/backup items 2 through
+  17 (including the real Docker/webhosting upgrade, Komodo import, S3/Hetzner
+  provisioning, and the Dockhand preservation smoke corrected in this
+  document versus a real previous-to-new-version manager upgrade). Each of
+  these items remains explicitly **BLOCKED** above until the named disposable
+  environment is available; this issue is where those dependencies stay
+  collected.
+- **helmerzNL/FotoArchief#16** — blocked real evidence for AI relevance/
+  corpus, concurrent load on 50k assets, and a full accessibility audit for
+  items 18 through 24. The existing deterministic
+  `SemanticRelevanceEvaluatorTest` and the static/small-scale browser checks
+  in this document only prove what they actually run; they do not substitute
+  for real corpus evaluation, a realistic-scale load test, or a full WCAG
+  audit.
+
+These references do not supersede any of the BLOCKED statuses recorded above;
+they are where follow-up on them is tracked outside this branch.

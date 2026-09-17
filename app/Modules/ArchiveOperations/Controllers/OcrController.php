@@ -69,7 +69,7 @@ class OcrController extends Controller
 
         return redirect()
             ->route('admin.operations.ocr.show', $ocr)
-            ->with('status', 'Tekstcorrectie succesvol opgeslagen.');
+            ->with('status', __('operations.generated.t_5e186cd64ba3186e'));
     }
 
     public function dispatchOcr(Request $request, Asset $asset): RedirectResponse
@@ -80,7 +80,7 @@ class OcrController extends Controller
 
         $primaryFile = $asset->files()->where('is_primary', true)->first() ?? $asset->files()->first();
         if (! $primaryFile) {
-            return redirect()->back()->with('error', 'Geen archiefbestand gevonden voor deze asset.');
+            return redirect()->back()->with('error', __('operations.generated.t_5bcaa4bc2c8bafb9'));
         }
 
         // Same connection and atomicity contract as the ingest pipeline: heavy work is

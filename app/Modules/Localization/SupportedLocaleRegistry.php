@@ -15,7 +15,7 @@ class SupportedLocaleRegistry
     {
         return $this->requireConfiguredLocale(
             config('localization.default_locale', 'nl'),
-            'The default locale must be present in localization.supported_locales.',
+            __('shared.generated.t_32f57484e141bb43'),
         );
     }
 
@@ -23,7 +23,7 @@ class SupportedLocaleRegistry
     {
         return $this->requireConfiguredLocale(
             config('localization.fallback_locale', $this->defaultLocale()),
-            'The fallback locale must be present in localization.supported_locales.',
+            __('shared.generated.t_dd68529520d6a493'),
         );
     }
 
@@ -65,7 +65,7 @@ class SupportedLocaleRegistry
         }
 
         throw ValidationException::withMessages([
-            $field => 'Deze taal wordt nog niet ondersteund.',
+            $field => __('shared.generated.t_26e5295c17c52120'),
         ]);
     }
 

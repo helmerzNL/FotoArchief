@@ -6,6 +6,7 @@ namespace App\Modules\Ai\Services;
 
 use App\Models\User;
 use App\Modules\Ai\Models\AiSetting;
+use App\Modules\ArchiveOperations\Models\OperationRun;
 use Illuminate\Validation\ValidationException;
 
 class AiConfigurationService
@@ -112,6 +113,30 @@ class AiConfigurationService
         return $settings;
     }
 
+    public function cancelQueuedRunIfUnavailable(OperationRun $run, string $capability, string $provider): bool
+    {
+        $settings = $this->effective();
+        $enabledKey = $capability === 'embeddings' ? 'embeddings_enabled' : 'image_analysis_enabled';
+        $providerKey = $capability === 'embeddings' ? 'embeddings_provider' : 'image_analysis_provider';
+        $available = (bool) ($settings['active'] ?? false)
+            && (bool) ($settings[$enabledKey] ?? false)
+            && (string) ($settings[$providerKey] ?? '') === $provider
+            && (bool) ($settings[$capability.'_ready'] ?? false);
+
+        if ($available) {
+            return true;
+        }
+
+        $run->forceFill([
+            'status' => OperationRun::STATUS_CANCELLED,
+            'claim_token' => null,
+            'finished_at' => now(),
+            'error_message' => __('ai.errors.run_cancelled'),
+        ])->save();
+
+        return false;
+    }
+
     /**
      * @param  array<string, mixed>  $settings
      */
@@ -192,16 +217,16 @@ class AiConfigurationService
     {
         $errors = [];
         if ((int) $values['max_assets_per_batch'] < 1 || (int) $values['max_assets_per_batch'] > 25) {
-            $errors['max_assets_per_batch'] = 'AI-batches zijn begrensd op 1 tot 25 assets.';
+            $errors['max_assets_per_batch'] = $this->ensureString(__('ai.errors.invalid_limits.batch'));
         }
         if ((int) $values['derivative_max_pixels'] < 256 || (int) $values['derivative_max_pixels'] > 1024) {
-            $errors['derivative_max_pixels'] = 'AI-afgeleiden moeten tussen 256 en 1024 pixels blijven.';
+            $errors['derivative_max_pixels'] = $this->ensureString(__('ai.errors.invalid_limits.derivative'));
         }
         if ((int) $values['request_timeout_seconds'] < 5 || (int) $values['request_timeout_seconds'] > 60) {
-            $errors['request_timeout_seconds'] = 'AI-provider timeouts moeten tussen 5 en 60 seconden blijven.';
+            $errors['request_timeout_seconds'] = $this->ensureString(__('ai.errors.invalid_limits.timeout'));
         }
         if ((bool) $values['local_provider_enabled'] && ! $this->isTrustedLocalEndpoint($values['local_endpoint'])) {
-            $errors['local_endpoint'] = 'Lokale AI moet een HTTPS-endpoint of localhost/private netwerkendpoint zijn.';
+            $errors['local_endpoint'] = $this->ensureString(__('ai.errors.invalid_limits.local_endpoint'));
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -231,16 +256,16 @@ class AiConfigurationService
             return;
         }
         if (! in_array($provider, $allowedProviders, true)) {
-            $errors[$providerKey] = "Ongeldige provider voor {$providerKey}: {$provider}.";
+            $errors[$providerKey] = $this->ensureString(__('ai.errors.invalid_provider_for', ['field' => $providerKey, 'provider' => $provider]));
 
             return;
         }
         if ($provider === 'external') {
             if (! (bool) ($values['external_processing_allowed'] ?? false)) {
-                $errors['external_processing_allowed'] = 'Geef expliciet toestemming voor doorgifte naar de custom externe provider.';
+                $errors['external_processing_allowed'] = $this->ensureString(__('ai.errors.external_consent'));
             }
             if (! (bool) $this->providerConfigs->status('external')['enabled']) {
-                $errors['external_provider_enabled'] = 'Schakel eerst de custom externe provider in de providersectie in.';
+                $errors['external_provider_enabled'] = $this->ensureString(__('ai.errors.external_enable_first'));
             }
 
             return;
@@ -248,15 +273,24 @@ class AiConfigurationService
         if (in_array($provider, self::NATIVE_PROVIDERS, true)) {
             $providerStatus = $this->providerConfigs->status($provider);
             if (trim((string) ($providerStatus[$providerModelKey] ?? '')) === '') {
-                $errors[$modelKey] = 'Kies een model voor de gekozen provider.';
+                $errors[$modelKey] = $this->ensureString(__('ai.errors.choose_model'));
             }
             if (! (bool) ($values[$consentKey] ?? false)) {
-                $errors[$consentKey] = 'Native provider gebruik vereist expliciete toestemming per functie.';
+                $errors[$consentKey] = $this->ensureString(__('ai.errors.native_consent_required'));
             }
             if (! (bool) $providerStatus['enabled']) {
-                $errors["{$provider}_provider_enabled"] = 'Schakel de provider eerst in voordat je hem selecteert.';
+                $errors["{$provider}_provider_enabled"] = $this->ensureString(__('ai.errors.provider_enable_first'));
             }
         }
+    }
+
+    private function ensureString(mixed $message): string
+    {
+        if (! is_string($message)) {
+            throw new \UnexpectedValueException('ai.validation.translation_string_expected');
+        }
+
+        return $message;
     }
 
     private function isTrustedLocalEndpoint(mixed $endpoint): bool

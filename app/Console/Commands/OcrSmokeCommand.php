@@ -46,7 +46,7 @@ class OcrSmokeCommand extends Command
         $diagnostics = $service->getDiagnostics();
 
         if ($diagnostics['available'] !== true) {
-            $this->error('Tesseract is niet beschikbaar: '.($diagnostics['status_message'] ?? 'onbekende reden'));
+            $this->error(__('shared.generated.t_05b05660839441e7').($diagnostics['status_message'] ?? __('shared.generated.t_9d381c259dc2ae70')));
             $this->line('Binary: '.($diagnostics['binary'] ?? 'onbekend'));
 
             return self::FAILURE;
@@ -62,7 +62,7 @@ class OcrSmokeCommand extends Command
 
         $image = $this->renderProbeImage();
         if ($image === null) {
-            $this->error('Kon geen testafbeelding maken; de GD-extensie ontbreekt.');
+            $this->error(__('shared.generated.t_255127982b0da35b'));
 
             return self::FAILURE;
         }
@@ -79,16 +79,16 @@ class OcrSmokeCommand extends Command
             $process->run();
 
             if (! $process->isSuccessful()) {
-                $this->error('Tesseract gaf een fout terug: '.$process->getErrorOutput());
+                $this->error(__('shared.generated.t_a850180676b5b89c').$process->getErrorOutput());
 
                 return self::FAILURE;
             }
 
             $text = trim($process->getOutput());
-            $this->line('Herkende tekst: '.($text !== '' ? $text : '(leeg)'));
+            $this->line(__('shared.generated.t_2c1435454a8f48bc').($text !== '' ? $text : '(leeg)'));
 
             if (! str_contains(strtoupper(preg_replace('/[^A-Z]/i', '', $text) ?? ''), 'ARCHIEF')) {
-                $this->error('De herkende tekst bevat het verwachte woord niet; controleer de taalbestanden.');
+                $this->error(__('shared.generated.t_245bda6e1a2e852e'));
 
                 return self::FAILURE;
             }
@@ -96,7 +96,7 @@ class OcrSmokeCommand extends Command
             @unlink($image);
         }
 
-        $this->info('Tesseract werkt: versie '.($diagnostics['version'] ?? 'onbekend').', taal '.$language.'.');
+        $this->info(__('shared.generated.t_5540131742adb070').($diagnostics['version'] ?? 'onbekend').__('shared.generated.t_7c514222c41ad0eb').$language.'.');
 
         return self::SUCCESS;
     }
@@ -128,7 +128,7 @@ class OcrSmokeCommand extends Command
         try {
             $probe = $this->renderProbeImage();
             if ($probe === null) {
-                $this->error('Kon geen testafbeelding maken; de GD-extensie ontbreekt.');
+                $this->error(__('shared.generated.t_255127982b0da35b'));
 
                 return self::FAILURE;
             }
@@ -139,7 +139,7 @@ class OcrSmokeCommand extends Command
 
             $asset = Asset::query()->create([
                 'accession_number' => $accession,
-                'title' => 'OCR-rookproef (tijdelijk)',
+                'title' => __('shared.generated.t_17847da9a4d8bd04'),
             ]);
 
             $file = AssetFile::query()->create([
@@ -156,7 +156,7 @@ class OcrSmokeCommand extends Command
             ]);
 
             Queue::connection('ingest')->push(new ProcessAssetOcrJob($file->id));
-            $this->line('Taak op de ingest-wachtrij geplaatst; wachten op de worker...');
+            $this->line(__('shared.generated.t_166db3119a351487'));
 
             $deadline = time() + max(5, (int) $this->option('wait'));
             $record = null;
@@ -170,25 +170,25 @@ class OcrSmokeCommand extends Command
             }
 
             if ($record === null) {
-                $this->error('De worker heeft de taak niet opgepakt. Draait de ingest-worker en staat OCR_ENABLED ook voor die container aan?');
+                $this->error(__('shared.generated.t_9ffce31057a25368'));
 
                 return self::FAILURE;
             }
 
             if ($record->status !== 'completed') {
-                $this->error('De worker rondde de taak niet af: '.($record->error_message ?? $record->status));
+                $this->error(__('shared.generated.t_2864171336098fb6').($record->error_message ?? $record->status));
 
                 return self::FAILURE;
             }
 
             $recognised = strtoupper(preg_replace('/[^A-Z]/i', '', (string) $record->extracted_text) ?? '');
             if (! str_contains($recognised, 'ARCHIEF')) {
-                $this->error('De worker leverde geen bruikbare tekst op; controleer de taalbestanden in de worker-container.');
+                $this->error(__('shared.generated.t_ae2177037bef5753'));
 
                 return self::FAILURE;
             }
 
-            $this->info('De ingest-worker heeft de OCR-taak uitgevoerd en tekst opgeslagen (taal '.$language.').');
+            $this->info(__('shared.generated.t_01903bed4dde40a7').$language.').');
 
             return self::SUCCESS;
         } finally {
@@ -240,10 +240,10 @@ class OcrSmokeCommand extends Command
 
         $expected = $this->accountName($owner);
 
-        return 'Dit commando draait als "'.$this->accountName($current).'" maar de opslag hoort bij "'
-            .$expected.'". Een testafbeelding van dit account is onleesbaar voor de worker, '
-            .'dus de proef zou een fout melden die er niet is. Draai hem als het runtime-account, '
-            .'bijvoorbeeld met "docker compose exec --user '.$expected.' app php artisan operations:ocr-smoke --queued".';
+        return __('shared.generated.t_6793c2e16197d2f6').$this->accountName($current).__('shared.generated.t_1a286321df1372ab')
+            .$expected.__('shared.generated.t_8fb62a321799af41')
+            .__('shared.generated.t_092768e2a6267fe6')
+            .__('shared.generated.t_ad66c0086909c6a4').$expected.__('shared.generated.t_5946fe23f4dd5fd5');
     }
 
     /** Resolves a uid to its account name, falling back to the number. */

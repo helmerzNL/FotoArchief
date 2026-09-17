@@ -57,6 +57,34 @@ foto houdt de hele batch tegen. De invoer blijft beschikbaar om te corrigeren.
 Dubbele verwijzingen naar dezelfde foto tellen na controle eenmaal.
 De ingestelde batchlimiet blijft gelden voor de ingevoerde selectie.
 
+### AI-resultaten bekijken en beoordelen
+
+Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
+**AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
+beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
+Ook geaccepteerde, afgewezen en verouderde voorstellen blijven zichtbaar.
+De historie is gepagineerd met 10 analyses/indexeringen per pagina.
+Bekijken start geen providerrequest en wijzigt geen metadata.
+
+Bevoegde medewerkers kunnen een voorstel accepteren of afwijzen en keren
+daarna terug naar de foto. De bestaande rechten-, checksum- en revisiecontroles
+blijven gelden: wijzigingen aan de foto, waaronder acceptatie, kunnen andere
+voorstellen uit een oudere revisie ongeldig maken. Alleen bekijken geeft geen
+beoordelingsrecht; private resultaten komen niet op de openbare fotopagina.
+
+Bij een AI-achtergrondtaak staat **Foto's en AI-resultaten bekijken**. Deze link
+toont maximaal 25 toegankelijke, succesvol verwerkte foto's per pagina op basis
+van het volledige auditlog, inclusief eerdere pogingen. Iedere fotolink opent
+de volledige AI-historie van die foto, niet alleen de uitvoer van deze taak.
+Verwijderde en niet-toegankelijke foto's worden niet getoond. Oude taken zonder
+succeslog verwijzen niet automatisch naar foto's; open de foto dan rechtstreeks.
+Een lege analyse meldt expliciet dat er geen beschrijving of tags zijn teruggegeven.
+Embeddingindexering toont modelruimte en dimensies, geen tekstvoorstellen of ruwe vector.
+
+Deze weergave werkt ook voor al opgeslagen resultaten: opnieuw analyseren is
+niet nodig. Versie `0.9.51` vereist geen nieuwe migraties of configuratie.
+Haal de release-image op en maak web-, worker- en schedulercontainers opnieuw aan.
+
 ### Taakstatus en auditlog
 
 Open **Beheer > Operations > Achtergrondtaken** om AI-taken te volgen. Een taak
@@ -109,6 +137,71 @@ providercredential via de beheerinterface.
 De officiële native base-URL's, de Anthropic API-versie en de multimodale
 OpenRouter-allowlist zijn vaste applicatiegegevens en niet wijzigbaar via
 runtimevariabelen of de UI.
+
+### Lokale AI-contractstub en echte proof
+
+`tests/Smoke/local-ai-http-contract.php` start een geïsoleerde lokale
+HTTP-stub die alleen het FotoArchief-contract voor `/v1/capabilities`,
+`/v1/analyze-image`, `/v1/embed-image` en `/v1/embed-text` controleert. Dit is
+geen bewijs dat een echt model draait, goed presteert of historisch relevante
+resultaten levert. Het bewijst wel dat het protocol zonder externe fallback kan
+worden aangesproken en dat beeld- en tekstembeddings dezelfde modelruimte en
+dimensie rapporteren.
+
+Voor een echte, operatorgekozen lokale service kan de contractprobe handmatig
+worden gedraaid:
+
+```sh
+php scripts/ai-local-contract-probe.php https://local-ai.example.invalid --confirm-send-test-image
+```
+
+De probe print provider, endpoint zonder credentials, model, modelversie of
+digest voor zover de service die meldt, modelruimte, dimensies en afstandsmaat.
+Hij print geen afbeeldingsbytes, ruwe embeddings of geheimen. Dit blijft een
+contractcontrole: productieacceptatie vereist daarnaast een goedgekeurde
+niet-gevoelige proofset, vastgelegde modelcode- en gewichtslicenties, p50/p95
+latency, foutpercentage, retrygedrag, CPU/GPU/geheugenprofiel en een gekozen
+relevantiedrempel met positieve en negatieve Nederlandse queries. Modeldownload,
+providerkosten en live uitvoering zijn geblokkeerd totdat de operator die
+middelen expliciet levert.
+
+### Synthetische binaire AI-ingest-smoke
+
+`tests/Smoke/ai-image-load.php` is nu een echte, herbruikbare binaire
+ingest-harness voor lokaal bewijs van de applicatiecode die FotoArchief zelf
+bezit. Hij weigert zonder `FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1`, gebruikt
+alleen een lege map met markerbestand `.fotoarchief-disposable-ai-load`, zet de
+Laravel testomgeving op met `sqlite::memory:` en schrijft private opslag naar
+die unieke fixturemap. De `--images=1..25` optie bepaalt hoeveel lokaal
+gegenereerde JPEG/PNG-bestanden echt door `QuarantineUploadService`,
+`ProcessUpload` en de private previewcontroller gaan. De uitvoer rapporteert
+geaccepteerde uploads, succesvol verwerkte items, mislukkingen,
+geverifieerde private JPEG-previews, bytes en looptijd.
+
+Er is bewust geen `--workers` optie meer. Deze smoke is single-process en
+synthetisch; hij bewijst geen queueconcurrency, proxygedrag, S3-latency,
+providerlatency of representatieve 50k-productiebelasting. Gebruik de echte
+gekozen deploymentruntime en een door de operator goedgekeurde beeldcorpus voor
+die acceptatie. CI draait alleen een kleine `--images=2` controle als regressie
+op echte binaire upload/ingest/preview-code.
+
+### Compatibele embeddings en vectorbackend
+
+Semantische beeldzoekopdrachten vereisen echte multimodale beeld- en
+tekstembeddings in dezelfde modelruimte. OpenAI `text-embedding-*` en andere
+tekst-alleen modellen mogen niet als beeldretrieval worden geconfigureerd.
+FotoArchief weigert tekstqueries waarvoor geen actieve beeldindex met dezelfde
+provider, modelruimte en dimensies bestaat. Een beeldindexrun weigert ook een
+bestaande modelruimte wanneer de provider of dimensie niet overeenkomt.
+
+De huidige applicatie slaat vectoren nog op als `database_json` en gebruikt
+PostgreSQL als bron van waarheid. `pgvector` blijft de beoogde eerste
+productie-vectorbackend, maar is niet stilzwijgend aangezet zolang de
+applicatiepad en migraties daar nog niet op zijn omgebouwd. De opt-in test
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` gebruikt een disposable
+PostgreSQL-schema met de echte `vector`-extensie om modelisolatie, stale
+filtering en rebuildgedrag te bewijzen wanneer `FOTOARCHIEF_TEST_PGVECTOR_*`
+naar een testdatabase wijst.
 
 ## English
 
@@ -166,6 +259,33 @@ batch. Input remains available for correction. Duplicate references to the same
 photo count once after validation. The configured batch limit still applies to
 the submitted selection.
 
+### Viewing and reviewing AI results
+
+From `0.9.51`, every private photo page has an **AI results** link and panel,
+before the metadata form. It shows the stored description and tags, provider,
+model, timestamp, source revision, and review status. Accepted, rejected, and
+superseded suggestions remain visible. History is paginated with 10 analysis/
+indexing records per page. Viewing starts no provider request and changes no metadata.
+
+Authorized staff can accept or reject a suggestion and return to the photo.
+Existing permission, checksum, and revision guards remain in force: changes to
+the photo, including acceptance, can invalidate other suggestions from an older
+revision. Read access does not grant review permission; private results are not
+shown on the public photo page.
+
+AI background jobs have a **View photos and AI results** link. It shows up to
+25 accessible, successfully processed photos per page using the full audit log,
+including previous attempts. Each photo link opens that photo's complete AI
+history, not just output from this job. Deleted and inaccessible photos are
+excluded. Old jobs without success logs cannot automatically link to photos;
+open the photo directly instead. An empty analysis explicitly reports that no
+description or tags were returned. Embedding indexing shows model space and
+dimensions, not text suggestions or raw vectors.
+
+This view also works with existing stored results: another analysis is not
+needed. Version `0.9.51` requires no new migrations or configuration. Pull the
+release image and recreate the web, worker, and scheduler containers.
+
 ### Job status and audit log
 
 Open **Administration > Operations > Background jobs** to monitor AI jobs. A
@@ -215,3 +335,66 @@ administration UI.
 Official native base URLs, the Anthropic API version, and the multimodal
 OpenRouter allowlist are fixed application data and cannot be changed through
 runtime variables or the UI.
+
+### Local AI contract stub and real proof
+
+`tests/Smoke/local-ai-http-contract.php` starts an isolated local HTTP stub that
+checks only FotoArchief's contract for `/v1/capabilities`, `/v1/analyze-image`,
+`/v1/embed-image`, and `/v1/embed-text`. This is not proof that a real model is
+running, performs well, or produces historically relevant results. It does prove
+that the protocol can be called without external fallback and that image and
+text embeddings report the same model space and dimensions.
+
+For a real operator-chosen local service, run the contract probe manually:
+
+```sh
+php scripts/ai-local-contract-probe.php https://local-ai.example.invalid --confirm-send-test-image
+```
+
+The probe prints provider, endpoint without credentials, model, model version
+or digest where the service reports one, model space, dimensions, and distance
+metric. It does not print image bytes, raw embeddings, or secrets. This remains
+a contract check: production acceptance also requires an approved non-sensitive
+proof set, recorded model-code and model-weight licenses, p50/p95 latency,
+failure rate, retry behavior, CPU/GPU/memory profile, and a chosen relevance
+threshold with positive and negative Dutch queries. Model download, provider
+spend, and live execution are blocked until the operator explicitly supplies
+those resources.
+
+### Synthetic binary AI ingest smoke
+
+`tests/Smoke/ai-image-load.php` is now a real, reusable binary ingest harness
+for local evidence of the application code FotoArchief owns. It refuses to run
+without `FOTOARCHIEF_DISPOSABLE_AI_IMAGE_LOAD=1`, accepts only an empty
+directory with the `.fotoarchief-disposable-ai-load` marker, boots the Laravel
+test environment with `sqlite::memory:`, and writes private storage to that
+unique fixture directory. The `--images=1..25` option controls how many locally
+generated JPEG/PNG files actually pass through `QuarantineUploadService`,
+`ProcessUpload`, and the private preview controller. Output reports accepted
+uploads, successfully processed items, failures, verified private JPEG
+previews, bytes, and elapsed time.
+
+There is deliberately no `--workers` option anymore. This smoke is
+single-process and synthetic; it does not prove queue concurrency, proxy
+behavior, S3 latency, provider latency, or representative 50k production load.
+Use the real chosen deployment runtime and an operator-approved image corpus
+for that acceptance. CI runs only a small `--images=2` check as a regression for
+real binary upload/ingest/preview code.
+
+### Compatible embeddings and vector backend
+
+Semantic image search requires real multimodal image and text embeddings in the
+same model space. OpenAI `text-embedding-*` and other text-only models must not
+be configured as image retrieval. FotoArchief refuses text queries when no
+active image index exists with the same provider, model space, and dimensions.
+An image-index run also refuses an existing model space when the provider or
+dimension does not match.
+
+The current application still stores vectors as `database_json` and uses
+PostgreSQL as the source of truth. `pgvector` remains the intended first
+production vector backend, but it is not silently enabled until the application
+path and migrations have been converted to it. The opt-in test
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` uses a disposable
+PostgreSQL schema with the real `vector` extension to prove model isolation,
+stale filtering, and rebuild behavior when `FOTOARCHIEF_TEST_PGVECTOR_*` points
+to a test database.

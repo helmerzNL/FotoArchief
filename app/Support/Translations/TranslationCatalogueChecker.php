@@ -37,7 +37,7 @@ final class TranslationCatalogueChecker
                 $problems[] = new TranslationProblem(
                     TranslationProblem::MISSING_CATALOGUE,
                     'lang/'.$locale,
-                    'Catalogus ontbreekt voor locale ['.$locale.'] / catalogue missing for locale ['.$locale.']',
+                    __('shared.generated.t_504ce027b6f814d6').$locale.__('shared.generated.t_6458b68210517c09').$locale.']',
                 );
 
                 continue;
@@ -108,7 +108,7 @@ final class TranslationCatalogueChecker
                 $problems[] = new TranslationProblem(
                     TranslationProblem::DYNAMIC_KEY,
                     $reference->location(),
-                    'Dynamische sleutel ['.$reference->expression.'] staat niet op de allowlist / dynamic key not allowlisted',
+                    __('shared.generated.t_b1a493f1a323a420').$reference->expression.__('shared.generated.t_bd3e64c53bf08803'),
                 );
 
                 continue;
@@ -149,7 +149,7 @@ final class TranslationCatalogueChecker
                 $problems[] = new TranslationProblem(
                     TranslationProblem::MISSING_KEY,
                     $reference->location(),
-                    'Sleutel ['.$reference->key.'] ontbreekt in lang/'.$locale.' / key missing in lang/'.$locale,
+                    __('shared.generated.t_46f5bc6a0135ad62').$reference->key.__('shared.generated.t_f1bad7827557aefa').$locale.__('shared.generated.t_37646999e4db536b').$locale,
                 );
             }
         }
@@ -195,7 +195,7 @@ final class TranslationCatalogueChecker
                 $problems[] = new TranslationProblem(
                     TranslationProblem::PARITY_GAP,
                     'lang/'.$locale.' :: '.$key,
-                    'Aanwezig in ['.implode(', ', $present).'] maar niet in ['.$locale.'] / present in other locales only',
+                    __('shared.generated.t_1b1ae9622944de43').implode(', ', $present).__('shared.generated.t_300ceb0de00b5e30').$locale.__('shared.generated.t_dd2e07181ec3a04c'),
                 );
             }
         }
@@ -238,7 +238,7 @@ final class TranslationCatalogueChecker
                 $problems[] = new TranslationProblem(
                     TranslationProblem::UNUSED_KEY,
                     $catalogue->sourceFor($key),
-                    'Sleutel ['.$key.'] wordt nergens gebruikt / key is never referenced (locale '.$locale.')',
+                    __('shared.generated.t_46f5bc6a0135ad62').$key.__('shared.generated.t_a7561ef652e2c962').$locale.')',
                 );
             }
         }
@@ -284,7 +284,7 @@ final class TranslationCatalogueChecker
             $problems[] = new TranslationProblem(
                 TranslationProblem::STALE_ALLOWLIST,
                 'config/translations.php :: allowlist.dynamic :: '.$entry['file'],
-                'Geen dynamische aanroep meer gevonden; verwijder de uitzondering / no dynamic call left, remove the exception',
+                __('shared.generated.t_9973c2400f8a8b6b'),
             );
         }
 
@@ -296,7 +296,7 @@ final class TranslationCatalogueChecker
             $problems[] = new TranslationProblem(
                 TranslationProblem::STALE_ALLOWLIST,
                 'config/translations.php :: allowlist.unused :: '.$pattern,
-                'Patroon dekt geen enkele sleutel meer; verwijder de uitzondering / pattern matches nothing, remove the exception',
+                __('shared.generated.t_614cf974e4e9a031'),
             );
         }
 

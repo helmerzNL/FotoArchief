@@ -116,6 +116,42 @@ it('stores source-bound image embeddings in a shared multimodal model space', fu
         ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.index.item_succeeded')->count())->toBe(1);
 });
 
+it('fails closed when an existing model space has incompatible dimensions', function (): void {
+    AiEmbeddingGeneration::query()->create([
+        'provider_kind' => 'local',
+        'provider_name' => 'owned-http',
+        'model_id' => 'clip-nl-proof-space',
+        'model_space' => 'clip-nl-proof-space',
+        'dimensions' => 2,
+        'distance_metric' => 'cosine',
+        'vector_backend' => 'database_json',
+        'status' => AiEmbeddingGeneration::STATUS_ACTIVE,
+        'activated_at' => now(),
+    ]);
+    Http::fake([
+        'http://127.0.0.1:8088/v1/embed-image' => Http::response([
+            'embedding' => [0.25, 0.5, 0.75],
+            'model_space' => 'clip-nl-proof-space',
+            'dimensions' => 3,
+        ]),
+    ]);
+
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiIndexJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'local', 'cursor' => 0],
+        'total_items' => 1,
+    ]);
+
+    expect(fn () => (new ProcessAiIndexJob($run->id))->handle())
+        ->toThrow(RuntimeException::class, 'andere provider, dimensie of status');
+
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_QUEUED)
+        ->and(AiEmbedding::query()->count())->toBe(0)
+        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.index.item_failed')->count())->toBe(1);
+});
+
 it('refuses embedding index batches when embeddings are disabled', function (): void {
     app(AiConfigurationService::class)->update([
         'global_enabled' => '1',

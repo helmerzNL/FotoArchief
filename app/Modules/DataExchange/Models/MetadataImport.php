@@ -55,10 +55,10 @@ class MetadataImport extends Model
     {
         return match ($this->status) {
             'received' => 'Ontvangen',
-            'analysing' => 'Controle bezig',
-            'analysed' => 'Gecontroleerd, wacht op bevestiging',
-            'queued' => 'Bevestigd, in wachtrij',
-            'running' => 'Bezig met bijwerken',
+            'analysing' => __('exchange.generated.t_6f387d9245f0824c'),
+            'analysed' => __('exchange.generated.t_daa62924e3c339a7'),
+            'queued' => __('exchange.generated.t_f928e478af8c5479'),
+            'running' => __('exchange.generated.t_41ebd3da30a6d5ac'),
             'completed' => 'Afgerond',
             'failed' => 'Mislukt',
             default => $this->status,

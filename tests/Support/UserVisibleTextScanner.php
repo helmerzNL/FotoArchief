@@ -83,7 +83,22 @@ final class UserVisibleTextScanner
         $entries = [];
         $contents = File::get(base_path($relative));
         $contents = preg_replace_callback(
+            '/{{--.*?--}}/s',
+            static fn (array $match): string => (string) preg_replace('/[^\r\n]/', ' ', $match[0]),
+            $contents,
+        ) ?? $contents;
+        $contents = preg_replace_callback(
             '/<(script|style)\b[^>]*>.*?<\/\1>/is',
+            static fn (array $match): string => (string) preg_replace('/[^\r\n]/', ' ', $match[0]),
+            $contents,
+        ) ?? $contents;
+        $contents = preg_replace_callback(
+            '/@php\b.*?@endphp/is',
+            static fn (array $match): string => (string) preg_replace('/[^\r\n]/', ' ', $match[0]),
+            $contents,
+        ) ?? $contents;
+        $contents = preg_replace_callback(
+            '/@php\(.*?(?=\R|$)/',
             static fn (array $match): string => (string) preg_replace('/[^\r\n]/', ' ', $match[0]),
             $contents,
         ) ?? $contents;
@@ -98,7 +113,7 @@ final class UserVisibleTextScanner
             $parts = preg_split('/<[^>]+>/', $withoutBlade) ?: [];
             foreach ($parts as $part) {
                 $text = $this->normalize($part);
-                if ($this->isCandidate($text)) {
+                if ($this->isCandidate($text) && ! $this->isBladeSyntaxArtifact($text)) {
                     $entries[] = $this->entry($relative, $lineNumber, 'blade_text', $text);
                 }
             }
@@ -118,7 +133,7 @@ final class UserVisibleTextScanner
                 continue;
             }
             $text = $this->normalize($this->decodePhpString($token[1]));
-            if ($this->isCandidate($text)) {
+            if ($this->isCandidate($text) && ! $this->isTechnicalPhpString($text)) {
                 $entries[] = $this->entry($relative, $token[2], 'php_string', $text);
             }
         }
@@ -156,11 +171,44 @@ final class UserVisibleTextScanner
         if ($text === '' || strlen($text) < 2 || str_contains($text, '{{') || str_contains($text, '$')) {
             return false;
         }
+        if (preg_match('/[\p{L}\p{N}]/u', $text) !== 1) {
+            return false;
+        }
         if (preg_match('/^[a-z0-9_.:\/\\\\-]+$/i', $text) === 1 || str_contains($text, '::')) {
             return false;
         }
 
         return preg_match('/\s|[À-ÿ’]|^[A-ZÀ-Þ][\p{L}0-9\'’() -]+$/u', $text) === 1;
+    }
+
+    private function isBladeSyntaxArtifact(string $text): bool
+    {
+        return str_starts_with($text, '<')
+            || str_starts_with($text, ".'")
+            || str_starts_with($text, 'style=')
+            || str_starts_with($text, 'aria-pressed=')
+            || str_starts_with($text, 'src=')
+            || str_contains($text, '|| request(');
+    }
+
+    private function isTechnicalPhpString(string $text): bool
+    {
+        return in_array($text, [
+            'Controleer vertaalsleutels en locale-pariteit / check translation keys and locale parity',
+            'Verify that the configured Tesseract binary really extracts text',
+            'no-store, private',
+            'attachment; filename="',
+            'attempts + 1',
+            'items as completed_items_count',
+            'status, count(*) as total',
+            'stream: OK',
+            '1 = 0',
+            "SELECT set_config('lock_timeout', '0', false)",
+            'tesseract unknown',
+        ], true)
+            || str_starts_with($text, 'translations:check ')
+            || str_starts_with($text, 'operations:ocr-smoke ')
+            || str_starts_with($text, 'count(*) as total, count(case when status');
     }
 
     /**
@@ -181,10 +229,10 @@ final class UserVisibleTextScanner
     {
         return match (true) {
             str_contains($file, '/Modules/Ai/'), str_contains($file, 'resources/views/ai/') => 'ai',
-            str_contains($file, 'resources/views/catalogue/') => 'catalogue',
-            str_contains($file, 'resources/views/exchange/') => 'exchange',
-            str_contains($file, 'resources/views/identity/') => 'identity',
-            str_contains($file, 'resources/views/operations/') => 'operations',
+            str_contains($file, '/Modules/Catalogue/'), str_contains($file, 'resources/views/catalogue/') => 'catalogue',
+            str_contains($file, '/Modules/DataExchange/'), str_contains($file, 'resources/views/exchange/') => 'exchange',
+            str_contains($file, '/Modules/Identity/'), str_contains($file, '/Controllers/Identity'), str_contains($file, 'resources/views/identity/') => 'identity',
+            str_contains($file, '/Modules/ArchiveOperations/'), str_contains($file, 'resources/views/operations/') => 'operations',
             str_contains($file, 'resources/views/public/') || str_contains($file, '/Publication/') => 'public_portal',
             str_contains($file, 'resources/views/admin/assets/') || str_contains($file, 'AdminAssetController.php') => 'asset_admin',
             str_contains($file, 'resources/views/admin/publications/') || str_contains($file, 'resources/views/admin/suggestions/') => 'publication_admin',

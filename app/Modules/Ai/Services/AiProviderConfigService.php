@@ -26,7 +26,7 @@ class AiProviderConfigService
         try {
             $hasApiKey = $row instanceof AiProviderConfig && $row->decryptedApiKey() !== null;
         } catch (DecryptException $exception) {
-            throw new \RuntimeException("De API-sleutel voor {$provider} kan niet worden ontsleuteld. Controleer APP_KEY.", 0, $exception);
+            throw new \RuntimeException(__('ai.errors.config_key_decrypt', ['provider' => $provider]), 0, $exception);
         }
 
         return [
@@ -54,16 +54,16 @@ class AiProviderConfigService
     {
         $row = $this->row($provider);
         if (! $row instanceof AiProviderConfig) {
-            throw new \RuntimeException("AI-providerconfiguratie ontbreekt voor {$provider}.");
+            throw new \RuntimeException(__('ai.errors.config_missing', ['provider' => $provider]));
         }
 
         try {
             $apiKey = $row->decryptedApiKey();
         } catch (DecryptException $exception) {
-            throw new \RuntimeException("De API-sleutel voor {$provider} kan niet worden ontsleuteld. Controleer APP_KEY.", 0, $exception);
+            throw new \RuntimeException(__('ai.errors.config_key_decrypt', ['provider' => $provider]), 0, $exception);
         }
         if ($provider === 'external' && ! $this->isPublicHttpsEndpoint($row->endpoint)) {
-            throw new \RuntimeException('Het externe AI-endpoint is geen publiek HTTPS-endpoint.');
+            throw new \RuntimeException(__('ai.errors.external_endpoint_not_public'));
         }
 
         return [
@@ -102,16 +102,16 @@ class AiProviderConfigService
         ];
         $allowlist = $provider === 'external' ? [] : AbstractNativeProvider::embeddingModelAllowlist($provider);
         if ($provider === 'openrouter' && $data['embedding_model'] !== null && ! in_array($data['embedding_model'], $allowlist, true)) {
-            throw ValidationException::withMessages(['embedding_model' => 'OpenRouter-embeddings moeten op de vaste multimodale allowlist staan.']);
+            throw ValidationException::withMessages(['embedding_model' => __('ai.errors.openrouter_allowlist')]);
         }
 
         if ($provider === 'external' && $data['enabled']) {
             if (! $this->isPublicHttpsEndpoint($data['endpoint'])) {
-                throw ValidationException::withMessages(['endpoint' => 'Externe AI vereist een publiek HTTPS-endpoint.']);
+                throw ValidationException::withMessages(['endpoint' => __('ai.errors.external_https_required')]);
             }
             foreach (['provider_region', 'retention_notice'] as $field) {
                 if (! is_string($data[$field]) || $data[$field] === '') {
-                    throw ValidationException::withMessages([$field => 'Externe AI vereist regio- en retentieinformatie.']);
+                    throw ValidationException::withMessages([$field => __('ai.errors.external_region_retention')]);
                 }
             }
         }
@@ -127,7 +127,7 @@ class AiProviderConfigService
         $this->assertProvider($provider);
         $apiKey = trim($apiKey);
         if ($apiKey === '') {
-            throw ValidationException::withMessages(['api_key' => 'Geef een niet-lege API-sleutel op.']);
+            throw ValidationException::withMessages(['api_key' => __('ai.errors.empty_api_key')]);
         }
 
         AiProviderConfig::query()->firstOrCreate(['provider' => $provider])->forceFill([
@@ -173,8 +173,8 @@ class AiProviderConfigService
     private function assertProvider(string $provider): void
     {
         if (! in_array($provider, self::PROVIDERS, true)) {
-            Log::warning('Unknown AI provider configuration requested', ['provider' => $provider]);
-            throw new \InvalidArgumentException("Onbekende AI-provider: {$provider}.");
+            Log::warning(__('ai.audit.unknown_provider_config'), ['provider' => $provider]);
+            throw new \InvalidArgumentException(__('ai.errors.unknown_provider', ['provider' => $provider]));
         }
     }
 

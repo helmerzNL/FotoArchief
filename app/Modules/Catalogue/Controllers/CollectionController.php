@@ -69,7 +69,7 @@ class CollectionController extends Controller
         $collection = Collection::query()->create($data);
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Collectie succesvol aangemaakt.');
+            ->with('status', __('catalogue.generated.t_3943bebed61d49ec'));
     }
 
     public function show(Request $request, Collection $collection): View
@@ -120,7 +120,7 @@ class CollectionController extends Controller
             $invalidParentIds = array_merge([$collection->id], $collection->allDescendantIds());
             if (in_array($data['parent_id'], $invalidParentIds, true)) {
                 throw ValidationException::withMessages([
-                    'parent_id' => 'Een collectie kan niet onder zichzelf of een subcollectie worden geplaatst.',
+                    'parent_id' => __('catalogue.generated.t_70327b43ee0b0570'),
                 ]);
             }
         }
@@ -128,7 +128,7 @@ class CollectionController extends Controller
         $collection->update($data);
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Collectie succesvol bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_3b5341d80bba02ce'));
     }
 
     public function destroy(Request $request, Collection $collection): RedirectResponse
@@ -145,7 +145,7 @@ class CollectionController extends Controller
         });
 
         return redirect()->route('catalogue.collections.index')
-            ->with('status', 'Collectie verwijderd.');
+            ->with('status', __('catalogue.generated.t_c0016fda358883b2'));
     }
 
     public function addAsset(Request $request, Collection $collection): RedirectResponse
@@ -163,13 +163,13 @@ class CollectionController extends Controller
 
         if ($asset === null) {
             throw ValidationException::withMessages([
-                'asset_id' => 'De opgegeven foto kon niet worden gevonden.',
+                'asset_id' => __('catalogue.generated.t_535f3aaae9765ff2'),
             ]);
         }
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te koppelen.');
+            abort(403, __('catalogue.generated.t_2159d6168feb9347'));
         }
 
         $nextPosition = $data['position'] ?? (($collection->assets()->max('collection_assets.position') ?? 0) + 1);
@@ -189,7 +189,7 @@ class CollectionController extends Controller
         }
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Foto toegevoegd aan collectie.');
+            ->with('status', __('catalogue.generated.t_b0046f49c1ba7d27'));
     }
 
     public function removeAsset(Request $request, Collection $collection, Asset $asset): RedirectResponse
@@ -198,13 +198,13 @@ class CollectionController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te ontkoppelen.');
+            abort(403, __('catalogue.generated.t_01f6c1ce25102b10'));
         }
 
         $collection->assets()->detach($asset->id);
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Foto verwijderd uit collectie.');
+            ->with('status', __('catalogue.generated.t_8f0b4d1c1342eaee'));
     }
 
     public function moveAsset(Request $request, Collection $collection, Asset $asset): RedirectResponse
@@ -213,7 +213,7 @@ class CollectionController extends Controller
 
         $user = $request->user();
         if ($user === null || ! $user->can('view', $asset) || ! $user->can('update', $asset)) {
-            abort(403, 'Je hebt geen toestemming om deze foto te verplaatsen.');
+            abort(403, __('catalogue.generated.t_494bf02af2ffd284'));
         }
 
         $data = $request->validate([
@@ -242,7 +242,7 @@ class CollectionController extends Controller
         });
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Foto verplaatst naar '.$targetCollection->title.'.');
+            ->with('status', __('catalogue.generated.t_7e5fecb82f1d0fd5').$targetCollection->title.'.');
     }
 
     public function reorder(Request $request, Collection $collection): RedirectResponse
@@ -276,14 +276,14 @@ class CollectionController extends Controller
         });
 
         return redirect()->route('catalogue.collections.show', $collection)
-            ->with('status', 'Volgorde van foto’s succesvol bijgewerkt.');
+            ->with('status', __('catalogue.generated.t_8ff66bd9a3fe93ac'));
     }
 
     private function checkManagePermission(Request $request): void
     {
         $user = $request->user();
         if ($user === null || (! $user->hasPermission('collections.manage') && ! $user->hasPermission('assets.update') && ! $user->hasPermission('catalogue.manage'))) {
-            abort(403, 'Onvoldoende rechten om collecties te beheren.');
+            abort(403, __('catalogue.generated.t_0d90dbbbf08ed5b5'));
         }
     }
 }

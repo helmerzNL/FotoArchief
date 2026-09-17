@@ -2,28 +2,28 @@
 @section('title', 'Prullenbak & Bewaartermijn - FotoArchief Operaties')
 @section('content')
     @include('operations._nav')
-    <p class="eyebrow">Operaties &middot; Archiefbeheer</p>
-    <h1>Prullenbak &amp; Bewaartermijn</h1>
-    <p class="intro">Beheer herstelbare verwijderingen, bewaartermijnen en definitieve opschoning van archief- en weesbestanden.</p>
+    <p class="eyebrow">{{ __('operations.generated.t_8a67130f2c962a7b') }}</p>
+    <h1>{{ __('operations.generated.t_e0399beb1a620a16') }}</h1>
+    <p class="intro">{{ __('operations.generated.t_2858af285b10df1b') }}</p>
 
     {{-- Overzicht cards --}}
     <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
         <div class="card">
-            <h3>Items in Prullenbak</h3>
+            <h3>{{ __('operations.generated.t_74276349718c2e7d') }}</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #d97706; margin: 0.5rem 0;">{{ $summary['trashed_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">Herstelbaar door archivarissen</p>
+            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_6372d61f13976e16') }}</p>
         </div>
 
         <div class="card">
-            <h3>Bewaartermijn Verlopen</h3>
+            <h3>{{ __('operations.generated.t_e4b514c23d7e0bd0') }}</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #dc2626; margin: 0.5rem 0;">{{ $summary['expired_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">Ouder dan {{ $summary['retention_days'] }} dagen</p>
+            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_152216f6cc5e9382') }} {{ $summary['retention_days'] }} dagen</p>
         </div>
 
         <div class="card">
             <h3>Wees-quarantaine</h3>
             <p style="font-size: 2rem; font-weight: bold; color: #4b5563; margin: 0.5rem 0;">{{ $summary['orphan_uploads_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">Mislukte/geannuleerde uploads</p>
+            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_4838f14e7bdbae3d') }}</p>
         </div>
     </div>
 
@@ -33,23 +33,23 @@
             @csrf
             <input type="hidden" name="retention_days" value="{{ $summary['retention_days'] }}">
             <button type="submit" class="secondary" style="color: #dc2626;" onclick="return confirm('Weet je zeker dat je alle verlopen items ouder dan {{ $summary['retention_days'] }} dagen definitief wilt verwijderen?');">
-                Verwijder Verlopen Prullenbak ({{ $summary['expired_count'] }})
+                {{ __('operations.generated.t_353fed0e36ea7688') }}{{ $summary['expired_count'] }})
             </button>
         </form>
 
         <form method="post" action="{{ route('admin.operations.trash.cleanupOrphans') }}">
             @csrf
             <button type="submit" class="secondary" onclick="return confirm('Weet je zeker dat je alle wees-quarantainebestanden wilt opschonen?');">
-                Ruim Wees-quarantaine Op ({{ $summary['orphan_uploads_count'] }})
+                {{ __('operations.generated.t_bc55e94416f93b55') }}{{ $summary['orphan_uploads_count'] }})
             </button>
         </form>
     </div>
 
     {{-- Prullenbak items --}}
     <section class="card" style="margin-bottom: 2rem;">
-        <h2>Verwijderde Archiefitems</h2>
+        <h2>{{ __('operations.generated.t_3e7f2266e2f1cfd5') }}</h2>
         @if($trashedAssets->isEmpty())
-            <p>De prullenbak is leeg.</p>
+            <p>{{ __('operations.generated.t_a8d3df9790138210') }}</p>
         @else
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -57,8 +57,8 @@
                     <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
-                        <th style="padding: 0.75rem;">Verwijderd op</th>
-                        <th style="padding: 0.75rem;">Verwijderd door</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_2afd5fba8c765d1d') }}</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_5fe1e753674d13a3') }}</th>
                         <th style="padding: 0.75rem;">Reden</th>
                         <th style="padding: 0.75rem;">Acties</th>
                     </tr>
@@ -83,7 +83,7 @@
                                         @method('DELETE')
                                         <input type="hidden" name="reason" value="Handmatige definitieve verwijdering via Prullenbak UI">
                                         <input type="hidden" name="confirm_purge" value="1">
-                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem; color: #dc2626;">Definitief Verwijderen</button>
+                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem; color: #dc2626;">{{ __('operations.generated.t_34dc19a47b213103') }}</button>
                                     </form>
                                 </div>
                             </td>
@@ -100,9 +100,9 @@
 
     {{-- Audit log van definitieve purges --}}
     <section class="card">
-        <h2>Recente Definitieve Verwijderingen (Purge Audit Log)</h2>
+        <h2>{{ __('operations.generated.t_bff7ebd1cb0e211d') }}</h2>
         @if($recentPurges->isEmpty())
-            <p>Geen definitieve verwijderingen geregistreerd.</p>
+            <p>{{ __('operations.generated.t_275590b294851df4') }}</p>
         @else
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -111,7 +111,7 @@
                         <th style="padding: 0.75rem;">Datum</th>
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
-                        <th style="padding: 0.75rem;">Verwijderd door</th>
+                        <th style="padding: 0.75rem;">{{ __('operations.generated.t_5fe1e753674d13a3') }}</th>
                         <th style="padding: 0.75rem;">Reden</th>
                         <th style="padding: 0.75rem;">Bestanden</th>
                     </tr>

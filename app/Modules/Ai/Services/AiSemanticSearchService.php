@@ -43,7 +43,11 @@ class AiSemanticSearchService
      */
     public function searchPublic(string $query, string $provider, int $limit = 24): Collection
     {
-        $matches = $this->rankEmbeddings($query, $provider, max(1, min($limit, 24)));
+        $limit = max(1, min($limit, 24));
+        // Visibility is an SQL authorization predicate, not a ranking signal.
+        // Rank a bounded candidate set first, then retain enough authorized
+        // publications to satisfy the requested page where they exist.
+        $matches = $this->rankEmbeddings($query, $provider, 500);
         if ($matches === []) {
             return collect();
         }
@@ -57,6 +61,8 @@ class AiSemanticSearchService
             ->whereIn('asset_id', $assetIds)
             ->get()
             ->sortBy(fn (Publication $publication): int => $rank[$publication->asset_id] ?? PHP_INT_MAX)
+            ->values()
+            ->take($limit)
             ->values();
     }
 
@@ -70,16 +76,16 @@ class AiSemanticSearchService
         $errors = [];
 
         if ($query === '') {
-            $errors['query'] = 'Vul een zoekvraag in.';
+            $errors['query'] = __('ai.errors.semantic_query_required');
         }
         if (! (bool) ($settings['active'] ?? false) || ! (bool) ($settings['embeddings_enabled'] ?? false)) {
-            $errors['ai'] = 'AI-embeddings zijn niet actief.';
+            $errors['ai'] = __('ai.errors.embeddings_inactive');
         }
         $configuredProvider = (string) ($settings['embeddings_provider'] ?? '');
         if ($provider === '' || $provider !== $configuredProvider) {
-            $errors['provider'] = 'De provider moet overeenkomen met de geconfigureerde embeddings-provider.';
+            $errors['provider'] = __('ai.errors.embeddings_provider_mismatch');
         } elseif (! (bool) ($settings['embeddings_ready'] ?? false)) {
-            $errors['provider'] = 'De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).';
+            $errors['provider'] = __('ai.errors.embeddings_provider_not_ready');
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -95,12 +101,12 @@ class AiSemanticSearchService
             ->first();
         if (! $generation instanceof AiEmbeddingGeneration) {
             throw ValidationException::withMessages([
-                'query' => 'Er is geen actieve beeldindex voor het model_space van deze tekstquery.',
+                'query' => __('ai.errors.semantic_no_index'),
             ]);
         }
         if ((int) $generation->dimensions !== (int) $queryEmbedding['dimensions']) {
             throw ValidationException::withMessages([
-                'query' => 'Tekstquery en beeldindex gebruiken verschillende embeddingdimensies.',
+                'query' => __('ai.errors.semantic_dimension_mismatch'),
             ]);
         }
 

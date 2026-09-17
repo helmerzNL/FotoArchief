@@ -24,10 +24,10 @@ final class AiAssetBatchService
     {
         $limit = (int) $this->configuration->effective()['max_assets_per_batch'];
         if ($references === [] || count($references) > $limit) {
-            throw ValidationException::withMessages(['asset_ids' => "Selecteer 1 tot {$limit} assets voor een AI-batch."]);
+            throw ValidationException::withMessages(['asset_ids' => __('ai.errors.asset_batch_count', ['limit' => $limit])]);
         }
         if (! in_array($format, ['references', 'legacy', self::INTERNAL_FORMAT], true)) {
-            throw ValidationException::withMessages(['asset_ids' => 'Onbekend formaat voor AI-fotoreferenties. Start een nieuwe taak.']);
+            throw ValidationException::withMessages(['asset_ids' => __('ai.errors.unknown_reference_format')]);
         }
 
         $ids = [];
@@ -35,7 +35,7 @@ final class AiAssetBatchService
         $errors = [];
         foreach ($references as $reference) {
             if (! is_string($reference) || trim($reference) === '' || strlen($reference) > 255) {
-                $errors[] = 'Een fotoreferentie ontbreekt of is ongeldig (maximaal 255 tekens).';
+                $errors[] = __('ai.errors.invalid_reference');
 
                 continue;
             }
@@ -46,7 +46,7 @@ final class AiAssetBatchService
                 default => AssetReference::resolve(null, $reference),
             };
             if ($asset === null || ! Gate::forUser($user)->allows('update', $asset)) {
-                $errors[] = "Foto {$reference} is niet gevonden of niet toegankelijk. Controleer het fotonummer of de interne ID.";
+                $errors[] = __('ai.errors.asset_not_found', ['reference' => $reference]);
 
                 continue;
             }

@@ -48,7 +48,7 @@ class AiBudgetLedgerService
 
             $committed = $ledger->cents_reserved + $ledger->cents_consumed;
             if ($limitCents <= 0 || $committed + $cents > $limitCents) {
-                throw new AiProviderException("Maandbudget voor {$providerKind}/{$capability} is bereikt of niet geconfigureerd.");
+                throw new AiProviderException(__('ai.errors.budget_reached', ['provider' => $providerKind, 'capability' => $capability]));
             }
 
             $ledger->increment('cents_reserved', $cents);

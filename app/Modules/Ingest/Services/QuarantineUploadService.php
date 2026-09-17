@@ -26,11 +26,11 @@ class QuarantineUploadService
         $storageKey = 'quarantine/'.str()->ulid().'/'.str()->random(32);
         $stream = fopen((string) $upload->getRealPath(), 'rb');
         if ($stream === false) {
-            throw new RuntimeException('Upload stream unavailable.');
+            throw new RuntimeException(__('shared.generated.t_b5394357da3fb02d'));
         }
         try {
             if (! $disk->writeStream($storageKey, $stream, ['visibility' => 'private'])) {
-                throw new RuntimeException('Quarantine write failed.');
+                throw new RuntimeException(__('shared.generated.t_7fe6a821c70aaab2'));
             }
 
             return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey): QuarantineUpload {
@@ -51,7 +51,7 @@ class QuarantineUploadService
             });
         } catch (Throwable $exception) {
             if (! $disk->delete($storageKey)) {
-                throw new RuntimeException('Quarantine rollback cleanup failed.', previous: $exception);
+                throw new RuntimeException(__('shared.generated.t_24f541067a7353d7'), previous: $exception);
             }
             throw $exception;
         } finally {
@@ -67,7 +67,7 @@ class QuarantineUploadService
             throw ValidationException::withMessages(['files' => "De upload moet geldig zijn en tussen 1 en {$maxBytes} bytes bevatten."]);
         }
         if (! in_array($upload->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            throw ValidationException::withMessages(['files' => 'Alleen JPEG, PNG en WebP zijn toegestaan. SVG, PDF en TIFF worden niet verwerkt.']);
+            throw ValidationException::withMessages(['files' => __('shared.generated.t_f92a35ba35c44c4b')]);
         }
     }
 }

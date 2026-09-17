@@ -2,7 +2,7 @@
 @section('title', $contributor->name.' — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.contributors.index') }}">&larr; Schenkers &amp; Bijdragers</a></div>
+    <div class="eyebrow"><a href="{{ route('catalogue.contributors.index') }}">{{ __('catalogue.generated.t_782eafaa79144033') }}</a></div>
     <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1>{{ $contributor->name }}</h1>
@@ -20,7 +20,7 @@
 
     @if($contributor->contact_details)
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <strong>Contact- &amp; Adresgegevens (intern):</strong>
+            <strong>{{ __('catalogue.generated.t_1c819fc0cb340373') }}</strong>
             <p>{{ $contributor->contact_details }}</p>
         </div>
     @endif
@@ -34,17 +34,17 @@
 </div>
 
 <div class="card">
-    <h2>Gekoppelde foto’s ({{ $assets->count() }})</h2>
+    <h2>{{ __('catalogue.generated.t_9084c0e65cc71fa7') }}{{ $assets->count() }})</h2>
 
     @if($assets->isEmpty())
-        <p style="color: var(--muted);">Er zijn nog geen foto’s aan deze schenker/bijdrager gekoppeld.</p>
+        <p style="color: var(--muted);">{{ __('catalogue.generated.t_405b49b9a358a342') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
             <thead>
                 <tr style="border-bottom: 2px solid var(--border); text-align: left;">
                     <th style="padding: .5rem;">Foto</th>
-                    <th style="padding: .5rem;">Rol / Bijdrage</th>
+                    <th style="padding: .5rem;">{{ __('catalogue.generated.t_2c31fcb54b4ded22') }}</th>
                     <th style="padding: .5rem;">Zekerheid</th>
                     <th style="padding: .5rem;">Status</th>
                     <th style="padding: .5rem;">Notitie</th>
@@ -97,20 +97,20 @@
     @endif
 
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-        <h3>Foto koppelen aan deze schenker / bijdrager</h3>
+        <h3>{{ __('catalogue.generated.t_6a1880cc8652efaa') }}</h3>
         <form method="post" action="{{ route('catalogue.contributors.assets.add', $contributor) }}" style="margin-top: 1rem;">
             @csrf
             <div class="grid">
                 <div>
-                    <label for="accession_number">Aanwinstnummer of Foto-ID *</label>
-                    <input type="text" id="accession_number" name="accession_number" placeholder="bijv. FA-01J..." required>
+                    <label for="accession_number">{{ __('catalogue.generated.t_defde4bbc85eec4e') }}</label>
+                    <input type="text" id="accession_number" name="accession_number" placeholder="{{ __('catalogue.generated.t_1af3ddcb66fd405d') }}" required>
                 </div>
                 <div>
-                    <label for="relationship_type">Rol / Type bijdrage *</label>
+                    <label for="relationship_type">{{ __('catalogue.generated.t_51c5b60859105d79') }}</label>
                     <select id="relationship_type" name="relationship_type" required>
-                        <option value="donor">Schenker / Donateur</option>
+                        <option value="donor">{{ __('catalogue.generated.t_6b7c5cff25c942d4') }}</option>
                         <option value="photographer">Fotograaf</option>
-                        <option value="creator">Maker / Vervaardiger</option>
+                        <option value="creator">{{ __('catalogue.generated.t_56fcf69d99538324') }}</option>
                         <option value="collector">Verzamelaar</option>
                         <option value="contact">Contactpersoon</option>
                         <option value="other">Overig</option>
@@ -120,17 +120,17 @@
 
             <div class="grid">
                 <div>
-                    <label for="confidence">Zekerheid (0.00 - 1.00)</label>
+                    <label for="confidence">{{ __('catalogue.generated.t_b5bcb118555e9f9e') }}</label>
                     <select id="confidence" name="confidence">
-                        <option value="1.00">1.00 — Zeker</option>
-                        <option value="0.80">0.80 — Zeer waarschijnlijk</option>
-                        <option value="0.50">0.50 — Vermoedelijk</option>
-                        <option value="0.25">0.25 — Onzeker</option>
-                        <option value="">Niet gespecificeerd</option>
+                        <option value="1.00">{{ __('catalogue.generated.t_687d40be67ac729f') }}</option>
+                        <option value="0.80">{{ __('catalogue.generated.t_bac2bc017baa6381') }}</option>
+                        <option value="0.50">{{ __('catalogue.generated.t_3ba2cd0c2f9bd138') }}</option>
+                        <option value="0.25">{{ __('catalogue.generated.t_84457da434a0a58e') }}</option>
+                        <option value="">{{ __('catalogue.generated.t_6c47b1d165bfdec6') }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="verification_status">Verificatiestatus *</label>
+                    <label for="verification_status">{{ __('catalogue.generated.t_5c0132b44624795c') }}</label>
                     <select id="verification_status" name="verification_status" required>
                         <option value="unverified">Ongeverifieerd</option>
                         <option value="verified">Geverifieerd</option>
@@ -140,9 +140,9 @@
             </div>
 
             <label for="note">Toelichting</label>
-            <input type="text" id="note" name="note" placeholder="bijv. Uit collectie geschonken in 2005">
+            <input type="text" id="note" name="note" placeholder="{{ __('catalogue.generated.t_f3063e8c397cfdff') }}">
 
-            <button type="submit">Foto koppelen</button>
+            <button type="submit">{{ __('catalogue.generated.t_c400ed2e32ef6b6d') }}</button>
         </form>
     </div>
 </div>

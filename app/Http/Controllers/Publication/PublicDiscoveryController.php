@@ -62,7 +62,7 @@ class PublicDiscoveryController extends Controller
             }
         } else {
             if ($semanticQuery !== '' && ! $semanticConsent) {
-                $semanticError = 'Geef eerst toestemming om je zoektekst naar een AI-provider te sturen voor semantisch zoeken.';
+                $semanticError = __('ai.public.consent_required');
             }
             [$publications, $nextCursor] = $this->paginate($this->eligibleQuery($request), $request);
         }

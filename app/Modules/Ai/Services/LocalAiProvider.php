@@ -30,12 +30,12 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
             ->get(rtrim((string) $settings['local_endpoint'], '/').'/v1/capabilities');
 
         if (! $response->successful()) {
-            throw new AiProviderException('Local AI capability probe failed with status '.$response->status().'.');
+            throw new AiProviderException(__('ai.provider_errors.local_probe_status', ['status' => $response->status()]));
         }
 
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException('Local AI capability probe returned invalid JSON.');
+            throw new AiProviderException(__('ai.provider_errors.local_probe_json'));
         }
         $this->assertCapabilities($payload);
 
@@ -57,7 +57,7 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
         ]);
 
         if (! is_string(Arr::get($payload, 'description')) || ! is_array(Arr::get($payload, 'tags'))) {
-            throw new AiProviderException('Local AI image analysis response misses description or tags.');
+            throw new AiProviderException(__('ai.provider_errors.local_analysis_schema'));
         }
 
         return $payload;
@@ -100,7 +100,7 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
     {
         $settings = $this->configuration->effective();
         if (! (bool) ($settings['local_ready'] ?? false)) {
-            throw new AiProviderException('Local AI provider is not explicitly enabled and ready.');
+            throw new AiProviderException(__('ai.provider_errors.local_not_ready'));
         }
 
         return $settings;
@@ -119,11 +119,11 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
             ->post(rtrim((string) $settings['local_endpoint'], '/').$path, $body);
 
         if (! $response->successful()) {
-            throw new AiProviderException("Local AI request {$path} failed with status ".$response->status().'.');
+            throw new AiProviderException(__('ai.provider_errors.local_request_status', ['path' => $path, 'status' => $response->status()]));
         }
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException("Local AI request {$path} returned invalid JSON.");
+            throw new AiProviderException(__('ai.provider_errors.local_request_json', ['path' => $path]));
         }
 
         return $payload;
@@ -135,16 +135,19 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
     private function assertCapabilities(array $payload): void
     {
         if (Arr::get($payload, 'provider_kind') !== 'local') {
-            throw new AiProviderException('Local AI provider must report provider_kind=local.');
+            throw new AiProviderException(__('ai.provider_errors.local_kind'));
         }
         if (Arr::get($payload, 'image_analysis') !== true || Arr::get($payload, 'image_embeddings') !== true || Arr::get($payload, 'text_embeddings') !== true) {
-            throw new AiProviderException('Local AI provider must report image analysis plus text/image embeddings.');
+            throw new AiProviderException(__('ai.provider_errors.local_capabilities'));
         }
         if (Arr::get($payload, 'same_embedding_space') !== true) {
-            throw new AiProviderException('Local AI provider must prove text and image embeddings share one model space.');
+            throw new AiProviderException(__('ai.provider_errors.local_space'));
+        }
+        if (! is_string(Arr::get($payload, 'model_space')) || trim((string) Arr::get($payload, 'model_space')) === '') {
+            throw new AiProviderException(__('ai.provider_errors.local_model_space'));
         }
         if (! is_numeric(Arr::get($payload, 'dimensions')) || (int) Arr::get($payload, 'dimensions') < 1) {
-            throw new AiProviderException('Local AI provider must report positive embedding dimensions.');
+            throw new AiProviderException(__('ai.provider_errors.local_dimensions'));
         }
     }
 
@@ -158,10 +161,10 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
         $modelSpace = Arr::get($payload, 'model_space');
         $dimensions = Arr::get($payload, 'dimensions');
         if (! is_array($embedding) || $embedding === [] || ! is_string($modelSpace) || ! is_numeric($dimensions)) {
-            throw new AiProviderException('Local AI embedding response misses embedding, model_space or dimensions.');
+            throw new AiProviderException(__('ai.provider_errors.local_embedding_schema'));
         }
         if (count($embedding) !== (int) $dimensions) {
-            throw new AiProviderException('Local AI embedding dimensions do not match the vector length.');
+            throw new AiProviderException(__('ai.provider_errors.local_embedding_dimensions'));
         }
 
         return [

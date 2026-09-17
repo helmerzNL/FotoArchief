@@ -33,7 +33,7 @@ class CheckTranslationsCommand extends Command
         $configuration = $this->configuration();
 
         if ($configuration->locales === []) {
-            $this->components->error('Geen locales geconfigureerd / no locales configured (config/translations.php).');
+            $this->components->error(__('shared.generated.t_bfa3f6a3441d1731'));
 
             return self::FAILURE;
         }
@@ -43,7 +43,7 @@ class CheckTranslationsCommand extends Command
         $this->reportScope($configuration, $report);
 
         if ($report->passed()) {
-            $this->components->info('Vertaalcontrole geslaagd / translation check passed.');
+            $this->components->info(__('shared.generated.t_e918bede0a3254a2'));
 
             return self::SUCCESS;
         }
@@ -59,7 +59,7 @@ class CheckTranslationsCommand extends Command
 
         $this->newLine();
         $this->components->error(sprintf(
-            '%d probleem(en) gevonden / %d problem(s) found. Zie docs/TRANSLATIONS.md.',
+            __('shared.generated.t_5b0e7050e788e3b8'),
             count($report->problems),
             count($report->problems),
         ));
@@ -110,15 +110,15 @@ class CheckTranslationsCommand extends Command
             implode(', ', $configuration->locales),
         );
         $this->components->twoColumnDetail(
-            'Gescande bestanden / scanned files',
+            __('shared.generated.t_7b6871e619734b6c'),
             (string) $report->scannedFileCount,
         );
         $this->components->twoColumnDetail(
-            'Gebruikte sleutels / referenced keys',
+            __('shared.generated.t_42a1a360a0ecc5aa'),
             (string) $report->referencedKeyCount,
         );
         $this->components->twoColumnDetail(
-            'Catalogusomvang / catalogue size',
+            __('shared.generated.t_1fbe3e831f5e6295'),
             $catalogues === [] ? '-' : implode(', ', $catalogues),
         );
     }
@@ -126,12 +126,12 @@ class CheckTranslationsCommand extends Command
     private function heading(string $type): string
     {
         return match ($type) {
-            TranslationProblem::MISSING_CATALOGUE => 'Ontbrekende catalogus / missing catalogue',
-            TranslationProblem::MISSING_KEY => 'Ontbrekende sleutels / missing keys',
-            TranslationProblem::UNUSED_KEY => 'Ongebruikte sleutels / unused keys',
-            TranslationProblem::PARITY_GAP => 'Pariteitsgaten / locale parity gaps',
-            TranslationProblem::DYNAMIC_KEY => 'Dynamische sleutels / dynamic keys',
-            TranslationProblem::STALE_ALLOWLIST => 'Verouderde allowlist / stale allowlist',
+            TranslationProblem::MISSING_CATALOGUE => __('shared.generated.t_22415d68be169936'),
+            TranslationProblem::MISSING_KEY => __('shared.generated.t_09f12eeca3809d0d'),
+            TranslationProblem::UNUSED_KEY => __('shared.generated.t_eb1f5adcdc148563'),
+            TranslationProblem::PARITY_GAP => __('shared.generated.t_3a9a150562288e7e'),
+            TranslationProblem::DYNAMIC_KEY => __('shared.generated.t_a75f038d32c79bb6'),
+            TranslationProblem::STALE_ALLOWLIST => __('shared.generated.t_88df6bfea0c8ac97'),
             default => $type,
         };
     }

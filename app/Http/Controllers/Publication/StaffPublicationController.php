@@ -61,14 +61,14 @@ class StaffPublicationController extends Controller
             'embargo_until' => ['nullable', 'date_format:Y-m-d'],
         ]);
         if (! $asset->rights()->where('verification_status', 'verified')->exists()) {
-            throw ValidationException::withMessages(['privacy_cleared' => 'Rechten moeten geverifieerd zijn voordat publicatie kan worden aangevraagd.']);
+            throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_f4bbb39c49e20153')]);
         }
         if (! $asset->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists()) {
-            throw ValidationException::withMessages(['privacy_cleared' => 'Er is nog geen scan-schoon verwerkt bestand beschikbaar voor publicatie.']);
+            throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_60b3dfa76442d7e0')]);
         }
         DB::transaction(function () use ($asset, $data, $user): void {
             $publication = Publication::query()->firstOrCreate(['asset_id' => $asset->id]);
-            abort_if($publication->status === 'published', 409, 'Deze foto is al gepubliceerd. Wijzig metadata om opnieuw ter review aan te bieden.');
+            abort_if($publication->status === 'published', 409, __('publication.generated.t_84ce5a3fcb66b807'));
             $publication->update([
                 'status' => 'in_review',
                 'requested_by_user_id' => $user->id,
@@ -82,7 +82,7 @@ class StaffPublicationController extends Controller
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.submitted', 'details' => ['publication_id' => $publication->id]]);
         });
 
-        return redirect()->route('admin.publications.show', $asset)->with('status', 'Publicatie aangevraagd. Wacht op beoordeling.');
+        return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_4e5417f584a7ba92'));
     }
 
     public function publish(Request $request, Asset $asset): RedirectResponse
@@ -91,11 +91,11 @@ class StaffPublicationController extends Controller
         abort_unless($user->hasPermission('assets.publish'), 403);
         DB::transaction(function () use ($asset, $user): void {
             $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first();
-            abort_unless($publication !== null && $publication->status === 'in_review', 409, 'Alleen een publicatie in review kan worden goedgekeurd.');
-            abort_unless($publication->privacy_cleared, 409, 'Privacy-controle ontbreekt.');
+            abort_unless($publication !== null && $publication->status === 'in_review', 409, __('publication.generated.t_4d8f1538488bec0e'));
+            abort_unless($publication->privacy_cleared, 409, __('publication.generated.t_e7c0bd249bb1c8f3'));
             $locked = Asset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
-            abort_unless($locked->rights()->where('verification_status', 'verified')->exists(), 409, 'Rechten zijn niet (meer) geverifieerd.');
-            abort_unless($locked->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists(), 409, 'Geen scan-schoon bestand beschikbaar.');
+            abort_unless($locked->rights()->where('verification_status', 'verified')->exists(), 409, __('publication.generated.t_65b44ea637cca0bd'));
+            abort_unless($locked->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists(), 409, __('publication.generated.t_a3e8eaf0d5f878d8'));
             $publication->update([
                 'permalink_slug' => $publication->permalink_slug ?? $this->uniqueSlug($locked),
                 'status' => 'published',
@@ -109,7 +109,7 @@ class StaffPublicationController extends Controller
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.published', 'details' => ['publication_id' => $publication->id, 'lock_version' => $locked->lock_version]]);
         });
 
-        return redirect()->route('admin.publications.show', $asset)->with('status', 'Foto is gepubliceerd.');
+        return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_98da200bdec7726d'));
     }
 
     public function reject(Request $request, Asset $asset): RedirectResponse
@@ -119,12 +119,12 @@ class StaffPublicationController extends Controller
         $data = $request->validate(['reject_reason' => ['required', 'string', 'max:2000']]);
         DB::transaction(function () use ($asset, $user, $data): void {
             $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first();
-            abort_unless($publication !== null && $publication->status === 'in_review', 409, 'Alleen een publicatie in review kan worden afgewezen.');
+            abort_unless($publication !== null && $publication->status === 'in_review', 409, __('publication.generated.t_b7de418a87e289e8'));
             $publication->update(['status' => 'draft', 'reviewed_by_user_id' => $user->id, 'reviewed_at' => now(), 'reject_reason' => $data['reject_reason']]);
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.rejected', 'details' => ['publication_id' => $publication->id, 'reason' => $data['reject_reason']]]);
         });
 
-        return redirect()->route('admin.publications.show', $asset)->with('status', 'Publicatieverzoek afgewezen.');
+        return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_140892551fe695aa'));
     }
 
     public function revoke(Request $request, Asset $asset): RedirectResponse
@@ -134,14 +134,14 @@ class StaffPublicationController extends Controller
         $data = $request->validate(['revoked_reason' => ['required', 'string', 'max:2000']]);
         DB::transaction(function () use ($asset, $user, $data): void {
             $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first();
-            abort_unless($publication !== null && $publication->status === 'published', 409, 'Alleen een gepubliceerde foto kan worden ingetrokken.');
+            abort_unless($publication !== null && $publication->status === 'published', 409, __('publication.generated.t_2f041838d1d96b23'));
             // Revocation must take effect immediately: status flips away from
             // "published" in the same predicate every public route reads.
             $publication->update(['status' => 'revoked', 'revoked_at' => now(), 'revoked_reason' => $data['revoked_reason']]);
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.revoked', 'details' => ['publication_id' => $publication->id, 'reason' => $data['revoked_reason']]]);
         });
 
-        return redirect()->route('admin.publications.show', $asset)->with('status', 'Publicatie ingetrokken.');
+        return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_23fb565923a1ee70'));
     }
 
     private function uniqueSlug(Asset $asset): string

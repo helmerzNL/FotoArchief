@@ -99,6 +99,18 @@ it('derives passkey origin from the configured public HTTPS origin and rejects m
         ->toThrow(InvalidArgumentException::class, 'WebAuthn origin does not match');
 });
 
+it('rejects malformed client data instead of accepting a missing or invalid origin', function (string $clientData): void {
+    config(['app.url' => 'https://archief.example.org']);
+    $party = app(WebAuthnRelyingParty::class);
+
+    expect(fn () => $party->assertClientDataOrigin($clientData))
+        ->toThrow(InvalidArgumentException::class, 'WebAuthn origin does not match');
+})->with([
+    'invalid JSON' => ['not-json'],
+    'missing origin' => [json_encode(['type' => 'webauthn.get'], JSON_THROW_ON_ERROR)],
+    'wrong scheme' => [json_encode(['origin' => 'http://archief.example.org'], JSON_THROW_ON_ERROR)],
+]);
+
 it('refuses non-local insecure passkey origins', function (): void {
     config(['app.url' => 'http://archief.example.org']);
 

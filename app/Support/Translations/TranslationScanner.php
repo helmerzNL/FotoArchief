@@ -246,7 +246,7 @@ final class TranslationScanner
         $flat = preg_replace('/\s+/', ' ', $argument) ?? $argument;
 
         if ($flat === '') {
-            return '(geen argument / no argument)';
+            return __('shared.generated.t_fb11bfeafc313ffa');
         }
 
         return mb_strlen($flat) > 80 ? mb_substr($flat, 0, 77).'...' : $flat;

@@ -9,21 +9,21 @@
 --}}
 @php
     $operationsNavItems = [
-        ['route' => 'admin.operations.diagnostics', 'pattern' => 'admin.operations.diagnostics', 'label' => 'Diagnose', 'abilities' => ['users.manage', 'audit.view']],
-        ['route' => 'admin.operations.ai.edit', 'pattern' => 'admin.operations.ai.*', 'label' => 'AI-instellingen', 'abilities' => ['users.manage']],
-        ['route' => 'admin.operations.ai.search', 'pattern' => 'admin.operations.ai.search', 'label' => 'Semantisch zoeken', 'abilities' => ['assets.view']],
-        ['route' => 'admin.operations.ai.suggestions.index', 'pattern' => 'admin.operations.ai.suggestions.*', 'label' => 'AI-suggesties', 'abilities' => ['catalogue.manage', 'assets.update']],
-        ['route' => 'admin.operations.duplicates.index', 'pattern' => 'admin.operations.duplicates.*', 'label' => 'Duplicaten', 'abilities' => ['assets.update', 'catalogue.manage']],
-        ['route' => 'admin.operations.processing.index', 'pattern' => 'admin.operations.processing.*', 'label' => 'Verwerking', 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],
-        ['route' => 'admin.operations.integrity.index', 'pattern' => 'admin.operations.integrity.*', 'label' => 'Integriteit', 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],
-        ['route' => 'admin.operations.storage.index', 'pattern' => 'admin.operations.storage.*', 'label' => 'Opslagmigratie', 'abilities' => ['users.manage', 'catalogue.manage']],
-        ['route' => 'admin.operations.trash.index', 'pattern' => 'admin.operations.trash.*', 'label' => 'Prullenbak', 'abilities' => ['catalogue.manage', 'users.manage']],
-        ['route' => 'admin.operations.ocr.index', 'pattern' => 'admin.operations.ocr.*', 'label' => 'OCR-tekst', 'abilities' => ['catalogue.manage', 'users.manage', 'assets.view']],
-        ['route' => 'admin.operations.runs.index', 'pattern' => 'admin.operations.runs.*', 'label' => 'Achtergrondtaken', 'abilities' => ['users.manage', 'catalogue.manage', 'assets.update']],
-        ['route' => 'admin.assets.index', 'pattern' => 'admin.operations.versions.*', 'label' => 'Bestandsversies per foto', 'abilities' => ['assets.view']],
+        ['route' => 'admin.operations.diagnostics', 'pattern' => 'admin.operations.diagnostics', 'label' => __('operations.navigation.diagnostics'), 'abilities' => ['users.manage', 'audit.view']],
+        ['route' => 'admin.operations.ai.edit', 'pattern' => 'admin.operations.ai.*', 'label' => __('operations.navigation.ai_settings'), 'abilities' => ['users.manage']],
+        ['route' => 'admin.operations.ai.search', 'pattern' => 'admin.operations.ai.search', 'label' => __('operations.navigation.semantic_search'), 'abilities' => ['assets.view']],
+        ['route' => 'admin.operations.ai.suggestions.index', 'pattern' => 'admin.operations.ai.suggestions.*', 'label' => __('operations.navigation.ai_suggestions'), 'abilities' => ['catalogue.manage', 'assets.update']],
+        ['route' => 'admin.operations.duplicates.index', 'pattern' => 'admin.operations.duplicates.*', 'label' => __('operations.navigation.duplicates'), 'abilities' => ['assets.update', 'catalogue.manage']],
+        ['route' => 'admin.operations.processing.index', 'pattern' => 'admin.operations.processing.*', 'label' => __('operations.navigation.processing'), 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],
+        ['route' => 'admin.operations.integrity.index', 'pattern' => 'admin.operations.integrity.*', 'label' => __('operations.navigation.integrity'), 'abilities' => ['assets.update', 'catalogue.manage', 'users.manage']],
+        ['route' => 'admin.operations.storage.index', 'pattern' => 'admin.operations.storage.*', 'label' => __('operations.navigation.storage'), 'abilities' => ['users.manage', 'catalogue.manage']],
+        ['route' => 'admin.operations.trash.index', 'pattern' => 'admin.operations.trash.*', 'label' => __('operations.navigation.trash'), 'abilities' => ['catalogue.manage', 'users.manage']],
+        ['route' => 'admin.operations.ocr.index', 'pattern' => 'admin.operations.ocr.*', 'label' => __('operations.navigation.ocr'), 'abilities' => ['catalogue.manage', 'users.manage', 'assets.view']],
+        ['route' => 'admin.operations.runs.index', 'pattern' => 'admin.operations.runs.*', 'label' => __('operations.navigation.runs'), 'abilities' => ['users.manage', 'catalogue.manage', 'assets.update']],
+        ['route' => 'admin.assets.index', 'pattern' => 'admin.operations.versions.*', 'label' => __('operations.navigation.versions'), 'abilities' => ['assets.view']],
     ];
 @endphp
-<nav aria-label="Archiefbewerkingen" style="margin: 0 0 2rem;">
+<nav aria-label="{{ __('operations.navigation.label') }}" style="margin: 0 0 2rem;">
     <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 0.5rem;">
         @foreach($operationsNavItems as $item)
             @canany($item['abilities'])

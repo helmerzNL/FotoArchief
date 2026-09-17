@@ -2,7 +2,7 @@
 @section('title', $person->display_name.' — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.people.index') }}">&larr; Personen &amp; Organisaties</a></div>
+    <div class="eyebrow"><a href="{{ route('catalogue.people.index') }}">{{ __('catalogue.generated.t_656eada0ad92f23f') }}</a></div>
     <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1>{{ $person->display_name }}</h1>
@@ -10,7 +10,7 @@
                 {{ $person->entity_type === 'organisation' ? 'Organisatie' : 'Persoon' }}
             </span>
             @if($person->sort_name && $person->sort_name !== $person->display_name)
-                <span style="color: var(--muted); margin-left: .5rem;">(Sorteernaam: {{ $person->sort_name }})</span>
+                <span style="color: var(--muted); margin-left: .5rem;">({{ __('catalogue.fragments.sort_name') }}: {{ $person->sort_name }})</span>
             @endif
         </div>
         <div class="actions">
@@ -20,24 +20,24 @@
 
     @if($person->aliases->isNotEmpty())
         <p style="margin-top: 1rem;">
-            <strong>Aliassen / Alternatieve namen:</strong>
+            <strong>{{ __('catalogue.generated.t_030fe9b1b7f288a8') }}</strong>
             {{ $person->aliases->pluck('name')->implode(', ') }}
         </p>
     @endif
 
     @if($person->biographical_note)
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <strong>Biografie / Toelichting:</strong>
+            <strong>{{ __('catalogue.generated.t_2c9c01c92166edd0') }}</strong>
             <p>{{ $person->biographical_note }}</p>
         </div>
     @endif
 </div>
 
 <div class="card">
-    <h2>Gekoppelde foto’s ({{ $assets->count() }})</h2>
+    <h2>{{ __('catalogue.generated.t_9084c0e65cc71fa7') }}{{ $assets->count() }})</h2>
 
     @if($assets->isEmpty())
-        <p style="color: var(--muted);">Er zijn nog geen foto’s aan deze persoon/organisatie gekoppeld.</p>
+        <p style="color: var(--muted);">{{ __('catalogue.generated.t_c05fd0afc78e347c') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -97,22 +97,22 @@
     @endif
 
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-        <h3>Foto koppelen met rol en onzekerheid</h3>
+        <h3>{{ __('catalogue.generated.t_df6e23c2cc8d1eda') }}</h3>
         <form method="post" action="{{ route('catalogue.people.assets.add', $person) }}" style="margin-top: 1rem;">
             @csrf
             <div class="grid">
                 <div>
-                    <label for="accession_number">Aanwinstnummer of Foto-ID *</label>
-                    <input type="text" id="accession_number" name="accession_number" placeholder="bijv. FA-01J..." required>
+                    <label for="accession_number">{{ __('catalogue.generated.t_defde4bbc85eec4e') }}</label>
+                    <input type="text" id="accession_number" name="accession_number" placeholder="{{ __('catalogue.generated.t_1af3ddcb66fd405d') }}" required>
                 </div>
                 <div>
-                    <label for="relationship_type">Rol / Relatie *</label>
+                    <label for="relationship_type">{{ __('catalogue.generated.t_4d90cd591e4e2df8') }}</label>
                     <select id="relationship_type" name="relationship_type" required>
-                        <option value="depicted">Afgebeeld (persoon zichtbaar op foto)</option>
-                        <option value="photographer">Fotograaf / Vervaardiger</option>
-                        <option value="subject">Onderwerp (hoofdthema)</option>
-                        <option value="mentioned">Vermeld / Gerelateerd</option>
-                        <option value="creator">Maker / Studio</option>
+                        <option value="depicted">{{ __('catalogue.generated.t_5a449e7e64d3f6a3') }}</option>
+                        <option value="photographer">{{ __('catalogue.generated.t_6cef7b451ac505db') }}</option>
+                        <option value="subject">{{ __('catalogue.generated.t_ae724d40fb044217') }}</option>
+                        <option value="mentioned">{{ __('catalogue.generated.t_ead43ec94828acf6') }}</option>
+                        <option value="creator">{{ __('catalogue.generated.t_9992ee70635f952c') }}</option>
                         <option value="publisher">Uitgever</option>
                         <option value="other">Overig</option>
                     </select>
@@ -121,29 +121,29 @@
 
             <div class="grid">
                 <div>
-                    <label for="confidence">Zekerheid / Betrouwbaarheid (0.00 - 1.00)</label>
+                    <label for="confidence">{{ __('catalogue.generated.t_232ac7e11fe36f4b') }}</label>
                     <select id="confidence" name="confidence">
-                        <option value="1.00">1.00 — Zeker / Vastgesteld</option>
-                        <option value="0.80">0.80 — Zeer waarschijnlijk</option>
-                        <option value="0.50">0.50 — Mogelijk / Vermoedelijk</option>
-                        <option value="0.25">0.25 — Onzeker / Hypothese</option>
-                        <option value="">Niet gespecificeerd</option>
+                        <option value="1.00">{{ __('catalogue.generated.t_7a4f0376e42557ce') }}</option>
+                        <option value="0.80">{{ __('catalogue.generated.t_bac2bc017baa6381') }}</option>
+                        <option value="0.50">{{ __('catalogue.generated.t_fabb52db92d99ab6') }}</option>
+                        <option value="0.25">{{ __('catalogue.generated.t_b3bf9c634095f559') }}</option>
+                        <option value="">{{ __('catalogue.generated.t_6c47b1d165bfdec6') }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="verification_status">Verificatiestatus *</label>
+                    <label for="verification_status">{{ __('catalogue.generated.t_5c0132b44624795c') }}</label>
                     <select id="verification_status" name="verification_status" required>
-                        <option value="unverified">Ongeverifieerd (nog te controleren)</option>
-                        <option value="verified">Geverifieerd (door archivaris bevestigd)</option>
-                        <option value="disputed">Betwist (twijfelachtig / tegenstrijdige bronnen)</option>
+                        <option value="unverified">{{ __('catalogue.generated.t_d52aae8e3d26b3bc') }}</option>
+                        <option value="verified">{{ __('catalogue.generated.t_5ea81f6f37b275b8') }}</option>
+                        <option value="disputed">{{ __('catalogue.generated.t_63ce1de33fb42c7e') }}</option>
                     </select>
                 </div>
             </div>
 
-            <label for="note">Toelichting / Bewijsvoering</label>
-            <input type="text" id="note" name="note" placeholder="bijv. Herkend door familiearchief, 3e persoon links">
+            <label for="note">{{ __('catalogue.generated.t_3e94a93f2bd1f575') }}</label>
+            <input type="text" id="note" name="note" placeholder="{{ __('catalogue.generated.t_4563e2acbb9cff99') }}">
 
-            <button type="submit">Foto koppelen</button>
+            <button type="submit">{{ __('catalogue.generated.t_c400ed2e32ef6b6d') }}</button>
         </form>
     </div>
 </div>

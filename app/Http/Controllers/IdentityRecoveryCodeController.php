@@ -22,7 +22,7 @@ class IdentityRecoveryCodeController extends Controller
         $codes = $recoveryCodes->regenerate($user);
 
         return redirect()->route('identity.security.show')->with([
-            'status' => 'Nieuwe herstelcodes gemaakt. Bewaar ze nu; ze worden niet opnieuw getoond.',
+            'status' => __('identity.generated.t_77bf1199d42a5f8c'),
             'recovery_codes' => $codes,
         ]);
     }
@@ -35,13 +35,13 @@ class IdentityRecoveryCodeController extends Controller
         ]);
         $key = 'recovery-login:'.$request->ip().':'.strtolower($data['email']);
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            abort(429, 'Te veel herstelpogingen. Wacht een minuut.');
+            abort(429, __('identity.generated.t_76f15c932d4958df'));
         }
         RateLimiter::hit($key, 60);
 
         $user = $recoveryCodes->consume($data['email'], $data['code']);
         if ($user === null) {
-            throw ValidationException::withMessages(['email' => 'Als deze gegevens geldig zijn, kun je inloggen. Controleer de code en probeer opnieuw.']);
+            throw ValidationException::withMessages(['email' => __('identity.generated.t_1527cf521a8b17c4')]);
         }
 
         Auth::login($user);

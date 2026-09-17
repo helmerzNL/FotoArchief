@@ -29,11 +29,11 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
         $response = $this->request($settings)->get(rtrim((string) $settings['external_endpoint'], '/').'/v1/capabilities');
 
         if (! $response->successful()) {
-            throw new AiProviderException('External AI capability probe failed with status '.$response->status().'.');
+            throw new AiProviderException(__('ai.provider_errors.external_probe_status', ['status' => $response->status()]));
         }
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException('External AI capability probe returned invalid JSON.');
+            throw new AiProviderException(__('ai.provider_errors.external_probe_json'));
         }
         $this->assertCapabilities($payload);
 
@@ -60,7 +60,7 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
         ]);
 
         if (! is_string(Arr::get($payload, 'description')) || ! is_array(Arr::get($payload, 'tags'))) {
-            throw new AiProviderException('External AI image analysis response misses description or tags.');
+            throw new AiProviderException(__('ai.provider_errors.external_analysis_schema'));
         }
 
         return $payload;
@@ -103,7 +103,7 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
     {
         $settings = $this->configuration->effective();
         if (! (bool) ($settings['external_ready'] ?? false)) {
-            throw new AiProviderException('External AI provider is not explicitly enabled, consented and budgeted.');
+            throw new AiProviderException(__('ai.provider_errors.external_not_ready'));
         }
 
         return array_merge($settings, $this->providerConfigs->runtime('external'));
@@ -135,11 +135,11 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
         $response = $this->request($settings)->post(rtrim((string) $settings['external_endpoint'], '/').$path, $body);
 
         if (! $response->successful()) {
-            throw new AiProviderException("External AI request {$path} failed with status ".$response->status().'.');
+            throw new AiProviderException(__('ai.provider_errors.external_request_status', ['path' => $path, 'status' => $response->status()]));
         }
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new AiProviderException("External AI request {$path} returned invalid JSON.");
+            throw new AiProviderException(__('ai.provider_errors.external_request_json', ['path' => $path]));
         }
 
         return $payload;
@@ -151,13 +151,13 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
     private function assertCapabilities(array $payload): void
     {
         if (Arr::get($payload, 'provider_kind') !== 'external') {
-            throw new AiProviderException('External AI provider must report provider_kind=external.');
+            throw new AiProviderException(__('ai.provider_errors.external_kind'));
         }
         if (Arr::get($payload, 'image_analysis') !== true || Arr::get($payload, 'image_embeddings') !== true || Arr::get($payload, 'text_embeddings') !== true) {
-            throw new AiProviderException('External AI provider must report image analysis plus text/image embeddings.');
+            throw new AiProviderException(__('ai.provider_errors.external_capabilities'));
         }
         if (Arr::get($payload, 'same_embedding_space') !== true) {
-            throw new AiProviderException('External AI provider must prove text and image embeddings share one model space.');
+            throw new AiProviderException(__('ai.provider_errors.external_space'));
         }
     }
 
@@ -171,10 +171,10 @@ class ExternalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAna
         $modelSpace = Arr::get($payload, 'model_space');
         $dimensions = Arr::get($payload, 'dimensions');
         if (! is_array($embedding) || $embedding === [] || ! is_string($modelSpace) || ! is_numeric($dimensions)) {
-            throw new AiProviderException('External AI embedding response misses embedding, model_space or dimensions.');
+            throw new AiProviderException(__('ai.provider_errors.external_embedding_schema'));
         }
         if (count($embedding) !== (int) $dimensions) {
-            throw new AiProviderException('External AI embedding dimensions do not match the vector length.');
+            throw new AiProviderException(__('ai.provider_errors.external_embedding_dimensions'));
         }
 
         return [

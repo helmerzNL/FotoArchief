@@ -23,7 +23,7 @@ class WorklistController extends Controller
             ->with(['createdBy', 'assignedTo'])
             ->withCount([
                 'items',
-                'items as pending_items_count' => fn ($q) => $q->where('status', 'pending'),
+                __('catalogue.generated.t_7f869f4b51edb31b') => fn ($q) => $q->where('status', 'pending'),
                 'items as completed_items_count' => fn ($q) => $q->where('status', 'completed'),
             ])
             ->latest('id')
@@ -122,7 +122,7 @@ class WorklistController extends Controller
             }
         }
 
-        return redirect()->route('catalogue.worklists.show', $worklist)->with('status', 'Werklijst aangemaakt met '.$worklist->items()->count().' items.');
+        return redirect()->route('catalogue.worklists.show', $worklist)->with('status', __('catalogue.generated.t_9b8ff9622b99226f').$worklist->items()->count().' items.');
     }
 
     public function show(Request $request, Worklist $worklist): View
@@ -172,14 +172,14 @@ class WorklistController extends Controller
 
         $worklist->update($validated);
 
-        return redirect()->route('catalogue.worklists.show', $worklist)->with('status', 'Werklijst bijgewerkt.');
+        return redirect()->route('catalogue.worklists.show', $worklist)->with('status', __('catalogue.generated.t_ddf536ab7a1cdd9d'));
     }
 
     public function destroy(Worklist $worklist): RedirectResponse
     {
         $worklist->delete();
 
-        return redirect()->route('catalogue.worklists.index')->with('status', 'Werklijst verwijderd.');
+        return redirect()->route('catalogue.worklists.index')->with('status', __('catalogue.generated.t_97624768773aa55c'));
     }
 
     public function updateItem(Request $request, Worklist $worklist, WorklistItem $item): RedirectResponse
@@ -207,7 +207,7 @@ class WorklistController extends Controller
             $worklist->update(['status' => 'completed']);
         }
 
-        return back()->with('status', 'Itemstatus bijgewerkt.');
+        return back()->with('status', __('catalogue.generated.t_b13263aff3fe29f1'));
     }
 
     public function addAssets(Request $request, Worklist $worklist): RedirectResponse
@@ -220,7 +220,7 @@ class WorklistController extends Controller
         /** @var Asset $asset */
         $asset = Asset::query()->whereKey($validated['asset_id'])->firstOrFail();
         if ($user->cannot('view', $asset)) {
-            abort(403, 'Geen toegang tot deze foto.');
+            abort(403, __('catalogue.generated.t_33884812ebb5b3c7'));
         }
 
         if (! $worklist->items()->where('asset_id', $asset->id)->exists()) {
@@ -231,7 +231,7 @@ class WorklistController extends Controller
             ]);
         }
 
-        return back()->with('status', 'Foto toegevoegd aan werklijst.');
+        return back()->with('status', __('catalogue.generated.t_6f75fdb8e4c2b8fb'));
     }
 
     private function user(Request $request): User

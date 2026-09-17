@@ -2,18 +2,18 @@
 @section('title', 'Collecties & Albums — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">&larr; Catalogus</a></div>
-    <h1>Collecties &amp; Albums</h1>
-    <p class="intro">Overzicht van alle thematische verzamelingen, fysieke albums en series in het archief.</p>
+    <div class="eyebrow"><a href="{{ route('catalogue.index') }}">{{ __('catalogue.generated.t_50589dc3880be794') }}</a></div>
+    <h1>{{ __('catalogue.generated.t_498f6ac003fac8f7') }}</h1>
+    <p class="intro">{{ __('catalogue.generated.t_334a91d3f00b43e4') }}</p>
     <div class="actions">
-        <a href="{{ route('catalogue.collections.create') }}" class="button">+ Nieuwe collectie / album</a>
+        <a href="{{ route('catalogue.collections.create') }}" class="button">{{ __('catalogue.generated.t_7ed9a474a9376764') }}</a>
     </div>
 </div>
 
 <div class="card">
     <h2>Collectieoverzicht</h2>
     @if($collections->isEmpty())
-        <p>Er zijn nog geen collecties of albums aangemaakt.</p>
+        <p>{{ __('catalogue.generated.t_fb25d3046dac328d') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -23,7 +23,7 @@
                     <th style="padding: .5rem;">Type</th>
                     <th style="padding: .5rem;">Hoofdcollectie</th>
                     <th style="padding: .5rem; text-align: right;">Subcollecties</th>
-                    <th style="padding: .5rem; text-align: right;">Foto’s</th>
+                    <th style="padding: .5rem; text-align: right;">{{ __('catalogue.generated.t_437769185346f168') }}</th>
                     <th style="padding: .5rem; text-align: right;">Acties</th>
                 </tr>
             </thead>

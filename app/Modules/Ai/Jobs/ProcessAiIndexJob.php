@@ -8,6 +8,7 @@ use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiBudgetLedgerService;
+use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiOperationAuditService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
@@ -16,6 +17,7 @@ use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 use Throwable;
 
@@ -44,13 +46,20 @@ class ProcessAiIndexJob extends OperationJob
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'embeddings') : 0;
 
+        if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'embeddings', $provider)) {
+            return ['processed' => 0, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+        }
+
         foreach ($slice as $assetId) {
+            if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'embeddings', $provider)) {
+                return ['processed' => $processed, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+            }
             $asset = null;
             $file = null;
             try {
                 $candidate = Asset::query()->with('files')->find($assetId);
                 if (! $candidate instanceof Asset) {
-                    throw new RuntimeException("Foto {$assetId} bestaat niet meer.");
+                    throw new RuntimeException(__('ai.errors.asset_missing', ['asset' => $assetId]));
                 }
                 $asset = $candidate;
                 ['file' => $file, 'bytes' => $bytes] = $sourceImages->load($asset);
@@ -75,7 +84,7 @@ class ProcessAiIndexJob extends OperationJob
                 $asset->refresh();
                 $file->refresh()->load('asset');
                 if ((int) $asset->lock_version !== $sourceLock || (string) $file->sha256 !== $sourceSha) {
-                    throw new RuntimeException("Foto {$assetId} is tijdens de AI-indexering gewijzigd. Probeer de taak opnieuw.");
+                    throw new RuntimeException(__('ai.errors.asset_changed_index', ['asset' => $assetId]));
                 }
 
                 $generation = AiEmbeddingGeneration::query()->firstOrCreate(
@@ -97,10 +106,19 @@ class ProcessAiIndexJob extends OperationJob
                     ],
                 );
 
+                if ((string) $generation->provider_kind !== $provider
+                    || (int) $generation->dimensions !== (int) $embedding['dimensions']
+                    || (string) $generation->status !== AiEmbeddingGeneration::STATUS_ACTIVE) {
+                    throw new RuntimeException(__('ai.errors.model_space_conflict', ['space' => $embedding['model_space']]));
+                }
+
                 $generation->embeddings()
                     ->where('asset_file_id', $file->id)
                     ->whereNull('stale_at')
-                    ->where('source_file_sha256', '!=', $sourceSha)
+                    ->where(function (Builder $query) use ($sourceLock, $sourceSha): void {
+                        $query->where('source_file_sha256', '!=', $sourceSha)
+                            ->orWhere('source_asset_lock_version', '!=', $sourceLock);
+                    })
                     ->update(['stale_at' => now()]);
 
                 AiEmbedding::query()->updateOrCreate(

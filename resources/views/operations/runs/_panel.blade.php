@@ -2,11 +2,11 @@
 <section class="card" style="margin-top: 2rem;">
     <h2>Achtergrondtaken</h2>
     <p style="font-size: 0.875rem; color: #4b5563;">
-        Controles, herbouw, opslagkopieën en definitieve verwijderingen draaien op de ingest-wachtrij. Deze pagina toont status, fouten en herpogingen.
+        {{ __('operations.generated.t_8a94fe8fea44c546') }}
     </p>
 
     @if($runs->isEmpty())
-        <p>Nog geen achtergrondtaken uitgevoerd.</p>
+        <p>{{ __('operations.generated.t_25a4e800f3e3882d') }}</p>
     @else
         {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -35,27 +35,27 @@
                             @elseif($run->status === 'cancelled')
                                 <span style="color: #6b7280; font-weight: bold;">Geannuleerd</span>
                             @else
-                                <span style="color: #d97706; font-weight: bold;">In wachtrij</span>
+                                <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_9b88bb032d925e75') }}</span>
                             @endif
                         </td>
                         <td style="padding: 0.75rem; font-size: 0.875rem;">
-                            {{ $run->processed_items }}@if($run->total_items > 0) / {{ $run->total_items }}@endif verwerkt
+                            {{ $run->processed_items }}@if($run->total_items > 0) / {{ $run->total_items }}@endif {{ __('operations.fragments.processed') }}
                             @if($run->failed_items > 0)
-                                <span style="color: #dc2626;">({{ $run->failed_items }} mislukt)</span>
+                                <span style="color: #dc2626;">({{ $run->failed_items }} {{ __('operations.fragments.failed') }})</span>
                             @endif
                         </td>
                         <td style="padding: 0.75rem; font-size: 0.875rem; color: #dc2626; max-width: 320px;">
                             {{ $run->error_message ?? '-' }}
                             @if($run->auditEvents->isNotEmpty())
                                 <details style="margin-top: 0.5rem; color: #374151;">
-                                    <summary>Auditlog ({{ $run->auditEvents->count() }})</summary>
+                                    <summary>{{ __('operations.generated.t_dab34c3526adb141') }}{{ $run->auditEvents->count() }})</summary>
                                     <ol style="padding-left: 1.25rem;">
                                         @foreach($run->auditEvents as $event)
                                             <li style="margin-top: 0.35rem;">
                                                 <strong>{{ $event->created_at }}</strong> · {{ $event->event_type }}
                                                 @if($event->message)<br>{{ $event->message }}@endif
                                                 @if($event->context)
-                                                    <details><summary>Technische context</summary><pre class="revision">{{ json_encode($event->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre></details>
+                                                    <details><summary>{{ __('operations.generated.t_21ed4703815d0981') }}</summary><pre class="revision">{{ json_encode($event->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre></details>
                                                 @endif
                                             </li>
                                         @endforeach
@@ -64,10 +64,15 @@
                             @endif
                         </td>
                         <td style="padding: 0.75rem;">
+                            @if(in_array($run->operation_type, ['ai.analysis', 'ai.index'], true))
+                                @can('assets.view')
+                                    <p><a href="{{ route('admin.operations.runs.ai-results', $run) }}">{{ __('operations.generated.t_04df4d525e4e9fe5') }}</a></p>
+                                @endcan
+                            @endif
                             @if($run->status === 'failed')
                                 <form method="post" action="{{ route('admin.operations.runs.retry', $run) }}">
                                     @csrf
-                                    <button type="submit" class="button" style="padding: 4px 8px; font-size: 0.8rem;">Opnieuw proberen</button>
+                                    <button type="submit" class="button" style="padding: 4px 8px; font-size: 0.8rem;">{{ __('operations.generated.t_e05ea9918232c0b5') }}</button>
                                 </form>
                             @elseif($run->status === 'queued')
                                 <form method="post" action="{{ route('admin.operations.runs.cancel', $run) }}" onsubmit="return confirm('Deze taak annuleren voordat deze start?');">

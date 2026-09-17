@@ -2,7 +2,7 @@
 @section('title', $source->name.' — FotoArchief')
 @section('content')
 <div class="card">
-    <div class="eyebrow"><a href="{{ route('catalogue.sources.index') }}">&larr; Herkomstbronnen</a></div>
+    <div class="eyebrow"><a href="{{ route('catalogue.sources.index') }}">{{ __('catalogue.generated.t_4a55a2c336166042') }}</a></div>
     <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 1rem;">
         <div>
             <h1>{{ $source->name }}</h1>
@@ -23,7 +23,7 @@
 
     @if($source->custody_history)
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
-            <strong>Bewaargeschiedenis (Custody):</strong>
+            <strong>{{ __('catalogue.generated.t_f7f1473667e1eda7') }}</strong>
             <p>{{ $source->custody_history }}</p>
         </div>
     @endif
@@ -37,10 +37,10 @@
 </div>
 
 <div class="card">
-    <h2>Gekoppelde foto’s ({{ $assets->count() }})</h2>
+    <h2>{{ __('catalogue.generated.t_9084c0e65cc71fa7') }}{{ $assets->count() }})</h2>
 
     @if($assets->isEmpty())
-        <p style="color: var(--muted);">Er zijn nog geen foto’s aan deze herkomstbron gekoppeld.</p>
+        <p style="color: var(--muted);">{{ __('catalogue.generated.t_f339e9ecc3283a96') }}</p>
     @else
         <x-catalogue-table>
         <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
@@ -100,22 +100,22 @@
     @endif
 
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-        <h3>Foto koppelen aan deze herkomstbron</h3>
+        <h3>{{ __('catalogue.generated.t_19c5434eaef5aa1c') }}</h3>
         <form method="post" action="{{ route('catalogue.sources.assets.add', $source) }}" style="margin-top: 1rem;">
             @csrf
             <div class="grid">
                 <div>
-                    <label for="accession_number">Aanwinstnummer of Foto-ID *</label>
-                    <input type="text" id="accession_number" name="accession_number" placeholder="bijv. FA-01J..." required>
+                    <label for="accession_number">{{ __('catalogue.generated.t_defde4bbc85eec4e') }}</label>
+                    <input type="text" id="accession_number" name="accession_number" placeholder="{{ __('catalogue.generated.t_1af3ddcb66fd405d') }}" required>
                 </div>
                 <div>
-                    <label for="relationship_type">Type herkomst / relatie *</label>
+                    <label for="relationship_type">{{ __('catalogue.generated.t_77db2f03b3e9bf33') }}</label>
                     <select id="relationship_type" name="relationship_type" required>
-                        <option value="provenance">Provenance (historische herkomstlijn)</option>
-                        <option value="donor">Schenking / Overdracht</option>
-                        <option value="custody">Bewaarder / Archiefbewaring</option>
-                        <option value="acquisition">Aankoop / Verwerving</option>
-                        <option value="deposit">Bruikleen / Deposito</option>
+                        <option value="provenance">{{ __('catalogue.generated.t_f61777f57181b4e0') }}</option>
+                        <option value="donor">{{ __('catalogue.generated.t_4a0648d28aabe67e') }}</option>
+                        <option value="custody">{{ __('catalogue.generated.t_a6825182a5b86e37') }}</option>
+                        <option value="acquisition">{{ __('catalogue.generated.t_fdb0bfa6b278ed6d') }}</option>
+                        <option value="deposit">{{ __('catalogue.generated.t_82596131eed0e566') }}</option>
                         <option value="other">Overig</option>
                     </select>
                 </div>
@@ -123,17 +123,17 @@
 
             <div class="grid">
                 <div>
-                    <label for="confidence">Zekerheid (0.00 - 1.00)</label>
+                    <label for="confidence">{{ __('catalogue.generated.t_b5bcb118555e9f9e') }}</label>
                     <select id="confidence" name="confidence">
-                        <option value="1.00">1.00 — Zeker / Gedocumenteerd</option>
-                        <option value="0.80">0.80 — Zeer waarschijnlijk</option>
-                        <option value="0.50">0.50 — Vermoedelijk</option>
-                        <option value="0.25">0.25 — Onzeker</option>
-                        <option value="">Niet gespecificeerd</option>
+                        <option value="1.00">{{ __('catalogue.generated.t_bb527382309f8f7f') }}</option>
+                        <option value="0.80">{{ __('catalogue.generated.t_bac2bc017baa6381') }}</option>
+                        <option value="0.50">{{ __('catalogue.generated.t_3ba2cd0c2f9bd138') }}</option>
+                        <option value="0.25">{{ __('catalogue.generated.t_84457da434a0a58e') }}</option>
+                        <option value="">{{ __('catalogue.generated.t_6c47b1d165bfdec6') }}</option>
                     </select>
                 </div>
                 <div>
-                    <label for="verification_status">Verificatiestatus *</label>
+                    <label for="verification_status">{{ __('catalogue.generated.t_5c0132b44624795c') }}</label>
                     <select id="verification_status" name="verification_status" required>
                         <option value="unverified">Ongeverifieerd</option>
                         <option value="verified">Geverifieerd</option>
@@ -142,10 +142,10 @@
                 </div>
             </div>
 
-            <label for="note">Toelichting / Referentienotitie</label>
-            <input type="text" id="note" name="note" placeholder="bijv. Schenkingsakte 1992 artikel 4">
+            <label for="note">{{ __('catalogue.generated.t_b7a3675c00c7d383') }}</label>
+            <input type="text" id="note" name="note" placeholder="{{ __('catalogue.generated.t_31d45c3bc7879998') }}">
 
-            <button type="submit">Foto koppelen</button>
+            <button type="submit">{{ __('catalogue.generated.t_c400ed2e32ef6b6d') }}</button>
         </form>
     </div>
 </div>
