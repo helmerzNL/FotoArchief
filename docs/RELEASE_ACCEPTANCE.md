@@ -882,3 +882,35 @@ providers. OpenAI text embeddings are not treated as visual retrieval.
 PostgreSQL/`vector` extension test for model isolation, stale filtering, and
 rebuild in a disposable schema. The index job refuses reuse of an existing model
 space with a different provider or dimension.
+
+## Item 26-30 addendum: backup-copy evidence correction and pgvector scope clarification
+
+### Nederlands
+
+31. **Correctie op de eerdere versleutelde-tweedekopie-status.** Git Bash (`C:\Program Files\Git\bin\bash.exe`) is op deze host beschikbaar; `sh` staat niet in PATH maar `sh tests/Smoke/encrypted-backup-copy.sh` is via Git Bash uitgevoerd. Het faalde op de eerste `openssl enc ... -pass file:$key_file`-aanroep met exact:
+
+```
+Can't open file /tmp/fotoarchief-encrypted-backup.XXXXXX/key
+Error getting password
+*:error:*:system library:BIO_new_file:No such process:*/bss_file.c:*:calling fopen(/tmp/fotoarchief-encrypted-backup.XXXXXX/key, r)
+*:error:*:BIO routines:BIO_new_file:no such file:*/bss_file.c:*:
+```
+
+De oorzaak is geverifieerd, niet vermoed: `which openssl` in dezelfde shell wijst naar `/mingw64/bin/openssl`, een natieve Windows-build. Git Bash vertaalt MSYS-paden zoals `/tmp/...` alleen voor argumenten die het als kaal pad herkent; het samengestelde argument `-pass file:/tmp/...` wordt niet herschreven, dus `openssl.exe` roept Win32 `fopen()` aan op een letterlijk niet-bestaand pad. Dit is een geverifieerd Windows/MSYS-padprobleem met dit specifieke argument, **geen bewijs van een fout in de scripts of in de Linux-runtime**. De scripts zelf (`scripts/backup-copy-encrypted.sh`, `scripts/backup-restore-encrypted-copy.sh`) zijn ongewijzigd POSIX `sh` en op een echte Linux-runner bestaat `/tmp/...` als gewoon bestandssysteempad; daar is er geen reden om hetzelfde falen te verwachten. De definitieve, gezaghebbende proef blijft de geïsoleerde Ubuntu CI-runner die `tests/Smoke/encrypted-backup-copy.sh` daadwerkelijk uitvoert; deze lokale Windows-poging bewijst dat niet en wordt niet als zodanig gepresenteerd.
+
+32. **Scopecorrectie voor `PgvectorAcceptanceTest`.** De testnaam en het docblock zijn aangescherpt: de test bewijst uitsluitend het gedrag van de kale PostgreSQL `vector`-extensie (modelisolatie, stale filtering, rebuild) tegen synthetische tabellen in een wegwerpschema, aangemaakt en opgeruimd door de test zelf. Hij doorloopt geen enkel FotoArchief-toepassingspad: geen model, controller, job of Eloquent-laag van de applicatie wordt aangeroepen. De applicatie bewaart embeddings nog steeds via `database_json`; er bestaat geen toepassingsseigen `pgvector`-adapter of -migratie. Dit is een **resterend implementatie-issue, geen alleen-bewijs-issue**: de adapter (indexjob-opslag, zoekpad-integratie zoals beschreven onder stappen 46-48 in `AI_CAPABILITY_DECISION.md`) is **ONGEBOUWD en GEBLOKKEERD**, niet slechts ongetest. Deze test mag niet gelezen worden als acceptatie van een pgvector-backend voor de applicatie.
+
+### English
+
+31. **Correction to the earlier encrypted second-copy status.** Git Bash (`C:\Program Files\Git\bin\bash.exe`) is available on this host; `sh` is not on PATH, but `sh tests/Smoke/encrypted-backup-copy.sh` was run through Git Bash. It failed at the first `openssl enc ... -pass file:$key_file` call with exactly:
+
+```
+Can't open file /tmp/fotoarchief-encrypted-backup.XXXXXX/key
+Error getting password
+*:error:*:system library:BIO_new_file:No such process:*/bss_file.c:*:calling fopen(/tmp/fotoarchief-encrypted-backup.XXXXXX/key, r)
+*:error:*:BIO routines:BIO_new_file:no such file:*/bss_file.c:*:
+```
+
+The cause was verified, not assumed: `which openssl` in the same shell resolves to `/mingw64/bin/openssl`, a native Windows build. Git Bash only rewrites MSYS paths such as `/tmp/...` for arguments it recognizes as a bare path; the compound argument `-pass file:/tmp/...` is not rewritten, so `openssl.exe` calls Win32 `fopen()` against a path that literally does not exist. This is a confirmed Windows/MSYS path interop problem with this specific argument form, **not evidence of a defect in the scripts or in the Linux runtime**. The scripts themselves (`scripts/backup-copy-encrypted.sh`, `scripts/backup-restore-encrypted-copy.sh`) are unmodified POSIX `sh`, and on a real Linux runner `/tmp/...` is an ordinary filesystem path with no reason to expect the same failure. The final, authoritative proof remains the isolated Ubuntu CI runner actually executing `tests/Smoke/encrypted-backup-copy.sh`; this local Windows attempt does not prove that and is not presented as if it did.
+
+32. **Scope correction for `PgvectorAcceptanceTest`.** The test name and docblock have been tightened: the test proves only the raw PostgreSQL `vector` extension's behavior (model isolation, stale filtering, rebuild) against synthetic tables in a disposable schema created and torn down by the test itself. It exercises no FotoArchief application path at all: no application model, controller, job, or Eloquent layer is invoked. The application still persists embeddings through `database_json`; no application-owned `pgvector` adapter or migration exists. This is a **remaining implementation issue, not merely an evidence gap**: the adapter (index-job storage, search-path integration as described under steps 46-48 in `AI_CAPABILITY_DECISION.md`) is **UNBUILT and BLOCKED**, not just untested. This test must not be read as acceptance of a pgvector backend for the application.

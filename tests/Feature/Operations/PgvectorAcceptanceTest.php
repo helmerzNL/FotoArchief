@@ -31,7 +31,16 @@ function pgvectorQuoteIdentifier(string $identifier): string
     return '"'.$identifier.'"';
 }
 
-it('proves pgvector model isolation stale filtering and rebuild semantics when explicitly configured', function (): void {
+/**
+ * Extension-only experiment: this proves the raw PostgreSQL `vector`
+ * extension's model-isolation, stale-filtering and rebuild semantics against
+ * synthetic tables in a disposable schema. It does not exercise the
+ * FotoArchief application, which currently persists embeddings through
+ * `database_json` and has no `pgvector` adapter implemented. This test is
+ * not application backend acceptance; the application-level `pgvector`
+ * migration remains UNIMPLEMENTED and BLOCKED until that adapter exists.
+ */
+it('proves pgvector extension model isolation stale filtering and rebuild semantics in a disposable schema, independent of the application backend', function (): void {
     $pdo = pgvectorAcceptancePdo();
     if (! $pdo instanceof PDO) {
         $this->markTestSkipped('Set FOTOARCHIEF_TEST_PGVECTOR_* for opt-in real pgvector acceptance.');
