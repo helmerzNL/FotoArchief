@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 type AssetName = 'review' | 'stale' | 'revoke' | 'embargo' | 'trash' | 'volunteer';
 interface Fixture {
   url: string;
+  operation_id: string;
   assets: Record<AssetName, { id: string; file_id: string; title: string }>;
 }
 const manifest = process.env.FOTOARCHIEF_BROWSER_MANIFEST;
@@ -19,6 +20,24 @@ const fixture: Fixture = JSON.parse(readFileSync(manifest, 'utf8'));
 if (new URL(fixture.url).hostname !== '127.0.0.1') throw new Error('Only disposable loopback HTTP is allowed.');
 const url = (path: string) => fixture.url + path;
 const assetPath = (name: AssetName) => `/admin/assets/${fixture.assets[name].id}`;
+
+test('task detail and filtered audit export work against PostgreSQL', async ({ page }) => {
+  await login(page);
+  await page.goto(url(`/admin/operations/runs/${fixture.operation_id}`));
+  await expect(page.getByRole('heading', { name: `Taakdetails ${fixture.operation_id}` })).toBeVisible();
+  await expect(page.getByLabel('Dit mislukte item selecteren')).toBeVisible();
+  await page.getByRole('link', { name: 'Doorzoekbaar auditlog', exact: true }).click();
+  await page.getByLabel('Taak-ID', { exact: true }).fill(fixture.operation_id);
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  await expect(page.getByText('ai.analysis.item_failed', { exact: false })).toBeVisible();
+  const response = await page.request.get(url(`/admin/operations/audit?run=${fixture.operation_id}&export=jsonl`));
+  expect(response.status()).toBe(200);
+  const text = await response.text();
+  expect(text).not.toContain('not-for-export');
+  const rows = text.trim().split('\n').map(line => JSON.parse(line));
+  expect(rows).toHaveLength(1);
+  expect(rows[0].operation_run_id).toBe(fixture.operation_id);
+});
 
 async function login(page: Page, role = 'administrator') {
   await page.goto(url('/login'));

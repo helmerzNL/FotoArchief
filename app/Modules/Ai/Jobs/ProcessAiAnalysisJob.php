@@ -52,6 +52,9 @@ class ProcessAiAnalysisJob extends OperationJob
         }
 
         foreach ($slice as $assetId) {
+            if ($this->shouldPause($run)) {
+                break;
+            }
             if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
                 return ['processed' => $processed, 'processed_total' => $run->processed_items, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
             }
@@ -147,7 +150,7 @@ class ProcessAiAnalysisJob extends OperationJob
             }
         }
 
-        $nextCursor = $cursor + count($slice);
+        $nextCursor = $cursor + $processed;
 
         return [
             'processed' => $processed,

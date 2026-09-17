@@ -10,6 +10,7 @@ use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\OcrController;
+use App\Modules\ArchiveOperations\Controllers\OperationAuditController;
 use App\Modules\ArchiveOperations\Controllers\OperationRunController;
 use App\Modules\ArchiveOperations\Controllers\OperationsLandingController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
@@ -20,6 +21,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+    Route::get('/audit', OperationAuditController::class)->name('audit');
     Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
@@ -37,6 +39,9 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
 
     Route::prefix('runs')->name('runs.')->group(function (): void {
         Route::get('/', [OperationRunController::class, 'index'])->name('index');
+        Route::get('/{run}', [OperationRunController::class, 'show'])->name('show');
+        Route::post('/{run}/control', [OperationRunController::class, 'control'])->name('control');
+        Route::post('/{run}/retry-selected', [OperationRunController::class, 'retrySelected'])->name('retry-selected');
         Route::get('/{run}/ai-results', [OperationRunController::class, 'aiResults'])->name('ai-results');
         Route::post('/{run}/retry', [OperationRunController::class, 'retry'])->name('retry');
         Route::post('/{run}/cancel', [OperationRunController::class, 'cancel'])->name('cancel');

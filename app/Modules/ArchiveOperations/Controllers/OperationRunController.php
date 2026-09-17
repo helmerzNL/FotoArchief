@@ -10,9 +10,12 @@ use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
 use App\Modules\Ai\Jobs\ProcessAiIndexJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
+use App\Modules\ArchiveOperations\Services\OperationWorkbenchService;
 use App\Modules\Catalogue\Models\Asset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class OperationRunController extends Controller
@@ -20,6 +23,42 @@ class OperationRunController extends Controller
     public function __construct(
         private readonly OperationRunService $runService,
     ) {}
+
+    public function show(Request $request, OperationRun $run, OperationWorkbenchService $workbench): View
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && ($user->hasPermission('users.manage') || $run->requested_by_user_id === $user->id), 403);
+        $data = $request->validate(['page' => ['nullable', 'integer', 'min:1']]);
+        $items = $workbench->items($run, (int) ($data['page'] ?? 1));
+        $settings = Arr::only($run->payload ?? [], ['provider', 'model', 'cursor', 'generation_id', 'model_space', 'parent_run_id', 'migration_id', 'asset_file_id', 'retention_days', 'retention_hours']);
+        $events = $run->auditEvents()->latest('created_at')->orderByDesc('id')->paginate(25, ['*'], 'audit_page');
+
+        return view('operations.runs.show', compact('run', 'items', 'settings', 'events'));
+    }
+
+    public function control(Request $request, OperationRun $run, OperationWorkbenchService $workbench): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+        $data = $request->validate(['action' => ['required', Rule::in(['pause', 'resume'])]]);
+        $workbench->control($run, $user, $data['action']);
+
+        return back()->with('status', __('workbench.control_saved'));
+    }
+
+    public function retrySelected(Request $request, OperationRun $run, OperationWorkbenchService $workbench): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User, 403);
+        $data = $request->validate([
+            'confirm' => ['accepted'],
+            'selected' => ['required', 'array', 'min:1', 'max:25'],
+            'selected.*' => ['required', 'string', 'size:26', 'distinct'],
+        ]);
+        $child = $workbench->retrySelected($run, $user, $data['selected']);
+
+        return redirect()->route('admin.operations.runs.show', $child)->with('status', __('workbench.retry_saved'));
+    }
 
     public function index(Request $request): View
     {

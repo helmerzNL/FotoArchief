@@ -40,6 +40,66 @@ process is healthy.
 
 ## Routine commands
 
+### Taakwerkbank en auditlog (Nederlands)
+
+Open een taak via het taaknummer: de detailpagina toont de opgeslagen,
+expliciet toegestane instellingen, tijdstippen, workerclaims (niet uitsluitend
+providerpogingen), gepagineerde AI-fotoselectie en gebeurtenissen. De laatste
+itemgebeurtenis bepaalt de uitkomst; een latere geslaagde poging vervangt een
+eerdere fout. Geannuleerde, nog niet verwerkte items zijn overgeslagen.
+Onderhoudstaken zonder opgeslagen fotoselectie tonen hun instellingen en
+gebeurtenissen, niet een verzonnen lijst van fotoresultaten.
+
+Beheerders kunnen maximaal 25 geselecteerde, laatst mislukte AI-items uit een
+afgeronde taak bevestigen en opnieuw starten. Dit maakt een nieuwe taak met
+een verwijzing naar de oorspronkelijke taak; successen en niet-geselecteerde
+items worden niet herhaald. Dezelfde items kunnen niet opnieuw vanuit de
+oudertaak worden gestart: gebruik bij een volgende fout de vervolgtaak.
+Een indexvervolgtaak krijgt geen kopie van de generatie van de oudertaak.
+Normale bron-, toestemmings-, provider- en budgetcontroles blijven gelden.
+
+Pauzeren houdt een lopende workerclaim vast totdat veilig kan worden gestopt:
+AI en integriteitscontrole tussen items, opslagkopie tussen batches van
+maximaal 25 bestanden. Een extern verzoek wordt niet afgebroken. Hervatten
+behoudt cursor en tellers; volledig afgerond werk blijft voltooid. Andere
+opruimtaken bieden bewust geen pauzeknop zonder veilig checkpoint.
+
+Het auditlog vereist `audit.view` en doorzoekt foto- en taakgebeurtenissen op
+foto-ID/archiefnummer, taak, gebruiker (actor of taakaanvrager), exact eventtype
+en datumbereik. JSONL-export is begrensd op 10000 gebeurtenissen en bevat
+uitsluitend ID's, eventtype en tijdstip; vrije tekst, technische context en
+foto-inhoud zijn uitgesloten. Beperk de filters bij een te grote export.
+De migratie voegt een pauzevlag toe; geen Compose- of omgevingswijziging nodig.
+
+### Task workbench and audit log (English)
+
+Open a task by its number: the detail page shows explicitly allowlisted saved
+settings, timestamps, worker claims (not exclusively provider attempts),
+paginated AI photo selection and events. The latest item event determines its
+outcome; a later success supersedes an earlier failure. Unprocessed items in a
+cancelled task are skipped. Maintenance tasks without a saved photo selection
+show their settings and events, not a fabricated list of photo outcomes.
+
+Administrators can confirm and retry at most 25 selected, latest-failed AI
+items from a finished task. This creates a new task referencing the original;
+successes and unselected items are not repeated. The same items cannot be
+started again from the parent: use the follow-up task after another failure.
+An index follow-up does not inherit the parent's generation.
+Normal source, authorization, provider and budget checks still apply.
+
+Pause retains an in-flight worker claim until a safe checkpoint: between items
+for AI/integrity, between batches of at most 25 files for storage copy. It does
+not abort an external request. Resume preserves cursor and counters; fully
+finished work remains completed. Other cleanup tasks deliberately have no
+pause control without a safe checkpoint.
+
+The audit log requires `audit.view` and searches photo/task events by photo
+ID/accession, task, user (actor or requester), exact event type and date range.
+JSONL export is limited to 10000 events and contains only identifiers, event
+type and timestamp; free text, technical context and photo content are excluded.
+Narrow filters if the export is too large. The migration adds a pause flag;
+no Compose or environment changes are required.
+
 ```powershell
 docker compose ps
 docker compose logs --tail=100 app

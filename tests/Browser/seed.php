@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Models\AiSuggestion;
+use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Publication\Models\Publication;
@@ -92,6 +93,16 @@ foreach (['review', 'stale', 'revoke', 'embargo', 'trash', 'volunteer'] as $inde
         $manifest['publications'][$name] = $publication->id;
     }
 }
+$operation = OperationRun::query()->create([
+    'operation_type' => 'ai.analysis', 'status' => 'failed', 'requested_by_user_id' => $admin->id,
+    'total_items' => 1, 'payload' => ['asset_ids' => [$manifest['assets']['review']['id']], 'provider' => 'synthetic-browser-fixture', 'cursor' => 0],
+]);
+$operation->auditEvents()->create([
+    'asset_id' => $manifest['assets']['review']['id'], 'event_type' => 'ai.analysis.item_failed',
+    'severity' => 'error', 'message' => 'Synthetic workbench failure',
+    'context' => ['secret' => 'not-for-export'],
+]);
+$manifest['operation_id'] = $operation->id;
 $upload = imagecreatetruecolor(151, 101);
 imagefill($upload, 0, 0, imagecolorallocate($upload, 119, 44, 201));
 imagepng($upload, $root.'/browser-upload.png');
