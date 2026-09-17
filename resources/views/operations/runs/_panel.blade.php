@@ -64,6 +64,11 @@
                             @endif
                         </td>
                         <td style="padding: 0.75rem;">
+                            @if(in_array($run->operation_type, ['ai.analysis', 'ai.index'], true))
+                                @can('assets.view')
+                                    <p><a href="{{ route('admin.operations.runs.ai-results', $run) }}">Foto's en AI-resultaten bekijken</a></p>
+                                @endcan
+                            @endif
                             @if($run->status === 'failed')
                                 <form method="post" action="{{ route('admin.operations.runs.retry', $run) }}">
                                     @csrf

@@ -5,9 +5,12 @@ declare(strict_types=1);
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\ArchiveOperations\Models\SystemHeartbeat;
+use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemDiagnosticsService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 beforeEach(function (): void {
     $this->artisan('migrate');
@@ -108,6 +111,34 @@ it('records scheduler and worker heartbeats for diagnostics', function (): void 
         ->and($diagnostics['activity']['roles']['worker']['state'])->toBe('starting');
 });
 
+it('reports stale heartbeats and returns to healthy after restored worker and scheduler heartbeats', function (): void {
+    SystemHeartbeat::query()->create([
+        'role' => 'scheduler',
+        'state' => 'ok',
+        'last_seen_at' => now()->subMinutes(6),
+    ]);
+    SystemHeartbeat::query()->create([
+        'role' => 'worker',
+        'state' => 'failed',
+        'last_seen_at' => now()->subMinutes(7),
+        'details' => ['exception' => RuntimeException::class],
+    ]);
+
+    $diagnostics = app(SystemDiagnosticsService::class)->getAllDiagnostics();
+    expect($diagnostics['activity']['status'])->toBe('warning')
+        ->and($diagnostics['activity']['stale_roles'])->toContain('scheduler', 'worker')
+        ->and($diagnostics['activity']['roles']['worker']['state'])->toBe('failed');
+
+    expect($this->artisan('operations:heartbeat', ['role' => 'scheduler'])->run())->toBe(0)
+        ->and($this->artisan('operations:heartbeat', ['role' => 'worker', '--state' => 'processed'])->run())->toBe(0);
+
+    $restored = app(SystemDiagnosticsService::class)->getAllDiagnostics();
+    expect($restored['activity']['status'])->toBe('ok')
+        ->and($restored['activity']['stale_roles'])->toBe([])
+        ->and($restored['activity']['roles']['worker']['state'])->toBe('processed')
+        ->and($restored['activity']['roles']['worker']['stale'])->toBeFalse();
+});
+
 it('sends configured operational alert webhooks without leaking secrets', function (): void {
     Http::fake([
         'https://ops.example.test/fotoarchief' => Http::response(['ok' => true], 202),
@@ -148,4 +179,51 @@ it('dry-runs operational alerts without calling the webhook', function (): void 
     $this->artisan('operations:check-alerts', ['--dry-run' => true])->assertExitCode(0);
 
     Http::assertNothingSent();
+});
+
+it('logs disabled operational alerts without calling the webhook', function (): void {
+    Http::fake();
+    Log::spy();
+    config([
+        'operations.alerts.enabled' => false,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'operations.alerts.minimum_severity' => 'warning',
+        'ingest.scanner' => 'none',
+    ]);
+
+    $result = app(OperationalAlertService::class)->evaluate();
+
+    expect($result['sent'])->toBeFalse()
+        ->and($result['reason'])->toBe('disabled')
+        ->and($result['payload']['incidents'])->not->toBeEmpty();
+    Http::assertNothingSent();
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        fn (string $message, array $context): bool => $message === 'Operationele FotoArchief melding gedetecteerd, verzending staat uit.'
+            && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'secret12345')
+    );
+});
+
+it('surfaces webhook failures and repeats sends while incidents remain active', function (): void {
+    Http::fake([
+        'https://ops.example.test/fotoarchief' => Http::sequence()
+            ->push(['ok' => true], 202)
+            ->push(['ok' => true], 202)
+            ->push('down', 500),
+    ]);
+    config([
+        'operations.alerts.enabled' => true,
+        'operations.alerts.webhook_url' => 'https://ops.example.test/fotoarchief',
+        'operations.alerts.minimum_severity' => 'warning',
+        'ingest.scanner' => 'none',
+    ]);
+
+    expect(app(OperationalAlertService::class)->evaluate()['sent'])->toBeTrue()
+        ->and(app(OperationalAlertService::class)->evaluate()['sent'])->toBeTrue();
+
+    Http::assertSentCount(2);
+
+    expect(fn () => app(OperationalAlertService::class)->evaluate())
+        ->toThrow(RuntimeException::class, 'Operations alert webhook failed with status 500.');
+
+    Http::assertSentCount(3);
 });

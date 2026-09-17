@@ -278,91 +278,91 @@
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 183,
+            "line": 185,
             "kind": "php_string",
             "text": "Wis de datums bij een onbekende datering.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 186,
+            "line": 188,
             "kind": "php_string",
             "text": "Vul de vereiste datum in (bij Vóór: de einddatum).",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 189,
+            "line": 191,
             "kind": "php_string",
             "text": "Een bereik vereist beide datums.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 197,
+            "line": 199,
             "kind": "php_string",
             "text": "Dit jaar valt buiten het ondersteunde bereik.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 204,
+            "line": 206,
             "kind": "php_string",
             "text": "Bij een exacte datum moeten beide datums gelijk zijn.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 209,
+            "line": 211,
             "kind": "php_string",
             "text": "Datumbereik is niet geldig voor deze datering.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 215,
+            "line": 217,
             "kind": "php_string",
             "text": "Gebruik maximaal 20 tags van maximaal 100 tekens.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 220,
+            "line": 222,
             "kind": "php_string",
             "text": "Dit item is intussen gewijzigd. Vernieuw de pagina voordat je opnieuw opslaat.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 237,
+            "line": 239,
             "kind": "php_string",
             "text": "Metadata en rechten opgeslagen. De foto blijft privé.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 247,
+            "line": 249,
             "kind": "php_string",
             "text": "Voorbeeld tijdelijk niet beschikbaar.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 255,
+            "line": 257,
             "kind": "php_string",
             "text": "no-store, private",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 265,
+            "line": 267,
             "kind": "php_string",
             "text": "Alleen mislukte of vastgelopen verwerking kan opnieuw starten.",
             "batch": "asset_admin"
         },
         {
             "file": "app/Http/Controllers/AdminAssetController.php",
-            "line": 271,
+            "line": 273,
             "kind": "php_string",
             "text": "Verwerking opnieuw gestart.",
             "batch": "asset_admin"
@@ -677,14 +677,14 @@
         },
         {
             "file": "app/Modules/Ai/Controllers/AiSuggestionReviewController.php",
-            "line": 48,
+            "line": 51,
             "kind": "php_string",
             "text": "AI-suggestie geaccepteerd en als metadatawijziging opgeslagen.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Controllers/AiSuggestionReviewController.php",
-            "line": 64,
+            "line": 69,
             "kind": "php_string",
             "text": "AI-suggestie afgewezen zonder metadata te wijzigen.",
             "batch": "ai"
@@ -4254,231 +4254,238 @@
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 11,
+            "line": 7,
+            "kind": "blade_text",
+            "text": "AI-resultaten bekijken",
+            "batch": "asset_admin"
+        },
+        {
+            "file": "resources/views/admin/assets/show.blade.php",
+            "line": 12,
             "kind": "blade_text",
             "text": "Groot privévoorbeeld (maximaal 2000 px)",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 15,
+            "line": 16,
             "kind": "blade_text",
             "text": "· poging(en)",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 17,
+            "line": 18,
             "kind": "blade_text",
             "text": "Verwerkingsdetails en logboek van",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 20,
+            "line": 21,
             "kind": "blade_text",
             "text": "Verwerking opnieuw proberen",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 25,
+            "line": 26,
             "kind": "blade_text",
             "text": "· Malwarecontrole:",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 26,
+            "line": 27,
             "kind": "blade_text",
             "text": "× px · · bytes",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 28,
+            "line": 29,
             "kind": "blade_text",
             "text": "Oriëntatie: . EXIF en GPS worden niet overgenomen in voorbeelden. Het origineel blijft ongewijzigd in private opslag.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 30,
+            "line": 31,
             "kind": "blade_text",
             "text": "Nog geen verwerkt voorbeeld beschikbaar. Voor queued/running: wacht op de worker en vernieuw deze pagina.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 32,
+            "line": 33,
             "kind": "blade_text",
             "text": "Status vernieuwen",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 33,
+            "line": 34,
             "kind": "blade_text",
             "text": "Er is geen automatische publicatie. Ook een schone scan geeft geen publicatietoestemming.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 35,
+            "line": 36,
             "kind": "blade_text",
             "text": "Beschrijving en rechten",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 37,
+            "line": 38,
             "kind": "blade_text",
             "text": "Datering: · —",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 39,
+            "line": 40,
             "kind": "blade_text",
             "text": "Rechthebbende: ·",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 43,
+            "line": 45,
             "kind": "blade_text",
             "text": "Metadata bewerken",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 54,
+            "line": 56,
             "kind": "blade_text",
             "text": "Onbekend: beide datums leeg. Exact: begindatum. Vóór: alleen einddatum. Na: alleen begindatum. Bereik: beide datums. Jaar/decennium: kies een begindatum; deze wordt opgeslagen als het volledige jaar/decennium. Circa kan een onzekerheidsbereik bevatten.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 57,
+            "line": 59,
             "kind": "blade_text",
             "text": "Weergave datering",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 58,
+            "line": 60,
             "kind": "blade_text",
             "text": "Tags (komma-gescheiden, maximaal 20)",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 65,
+            "line": 67,
             "kind": "blade_text",
             "text": "Rechtennotitie en bewijs",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 66,
+            "line": 68,
             "kind": "blade_text",
             "text": "Rechtencontrole is documentatie, geen toestemming voor openbare publicatie.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 72,
+            "line": 74,
             "kind": "blade_text",
             "text": "Bewerkingen op dit dossier. Zware taken draaien op de achtergrond; volg ze via Achtergrondtaken.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 75,
+            "line": 77,
             "kind": "blade_text",
             "text": "Bestandsversies en herverwerking",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 78,
+            "line": 80,
             "kind": "blade_text",
             "text": "Herkende tekst (OCR)",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 87,
+            "line": 89,
             "kind": "blade_text",
             "text": "Tekstherkenning starten voor deze foto",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 89,
+            "line": 91,
             "kind": "blade_text",
             "text": "De tekstherkenning draait op de ingest-wachtrij en vereist een ingeschakelde, beschikbare Tesseract-installatie. Zonder worker blijft de taak in de wachtrij staan.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 92,
+            "line": 94,
             "kind": "blade_text",
             "text": "Reden voor verwijdering",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 93,
+            "line": 95,
             "kind": "blade_attribute",
             "text": "Bijvoorbeeld: dubbel ingevoerd dossier",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 94,
+            "line": 96,
             "kind": "blade_text",
             "text": "Naar prullenbak verplaatsen",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 96,
+            "line": 98,
             "kind": "blade_text",
             "text": "Verplaatsen naar de prullenbak verwijdert niets onherroepelijk: het dossier verdwijnt uit alle overzichten en blijft herstelbaar tot een beheerder het definitief vernietigt.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 98,
+            "line": 100,
             "kind": "blade_text",
             "text": "Wijzigings- en verwerkingshistorie",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 99,
+            "line": 101,
             "kind": "blade_text",
             "text": "Laatste 50 gebeurtenissen, nieuwste eerst. Alle revisies blijven in de database bewaard.",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 101,
+            "line": 103,
             "kind": "blade_text",
             "text": "· ·",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 102,
+            "line": 104,
             "kind": "blade_text",
             "text": "Details / revisie vergelijken",
             "batch": "asset_admin"
         },
         {
             "file": "resources/views/admin/assets/show.blade.php",
-            "line": 104,
+            "line": 106,
             "kind": "blade_text",
             "text": "Nog geen gebeurtenissen.",
             "batch": "asset_admin"
@@ -4622,6 +4629,132 @@
             "kind": "blade_text",
             "text": "Naar publicatiebeheer van deze foto",
             "batch": "publication_admin"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 3,
+            "kind": "blade_text",
+            "text": "Opgeslagen resultaten, nieuwste eerst. Bekijken verstuurt niets naar een provider. Beschrijvingen en tags zijn voorstellen: er verandert geen metadata zonder jouw acceptatie.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 7,
+            "kind": "blade_text",
+            "text": "Provider: · Model: ( )",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 8,
+            "kind": "blade_text",
+            "text": "Opgeslagen: · Status:",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 11,
+            "kind": "blade_text",
+            "text": "Bronrevisie · huidige revisie",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 13,
+            "kind": "blade_text",
+            "text": "De foto is sinds deze analyse gewijzigd. Voorstellen kunnen verouderd zijn; acceptatie controleert de bron opnieuw.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 16,
+            "kind": "blade_text",
+            "text": "Een embedding is een zoekvector, geen beschrijving of tags. De opgeslagen vector wordt niet als tekstvoorstel getoond.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 17,
+            "kind": "blade_text",
+            "text": "Modelruimte: · Dimensies:",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 34,
+            "kind": "blade_text",
+            "text": "Voorstel accepteren",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 40,
+            "kind": "blade_text",
+            "text": "Afwijsreden (optioneel)",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 41,
+            "kind": "blade_text",
+            "text": "Voorstel afwijzen",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/_photo.blade.php",
+            "line": 52,
+            "kind": "blade_text",
+            "text": "Nog geen opgeslagen AI-resultaten voor deze foto. Wacht bij een lopende taak op de worker en vernieuw de pagina.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 5,
+            "kind": "blade_text",
+            "text": "Foto's en AI-resultaten",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 7,
+            "kind": "blade_text",
+            "text": "Hier staan de toegankelijke foto's die volgens het auditlog succesvol zijn verwerkt, inclusief eerdere pogingen van deze taak. De link opent de volledige opgeslagen AI-historie van de foto, niet uitsluitend de uitvoer van deze taak.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 8,
+            "kind": "blade_text",
+            "text": "Je hoeft geen nieuwe analyse te starten om opgeslagen resultaten te bekijken. Vernieuw deze pagina als de taak nog bezig is.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 10,
+            "kind": "blade_text",
+            "text": "Succesvol verwerkte foto's",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 13,
+            "kind": "blade_text",
+            "text": "· — AI-resultaten bekijken",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 15,
+            "kind": "blade_text",
+            "text": "Nog geen toegankelijke, succesvol verwerkte foto's in het auditlog. De taak kan nog bezig zijn, foto's kunnen verwijderd of niet toegankelijk zijn, of een oude taak heeft geen succeslog. Bekijk dan de AI-resultaten rechtstreeks bij de foto.",
+            "batch": "ai"
+        },
+        {
+            "file": "resources/views/ai/results/operation.blade.php",
+            "line": 20,
+            "kind": "blade_text",
+            "text": "Terug naar achtergrondtaken",
+            "batch": "ai"
         },
         {
             "file": "resources/views/ai/search/admin.blade.php",
@@ -10260,7 +10393,14 @@
         },
         {
             "file": "resources/views/operations/runs/_panel.blade.php",
-            "line": 70,
+            "line": 69,
+            "kind": "blade_text",
+            "text": "Foto's en AI-resultaten bekijken",
+            "batch": "operations"
+        },
+        {
+            "file": "resources/views/operations/runs/_panel.blade.php",
+            "line": 75,
             "kind": "blade_text",
             "text": "Opnieuw proberen",
             "batch": "operations"

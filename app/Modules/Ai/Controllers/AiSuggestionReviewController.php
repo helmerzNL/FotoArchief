@@ -10,6 +10,7 @@ use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiSuggestionReviewService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AiSuggestionReviewController extends Controller
@@ -41,11 +42,13 @@ class AiSuggestionReviewController extends Controller
 
         $validated = $request->validate([
             'lock_version' => ['required', 'integer', 'min:1'],
+            'return_to' => ['nullable', Rule::in(['asset'])],
         ]);
 
         $this->review->accept($suggestion, $user, (int) $validated['lock_version']);
 
-        return redirect()->route('admin.operations.ai.suggestions.index')->with('status', 'AI-suggestie geaccepteerd en als metadatawijziging opgeslagen.');
+        return $this->reviewRedirect($suggestion, $validated['return_to'] ?? null)
+            ->with('status', 'AI-suggestie geaccepteerd en als metadatawijziging opgeslagen.');
     }
 
     public function reject(Request $request, AiSuggestion $suggestion): RedirectResponse
@@ -57,10 +60,19 @@ class AiSuggestionReviewController extends Controller
 
         $validated = $request->validate([
             'review_note' => ['nullable', 'string', 'max:500'],
+            'return_to' => ['nullable', Rule::in(['asset'])],
         ]);
 
         $this->review->reject($suggestion, $user, $validated['review_note'] ?? null);
 
-        return redirect()->route('admin.operations.ai.suggestions.index')->with('status', 'AI-suggestie afgewezen zonder metadata te wijzigen.');
+        return $this->reviewRedirect($suggestion, $validated['return_to'] ?? null)
+            ->with('status', 'AI-suggestie afgewezen zonder metadata te wijzigen.');
+    }
+
+    private function reviewRedirect(AiSuggestion $suggestion, ?string $returnTo): RedirectResponse
+    {
+        return $returnTo === 'asset'
+            ? redirect()->to(route('admin.assets.show', $suggestion->asset_id).'#ai-results')
+            : redirect()->route('admin.operations.ai.suggestions.index');
     }
 }

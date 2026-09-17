@@ -157,8 +157,10 @@ class AdminAssetController extends Controller
         $this->authorize('view', $asset);
         $asset->load(['files', 'tags', 'rights', 'uploads', 'people', 'locations', 'collections', 'sources', 'contributors']);
         $events = $asset->auditEvents()->latest('id')->limit(50)->get();
+        $aiRuns = $asset->aiRuns()->with(['suggestions' => fn ($query) => $query->oldest('id')])
+            ->latest('created_at')->latest('id')->paginate(10, ['*'], 'ai_page')->fragment('ai-results');
 
-        return view('admin.assets.show', compact('asset', 'events'));
+        return view('admin.assets.show', compact('asset', 'events', 'aiRuns'));
     }
 
     public function update(Request $request, Asset $asset): RedirectResponse

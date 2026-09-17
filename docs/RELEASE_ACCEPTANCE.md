@@ -343,3 +343,77 @@ Run `php tests/Performance/seed.php`, then serve
 `php tests/Performance/measure.php`. Stop the test server afterward. The fixture
 refuses a non-empty database and never reads a developer environment file.
 Its disposable account and testing router must never be deployed publicly.
+
+## Batch 1 acceptance evidence for AI result visibility and operations safeguards
+
+### Nederlands
+
+Deze batch bundelt items 1-5 en wordt niet als losse release geclaimd. De
+versie blijft `0.9.51` voor de hele batcheserie.
+
+1. **Opgeslagen AI-resultaten op de fotopagina**: de bestaande hotfix voegt het
+   paneel `AI-resultaten` toe aan private fotopagina's, toont opgeslagen
+   analyse-/embeddinghistorie zonder providerrequest, linkt AI-taken naar
+   succesvol verwerkte toegankelijke foto's en houdt acceptatie/afwijzing achter
+   bestaande autorisatie-, revisie- en checksumcontroles. De tijdelijke preview
+   is alleen een lokale fixture en geen productiecode.
+2. **OpenAI veilige keten**: HTTP-fakes bewijzen de volledige
+   form-worker-results-review-keten zonder echte provider, echte foto's of
+   kosten. De worker bouwt een metadata-gestripte JPEG-data-URL, gebruikt het
+   geconfigureerde model, bewaart alleen reviewvoorstellen, schrijft geen
+   metadata automatisch en lekt geen API-sleutel of beeldpayload in auditdata.
+3. **ClamAV**: `quality.yml` start al het Compose-profiel `clamav` en voert in
+   de container een echte clean/EICAR-scan uit. Unit-/featuretests dekken het
+   INSTREAM-protocol, clean, EICAR, onverwachte antwoorden en een onbereikbare
+   daemon die fail-closed eindigt.
+4. **Worker/scheduler heartbeats**: diagnostics gebruikt echte
+   `system_heartbeats`. Tests dekken ontbrekende, verouderde en herstelde
+   scheduler-/workerheartbeats; een verse heartbeat brengt de activity-status
+   terug naar `ok`.
+5. **Operationele alerts**: tests dekken dry-run, disabled/log-only zonder
+   webhookcall, enabled webhooksend, herhaald verzenden zolang incidenten actief
+   blijven, webhookfouten en redactie van payloads. Er zijn geen echte webhooks
+   aangeroepen.
+
+Live controles die op deze host geblokkeerd blijven: visuele desktop/mobile
+browseracceptatie van de echte AI-resultaatroutes, echte OpenAI-providerproof
+met goedgekeurde testbeelden en budget, hostdeployment met ClamAV, echte
+worker/schedulerprocessen over tijd en het instellen van een echt
+alertkanaal/webhook. Deze blijven releaseblokkades totdat de gebruikershost de
+benodigde services, credentials en toestemming levert.
+
+### English
+
+This batch covers items 1-5 and is not claimed as a standalone release. The
+version remains `0.9.51` for the whole batch series.
+
+1. **Stored AI results on the photo page**: the existing hotfix adds the
+   `AI-resultaten` panel to private photo pages, shows stored analysis/embedding
+   history without a provider request, links AI tasks to successfully processed
+   accessible photos, and keeps accept/reject behind existing authorization,
+   revision, and checksum guards. The temporary preview is a local fixture only,
+   not production code.
+2. **OpenAI safe chain**: HTTP fakes prove the full
+   form-worker-results-review chain without a real provider, real photos, or
+   spend. The worker builds a metadata-stripped JPEG data URL, uses the
+   configured model, stores only review suggestions, never writes metadata
+   automatically, and does not leak the API key or image payload into audit data.
+3. **ClamAV**: `quality.yml` already starts the Compose profile `clamav` and
+   performs a real clean/EICAR scan in the container. Unit/feature tests cover
+   the INSTREAM protocol, clean, EICAR, unexpected replies, and an unavailable
+   daemon that fails closed.
+4. **Worker/scheduler heartbeats**: diagnostics uses real
+   `system_heartbeats`. Tests cover missing, stale, and restored
+   scheduler/worker heartbeats; a fresh heartbeat returns the activity status to
+   `ok`.
+5. **Operational alerts**: tests cover dry-run, disabled/log-only without a
+   webhook call, enabled webhook send, repeated sends while incidents remain
+   active, webhook failures, and payload redaction. No real webhooks were
+   called.
+
+Live checks still blocked on this host: visual desktop/mobile browser acceptance
+of the real AI result routes, real OpenAI provider proof with approved test
+images and budget, host deployment with ClamAV, real worker/scheduler processes
+over time, and setup of a real alert channel/webhook. These remain release
+blockers until the user host provides the required services, credentials, and
+permission.

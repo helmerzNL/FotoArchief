@@ -57,6 +57,34 @@ foto houdt de hele batch tegen. De invoer blijft beschikbaar om te corrigeren.
 Dubbele verwijzingen naar dezelfde foto tellen na controle eenmaal.
 De ingestelde batchlimiet blijft gelden voor de ingevoerde selectie.
 
+### AI-resultaten bekijken en beoordelen
+
+Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
+**AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
+beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
+Ook geaccepteerde, afgewezen en verouderde voorstellen blijven zichtbaar.
+De historie is gepagineerd met 10 analyses/indexeringen per pagina.
+Bekijken start geen providerrequest en wijzigt geen metadata.
+
+Bevoegde medewerkers kunnen een voorstel accepteren of afwijzen en keren
+daarna terug naar de foto. De bestaande rechten-, checksum- en revisiecontroles
+blijven gelden: wijzigingen aan de foto, waaronder acceptatie, kunnen andere
+voorstellen uit een oudere revisie ongeldig maken. Alleen bekijken geeft geen
+beoordelingsrecht; private resultaten komen niet op de openbare fotopagina.
+
+Bij een AI-achtergrondtaak staat **Foto's en AI-resultaten bekijken**. Deze link
+toont maximaal 25 toegankelijke, succesvol verwerkte foto's per pagina op basis
+van het volledige auditlog, inclusief eerdere pogingen. Iedere fotolink opent
+de volledige AI-historie van die foto, niet alleen de uitvoer van deze taak.
+Verwijderde en niet-toegankelijke foto's worden niet getoond. Oude taken zonder
+succeslog verwijzen niet automatisch naar foto's; open de foto dan rechtstreeks.
+Een lege analyse meldt expliciet dat er geen beschrijving of tags zijn teruggegeven.
+Embeddingindexering toont modelruimte en dimensies, geen tekstvoorstellen of ruwe vector.
+
+Deze weergave werkt ook voor al opgeslagen resultaten: opnieuw analyseren is
+niet nodig. Versie `0.9.51` vereist geen nieuwe migraties of configuratie.
+Haal de release-image op en maak web-, worker- en schedulercontainers opnieuw aan.
+
 ### Taakstatus en auditlog
 
 Open **Beheer > Operations > Achtergrondtaken** om AI-taken te volgen. Een taak
@@ -165,6 +193,33 @@ internal IDs. One unknown, deleted, or inaccessible photo blocks the entire
 batch. Input remains available for correction. Duplicate references to the same
 photo count once after validation. The configured batch limit still applies to
 the submitted selection.
+
+### Viewing and reviewing AI results
+
+From `0.9.51`, every private photo page has an **AI results** link and panel,
+before the metadata form. It shows the stored description and tags, provider,
+model, timestamp, source revision, and review status. Accepted, rejected, and
+superseded suggestions remain visible. History is paginated with 10 analysis/
+indexing records per page. Viewing starts no provider request and changes no metadata.
+
+Authorized staff can accept or reject a suggestion and return to the photo.
+Existing permission, checksum, and revision guards remain in force: changes to
+the photo, including acceptance, can invalidate other suggestions from an older
+revision. Read access does not grant review permission; private results are not
+shown on the public photo page.
+
+AI background jobs have a **View photos and AI results** link. It shows up to
+25 accessible, successfully processed photos per page using the full audit log,
+including previous attempts. Each photo link opens that photo's complete AI
+history, not just output from this job. Deleted and inaccessible photos are
+excluded. Old jobs without success logs cannot automatically link to photos;
+open the photo directly instead. An empty analysis explicitly reports that no
+description or tags were returned. Embedding indexing shows model space and
+dimensions, not text suggestions or raw vectors.
+
+This view also works with existing stored results: another analysis is not
+needed. Version `0.9.51` requires no new migrations or configuration. Pull the
+release image and recreate the web, worker, and scheduler containers.
 
 ### Job status and audit log
 

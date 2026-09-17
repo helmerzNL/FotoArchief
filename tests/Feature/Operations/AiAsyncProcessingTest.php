@@ -8,6 +8,7 @@ use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
 use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
+use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
@@ -125,6 +126,66 @@ it('processes AI analysis in the worker and stores only pending suggestions', fu
         ->and($this->asset->fresh()->description)->toBeNull()
         ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->where('review_status', AiSuggestion::REVIEW_PENDING)->count())->toBe(3)
         ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.analysis.item_succeeded')->count())->toBe(1);
+});
+
+it('processes OpenAI analysis through the worker with the safe review chain and no live provider calls', function (): void {
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true,
+        'vision_model' => 'gpt-4.1-mini',
+        'cost_cents_per_image' => 1,
+        'monthly_budget_cents' => 100,
+    ], $this->user);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'test-openai-secret', $this->user);
+    Http::fake([
+        'https://api.openai.com/v1/chat/completions' => Http::response([
+            'model' => 'gpt-4.1-mini-2026-09-17',
+            'choices' => [[
+                'message' => [
+                    'content' => '{"description":"Een veilige OpenAI fixturebeschrijving.","tags":["Archief","Controle"],"confidence":0.91}',
+                ],
+            ]],
+        ]),
+    ]);
+
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id], 'provider' => 'openai', 'model' => 'gpt-4.1-mini', 'cursor' => 0],
+        'total_items' => 1,
+    ]);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    Http::assertSent(function ($request): bool {
+        $payload = $request->data();
+        $imageUrl = $payload['messages'][0]['content'][1]['image_url']['url'] ?? null;
+
+        return $request->url() === 'https://api.openai.com/v1/chat/completions'
+            && $request->hasHeader('Authorization', 'Bearer test-openai-secret')
+            && ($payload['model'] ?? null) === 'gpt-4.1-mini'
+            && ($payload['response_format']['type'] ?? null) === 'json_object'
+            && is_string($imageUrl)
+            && str_starts_with($imageUrl, 'data:image/jpeg;base64,')
+            && ! str_contains($imageUrl, 'safe-derived-image-bytes');
+    });
+
+    $aiRun = $this->asset->aiRuns()->firstOrFail();
+    $auditPayload = json_encode(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->get()->toArray(), JSON_THROW_ON_ERROR);
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($this->asset->fresh()->description)->toBeNull()
+        ->and($aiRun->provider_kind)->toBe('openai')
+        ->and($aiRun->provider_name)->toBe('native-openai')
+        ->and($aiRun->model_id)->toBe('gpt-4.1-mini')
+        ->and($aiRun->model_version)->toBe('gpt-4.1-mini-2026-09-17')
+        ->and($aiRun->input_contract)->toMatchArray([
+            'metadata_stripped' => true,
+            'automatic_metadata_write' => false,
+        ])
+        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->where('review_status', AiSuggestion::REVIEW_PENDING)->pluck('value')->all())
+        ->toBe(['Een veilige OpenAI fixturebeschrijving.', 'archief', 'controle'])
+        ->and($auditPayload)->not->toContain('test-openai-secret')
+        ->and($auditPayload)->not->toContain('data:image/jpeg');
 });
 
 it('reports an explicit failure when an existing source file was never malware scanned', function (): void {

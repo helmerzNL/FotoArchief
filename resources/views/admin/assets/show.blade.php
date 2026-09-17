@@ -4,6 +4,7 @@
 <a href="{{ route('admin.assets.index') }}">Terug naar alle foto’s</a>
 <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
 <p>{{ $asset->accession_number }} · Concept / privé · Revisie {{ $asset->lock_version }}</p>
+<p><a href="#ai-results">AI-resultaten bekijken</a></p>
 @php($file = $asset->files->first())
 @php($right = $asset->rights->sortByDesc('id')->first())
 @if($file && isset($file->derivatives['preview1200']))
@@ -39,6 +40,7 @@
     <p>Rechthebbende: {{ $right?->rights_holder ?: 'Onbekend' }} · {{ $right?->verification_status ?? 'unverified' }}</p>
     <p>{{ $right?->note }}</p>
 </section>
+@include('ai.results._photo')
 @can('update', $asset)
 <section class="card"><h2>Metadata bewerken</h2>
     <form method="post" action="{{ route('admin.assets.update', $asset) }}">

@@ -10,6 +10,7 @@ use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
 use App\Modules\Ai\Jobs\ProcessAiIndexJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
+use App\Modules\Catalogue\Models\Asset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -48,6 +49,23 @@ class OperationRunController extends Controller
         return redirect()
             ->route('admin.operations.runs.index')
             ->with('status', $message);
+    }
+
+    public function aiResults(Request $request, OperationRun $run): View
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('assets.view')
+            && ($user->hasPermission('users.manage') || $user->hasPermission('catalogue.manage') || $user->hasPermission('assets.update')), 403);
+        abort_unless(in_array($run->operation_type, [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE], true), 404);
+
+        $query = Asset::query()->whereIn('id', $run->auditEvents()
+            ->select('asset_id')->where('event_type', $run->operation_type.'.item_succeeded'));
+        if (! $user->hasPermission('assets.publish')) {
+            $query->where('created_by_user_id', $user->id);
+        }
+        $assets = $query->orderBy('accession_number')->orderBy('id')->paginate(25);
+
+        return view('ai.results.operation', compact('run', 'assets'));
     }
 
     public function cancel(Request $request, OperationRun $run): RedirectResponse
