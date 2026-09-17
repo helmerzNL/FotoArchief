@@ -1162,19 +1162,26 @@
             "file": "app/Modules/Ai/Services/LocalAiProvider.php",
             "line": 147,
             "kind": "php_string",
+            "text": "Local AI provider must report a non-empty shared model_space.",
+            "batch": "ai"
+        },
+        {
+            "file": "app/Modules/Ai/Services/LocalAiProvider.php",
+            "line": 150,
+            "kind": "php_string",
             "text": "Local AI provider must report positive embedding dimensions.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/LocalAiProvider.php",
-            "line": 161,
+            "line": 164,
             "kind": "php_string",
             "text": "Local AI embedding response misses embedding, model_space or dimensions.",
             "batch": "ai"
         },
         {
             "file": "app/Modules/Ai/Services/LocalAiProvider.php",
-            "line": 164,
+            "line": 167,
             "kind": "php_string",
             "text": "Local AI embedding dimensions do not match the vector length.",
             "batch": "ai"

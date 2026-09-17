@@ -1,0 +1,13 @@
+[Unit]
+Description=FotoArchief encrypted second backup copy timer (disabled template)
+Documentation=docs/BACKUP_RESTORE.md
+
+[Timer]
+# Example only. Choose a local maintenance window after confirming backup
+# duration, off-host destination availability, alert routing and retention.
+OnCalendar=*-*-* 03:15:00
+Persistent=false
+Unit=fotoarchief-encrypted-second-backup.service
+
+[Install]
+WantedBy=timers.target

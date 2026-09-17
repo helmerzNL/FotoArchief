@@ -17,6 +17,7 @@ use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 use Throwable;
 
@@ -105,10 +106,19 @@ class ProcessAiIndexJob extends OperationJob
                     ],
                 );
 
+                if ((string) $generation->provider_kind !== $provider
+                    || (int) $generation->dimensions !== (int) $embedding['dimensions']
+                    || (string) $generation->status !== AiEmbeddingGeneration::STATUS_ACTIVE) {
+                    throw new RuntimeException("AI-indexering geweigerd: modelruimte {$embedding['model_space']} hoort bij een andere provider, dimensie of status.");
+                }
+
                 $generation->embeddings()
                     ->where('asset_file_id', $file->id)
                     ->whereNull('stale_at')
-                    ->where('source_file_sha256', '!=', $sourceSha)
+                    ->where(function (Builder $query) use ($sourceLock, $sourceSha): void {
+                        $query->where('source_file_sha256', '!=', $sourceSha)
+                            ->orWhere('source_asset_lock_version', '!=', $sourceLock);
+                    })
                     ->update(['stale_at' => now()]);
 
                 AiEmbedding::query()->updateOrCreate(

@@ -138,6 +138,51 @@ De officiële native base-URL's, de Anthropic API-versie en de multimodale
 OpenRouter-allowlist zijn vaste applicatiegegevens en niet wijzigbaar via
 runtimevariabelen of de UI.
 
+### Lokale AI-contractstub en echte proof
+
+`tests/Smoke/local-ai-http-contract.php` start een geïsoleerde lokale
+HTTP-stub die alleen het FotoArchief-contract voor `/v1/capabilities`,
+`/v1/analyze-image`, `/v1/embed-image` en `/v1/embed-text` controleert. Dit is
+geen bewijs dat een echt model draait, goed presteert of historisch relevante
+resultaten levert. Het bewijst wel dat het protocol zonder externe fallback kan
+worden aangesproken en dat beeld- en tekstembeddings dezelfde modelruimte en
+dimensie rapporteren.
+
+Voor een echte, operatorgekozen lokale service kan de contractprobe handmatig
+worden gedraaid:
+
+```sh
+php scripts/ai-local-contract-probe.php https://local-ai.example.invalid --confirm-send-test-image
+```
+
+De probe print provider, endpoint zonder credentials, model, modelversie of
+digest voor zover de service die meldt, modelruimte, dimensies en afstandsmaat.
+Hij print geen afbeeldingsbytes, ruwe embeddings of geheimen. Dit blijft een
+contractcontrole: productieacceptatie vereist daarnaast een goedgekeurde
+niet-gevoelige proofset, vastgelegde modelcode- en gewichtslicenties, p50/p95
+latency, foutpercentage, retrygedrag, CPU/GPU/geheugenprofiel en een gekozen
+relevantiedrempel met positieve en negatieve Nederlandse queries. Modeldownload,
+providerkosten en live uitvoering zijn geblokkeerd totdat de operator die
+middelen expliciet levert.
+
+### Compatibele embeddings en vectorbackend
+
+Semantische beeldzoekopdrachten vereisen echte multimodale beeld- en
+tekstembeddings in dezelfde modelruimte. OpenAI `text-embedding-*` en andere
+tekst-alleen modellen mogen niet als beeldretrieval worden geconfigureerd.
+FotoArchief weigert tekstqueries waarvoor geen actieve beeldindex met dezelfde
+provider, modelruimte en dimensies bestaat. Een beeldindexrun weigert ook een
+bestaande modelruimte wanneer de provider of dimensie niet overeenkomt.
+
+De huidige applicatie slaat vectoren nog op als `database_json` en gebruikt
+PostgreSQL als bron van waarheid. `pgvector` blijft de beoogde eerste
+productie-vectorbackend, maar is niet stilzwijgend aangezet zolang de
+applicatiepad en migraties daar nog niet op zijn omgebouwd. De opt-in test
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` gebruikt een disposable
+PostgreSQL-schema met de echte `vector`-extensie om modelisolatie, stale
+filtering en rebuildgedrag te bewijzen wanneer `FOTOARCHIEF_TEST_PGVECTOR_*`
+naar een testdatabase wijst.
+
 ## English
 
 FotoArchief keeps AI disabled by default. Administrators configure the custom
@@ -270,3 +315,46 @@ administration UI.
 Official native base URLs, the Anthropic API version, and the multimodal
 OpenRouter allowlist are fixed application data and cannot be changed through
 runtime variables or the UI.
+
+### Local AI contract stub and real proof
+
+`tests/Smoke/local-ai-http-contract.php` starts an isolated local HTTP stub that
+checks only FotoArchief's contract for `/v1/capabilities`, `/v1/analyze-image`,
+`/v1/embed-image`, and `/v1/embed-text`. This is not proof that a real model is
+running, performs well, or produces historically relevant results. It does prove
+that the protocol can be called without external fallback and that image and
+text embeddings report the same model space and dimensions.
+
+For a real operator-chosen local service, run the contract probe manually:
+
+```sh
+php scripts/ai-local-contract-probe.php https://local-ai.example.invalid --confirm-send-test-image
+```
+
+The probe prints provider, endpoint without credentials, model, model version
+or digest where the service reports one, model space, dimensions, and distance
+metric. It does not print image bytes, raw embeddings, or secrets. This remains
+a contract check: production acceptance also requires an approved non-sensitive
+proof set, recorded model-code and model-weight licenses, p50/p95 latency,
+failure rate, retry behavior, CPU/GPU/memory profile, and a chosen relevance
+threshold with positive and negative Dutch queries. Model download, provider
+spend, and live execution are blocked until the operator explicitly supplies
+those resources.
+
+### Compatible embeddings and vector backend
+
+Semantic image search requires real multimodal image and text embeddings in the
+same model space. OpenAI `text-embedding-*` and other text-only models must not
+be configured as image retrieval. FotoArchief refuses text queries when no
+active image index exists with the same provider, model space, and dimensions.
+An image-index run also refuses an existing model space when the provider or
+dimension does not match.
+
+The current application still stores vectors as `database_json` and uses
+PostgreSQL as the source of truth. `pgvector` remains the intended first
+production vector backend, but it is not silently enabled until the application
+path and migrations have been converted to it. The opt-in test
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` uses a disposable
+PostgreSQL schema with the real `vector` extension to prove model isolation,
+stale filtering, and rebuild behavior when `FOTOARCHIEF_TEST_PGVECTOR_*` points
+to a test database.

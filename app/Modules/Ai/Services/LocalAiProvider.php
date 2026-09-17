@@ -143,6 +143,9 @@ class LocalAiProvider implements ConnectionProbe, EmbeddingProvider, ImageAnalys
         if (Arr::get($payload, 'same_embedding_space') !== true) {
             throw new AiProviderException('Local AI provider must prove text and image embeddings share one model space.');
         }
+        if (! is_string(Arr::get($payload, 'model_space')) || trim((string) Arr::get($payload, 'model_space')) === '') {
+            throw new AiProviderException('Local AI provider must report a non-empty shared model_space.');
+        }
         if (! is_numeric(Arr::get($payload, 'dimensions')) || (int) Arr::get($payload, 'dimensions') < 1) {
             throw new AiProviderException('Local AI provider must report positive embedding dimensions.');
         }

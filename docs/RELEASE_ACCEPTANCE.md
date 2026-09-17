@@ -615,3 +615,82 @@ tests/Feature/ReleaseArchiveSafetyTest.php
 tests/Feature/Operations/StorageMigrationTest.php
 tests/Feature/Operations/S3ProviderAcceptanceTest.php --compact` with
 **5 passing / 106 assertions** and **2 environment-gated skips** for live S3.
+
+## Items 16-20 backup and AI/vector acceptance provisions
+
+### Nederlands
+
+Deze batch is lokaal voorbereid zonder productie-installatie, providergeheimen,
+Docker, shellbackupuitvoering, modeldownload, externe providerrequests of
+kosten. De versie blijft `0.9.51`; live S3/key-custody, echte lokale
+modeluitvoering en echte applicatie-`pgvector` migratie blijven geblokkeerd
+totdat de operator de bijbehorende middelen levert.
+
+16. **Geplande versleutelde tweede backupkopie**:
+`scripts/backup-second-copy-scheduled.sh` en de uitgeschakelde voorbeelden in
+`deploy/fotoarchief-encrypted-second-backup.conf.example` en
+`deploy/systemd/` leveren een opt-in planning met expliciete lock, stderr-fouten
+en optionele operatorgekozen failure reporter. Er is geen standaard enablement,
+geen geraden bestemming en geen automatische retentieverwijdering; de
+retentiepolicy is verplicht maar wordt alleen geregistreerd.
+17. **Herstel tweede kopie**: `tests/Smoke/encrypted-backup-copy.sh` bouwt een
+wegwerpbackup, maakt een versleutelde kopie, herstelt die naar een nieuwe map en
+weigert tampering, verkeerde sleutel en een bestaand doel. De bestaande
+containeracceptatie voor `scripts/restore-compose.sh` blijft het bewijs voor
+restore naar lege lokale volumes/database; S3-restore is niet als live bewijs
+geclaimd.
+18. **Lokale AI-service**: `tests/Smoke/local-ai-http-contract.php` is een
+geïsoleerde HTTP-contractstub, geen modelproof. `scripts/ai-local-contract-probe.php`
+rapporteert bij handmatige opt-in provider, endpoint zonder credentials, model,
+modelversie/digest, modelruimte, dimensies en afstandsmaat zonder bytes,
+embeddings of geheimen te printen. Echte modeluitvoering blijft geblokkeerd
+zonder operatorgekozen model, licentiebeoordeling, latency-eisen en resources.
+19. **Compatibele beeld-/tekstembeddings**: de lokale capabilityprobe weigert
+tekst-alleen of modelruimte-loze providers, semantisch zoeken weigert
+modelruimte-/dimensiemismatch en OpenAI/Anthropic blijven niet-embeddingproviders.
+OpenAI tekstembeddings worden niet als visuele retrieval behandeld.
+20. **Vectorbackend en modelwijzigingen**: de huidige applicatie gebruikt nog
+`database_json`; daarom wordt `pgvector` niet als productiepad geclaimd.
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` is een opt-in echte
+PostgreSQL/`vector`-extensietest voor modelisolatie, stale filtering en rebuild
+in een disposable schema. De indexjob weigert hergebruik van een bestaande
+modelruimte met andere provider of dimensie.
+
+### English
+
+This batch was prepared locally without a production installation, provider
+secrets, Docker, shell backup execution, model download, external provider
+requests, or spend. The version remains `0.9.51`; live S3/key custody, real
+local model execution, and real application `pgvector` migration remain blocked
+until the operator supplies the corresponding resources.
+
+16. **Scheduled encrypted second backup copy**:
+`scripts/backup-second-copy-scheduled.sh` and the disabled examples in
+`deploy/fotoarchief-encrypted-second-backup.conf.example` and `deploy/systemd/`
+provide opt-in scheduling with an explicit lock, stderr failures, and an
+optional operator-chosen failure reporter. There is no default enablement, no
+guessed destination, and no automatic retention deletion; the retention policy
+is required but only recorded.
+17. **Restore second copy**: `tests/Smoke/encrypted-backup-copy.sh` builds a
+disposable backup, creates an encrypted copy, restores it into a new directory,
+and refuses tampering, a wrong key, and an existing target. The existing
+container acceptance for `scripts/restore-compose.sh` remains the proof for
+restoring into empty local volumes/database; S3 restore is not claimed as live
+evidence.
+18. **Local AI service**: `tests/Smoke/local-ai-http-contract.php` is an
+isolated HTTP contract stub, not model proof. `scripts/ai-local-contract-probe.php`
+reports provider, endpoint without credentials, model, model version/digest,
+model space, dimensions, and distance metric during manual opt-in without
+printing bytes, embeddings, or secrets. Real model execution remains blocked
+without an operator-chosen model, license review, latency requirements, and
+resources.
+19. **Compatible image/text embeddings**: the local capability probe refuses
+text-only providers or providers without a model space, semantic search refuses
+model-space/dimension mismatches, and OpenAI/Anthropic remain non-embedding
+providers. OpenAI text embeddings are not treated as visual retrieval.
+20. **Vector backend and model changes**: the current application still uses
+`database_json`; therefore `pgvector` is not claimed as the production path.
+`tests/Feature/Operations/PgvectorAcceptanceTest.php` is an opt-in real
+PostgreSQL/`vector` extension test for model isolation, stale filtering, and
+rebuild in a disposable schema. The index job refuses reuse of an existing model
+space with a different provider or dimension.

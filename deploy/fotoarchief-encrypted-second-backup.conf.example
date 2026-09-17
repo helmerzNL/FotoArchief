@@ -1,0 +1,33 @@
+# Disabled template for scripts/backup-second-copy-scheduled.sh.
+# Copy to a private root-owned path such as /etc/fotoarchief/second-backup.conf,
+# fill every value, then enable the systemd timer manually.
+
+FOTOARCHIEF_SECOND_BACKUP_ENABLED=false
+
+# Existing checkout compose file. Leave empty only if the service WorkingDirectory
+# always points at the checkout and deploy/compose.yaml is the intended stack.
+COMPOSE_FILE=deploy/compose.yaml
+
+# Existing private staging directory for the unencrypted, consistent local backup.
+# The script creates one new timestamped child per run and never guesses this path.
+BACKUP_PARENT_DIR=
+
+# Existing mounted second location for encrypted .tar.gz.enc copies.
+ENCRYPTED_COPY_DIR=
+
+# Existing key file, chmod 600, stored outside the application checkout,
+# outside the backup directory and outside the second-copy destination.
+KEY_FILE=
+
+# Existing lock directory parent; the exact lock path must not be shared with
+# unrelated jobs. The script creates and removes this directory atomically.
+LOCK_DIR=/run/lock/fotoarchief-second-backup.lock
+
+# Required human retention decision. This script records the policy but never
+# deletes old backups; configure retention on the destination or run reviewed
+# operator cleanup separately.
+RETENTION_POLICY=
+
+# Optional explicit failure reporter, for example:
+# FAILURE_REPORT_COMMAND='docker compose -f deploy/compose.yaml exec -T scheduler php artisan operations:check-alerts --dry-run'
+FAILURE_REPORT_COMMAND=

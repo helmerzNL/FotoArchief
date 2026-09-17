@@ -113,6 +113,66 @@ S3-based archives, the second location must include the database dump,
 `storage/app/installation`, deployment config and the object-storage snapshot or
 sync result for originals and retained derivatives.
 
+## Geplande versleutelde tweede kopie / Scheduled encrypted second copy
+
+### Nederlands
+
+Er is een uitgeschakeld voorbeeld voor een geplande tweede kopie:
+
+- `deploy/fotoarchief-encrypted-second-backup.conf.example`
+- `deploy/systemd/fotoarchief-encrypted-second-backup.service.example`
+- `deploy/systemd/fotoarchief-encrypted-second-backup.timer.example`
+- `scripts/backup-second-copy-scheduled.sh`
+
+Kopieer het configuratievoorbeeld naar een private locatie, vul pas daarna
+`BACKUP_PARENT_DIR`, `ENCRYPTED_COPY_DIR`, `KEY_FILE`, `LOCK_DIR`,
+`RETENTION_POLICY` en eventueel `FAILURE_REPORT_COMMAND` in, en zet
+`FOTOARCHIEF_SECOND_BACKUP_ENABLED=true` alleen na die keuzes. De helper maakt
+eerst met `scripts/backup-compose.sh` een consistente lokale backup en maakt
+daarna met `scripts/backup-copy-encrypted.sh` een versleutelde tweede kopie.
+Hij gebruikt een expliciete lockdirectory en weigert een tweede run zolang die
+lock bestaat. Bij een fout schrijft hij naar stderr en voert hij alleen de
+operatorgekozen `FAILURE_REPORT_COMMAND` uit; er is geen standaard webhook of
+bestemmingspad.
+
+De retentie is bewust alleen een verplichte tekstuele keuze. Deze helper
+verwijdert geen oude backups en voert geen brede `rm` uit op een bestemming.
+Configureer retentie op de tweede locatie of voer aparte, beoordeelde
+operatoropschoning uit. Bewaar de sleutel buiten de application checkout,
+buiten het actieve backup/serverpad en buiten de tweede locatie. De bestaande
+encryptie gebruikt AES-256-CBC met PBKDF2-SHA256 en een checksummanifest; dat is
+een kopieer-/rustversleutelingshulpmiddel, geen authenticatie van een
+onvertrouwde backupbron.
+
+### English
+
+A disabled example is available for a scheduled second copy:
+
+- `deploy/fotoarchief-encrypted-second-backup.conf.example`
+- `deploy/systemd/fotoarchief-encrypted-second-backup.service.example`
+- `deploy/systemd/fotoarchief-encrypted-second-backup.timer.example`
+- `scripts/backup-second-copy-scheduled.sh`
+
+Copy the configuration example to a private location, fill in
+`BACKUP_PARENT_DIR`, `ENCRYPTED_COPY_DIR`, `KEY_FILE`, `LOCK_DIR`,
+`RETENTION_POLICY` and optionally `FAILURE_REPORT_COMMAND`, and set
+`FOTOARCHIEF_SECOND_BACKUP_ENABLED=true` only after making those choices. The
+helper first creates a consistent local backup with `scripts/backup-compose.sh`
+and then creates the encrypted second copy with
+`scripts/backup-copy-encrypted.sh`. It uses an explicit lock directory and
+refuses a second run while that lock exists. On failure it writes to stderr and
+only runs the operator-chosen `FAILURE_REPORT_COMMAND`; there is no default
+webhook or destination path.
+
+Retention is deliberately only a required textual decision. This helper does
+not delete old backups and does not run broad `rm` commands against a
+destination. Configure retention at the second location or run separate,
+reviewed operator cleanup. Keep the key outside the application checkout,
+outside the active backup/server path and outside the second location. The
+existing encryption uses AES-256-CBC with PBKDF2-SHA256 plus a checksum
+manifest; it is a copy/encryption-at-rest helper, not authentication for an
+untrusted backup source.
+
 ## Database backup
 
 Example local PostgreSQL dump into the persistent `postgres-backups` volume:

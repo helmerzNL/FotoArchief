@@ -64,6 +64,32 @@ it('probes local AI capabilities and rejects incompatible embedding spaces', fun
     Http::assertSent(fn ($request): bool => $request->url() === 'http://127.0.0.1:8088/v1/capabilities');
 });
 
+it('rejects local capability probes that are text-only or lack a shared model space', function (array $payload, string $expected): void {
+    enableLocalAi($this->user);
+    Http::fake(['http://127.0.0.1:8088/v1/capabilities' => Http::response($payload)]);
+
+    expect(fn () => app(LocalAiProvider::class)->probe())
+        ->toThrow(AiProviderException::class, $expected);
+})->with([
+    'text only' => [[
+        'provider_kind' => 'local',
+        'image_analysis' => true,
+        'image_embeddings' => false,
+        'text_embeddings' => true,
+        'same_embedding_space' => false,
+        'model_space' => 'text-only:3:cosine',
+        'dimensions' => 3,
+    ], 'image analysis plus text/image embeddings'],
+    'missing model space' => [[
+        'provider_kind' => 'local',
+        'image_analysis' => true,
+        'image_embeddings' => true,
+        'text_embeddings' => true,
+        'same_embedding_space' => true,
+        'dimensions' => 3,
+    ], 'non-empty shared model_space'],
+]);
+
 it('sends local image analysis requests without external fallback', function (): void {
     enableLocalAi($this->user);
     Http::fake([
@@ -107,4 +133,30 @@ it('validates local text and image embedding dimensions', function (): void {
 
     expect(fn () => app(LocalAiProvider::class)->embedText('dorpsstraat'))
         ->toThrow(AiProviderException::class, 'dimensions do not match');
+});
+
+it('maps local HTTP status failures without fallback', function (): void {
+    enableLocalAi($this->user);
+    Http::fake([
+        'http://127.0.0.1:8088/v1/analyze-image' => Http::response(['error' => 'bad'], 503),
+        '*' => Http::response(['unexpected' => 'fallback'], 200),
+    ]);
+
+    expect(fn () => app(LocalAiProvider::class)->analyzeImage('image-bytes', []))
+        ->toThrow(AiProviderException::class, 'failed with status 503');
+
+    Http::assertSentCount(1);
+});
+
+it('maps local malformed JSON failures without fallback', function (): void {
+    enableLocalAi($this->user);
+    Http::fake([
+        'http://127.0.0.1:8088/v1/analyze-image' => Http::response('not-json', 200),
+        '*' => Http::response(['unexpected' => 'fallback'], 200),
+    ]);
+
+    expect(fn () => app(LocalAiProvider::class)->analyzeImage('image-bytes', []))
+        ->toThrow(AiProviderException::class, 'returned invalid JSON');
+
+    Http::assertSentCount(1);
 });

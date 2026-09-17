@@ -14,6 +14,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -124,3 +125,22 @@ it('renders admin semantic search results', function (): void {
         ->assertSee('AI semantisch zoeken', false)
         ->assertSee('SEM-ROUTE', false);
 });
+
+it('refuses text embeddings from a different model space or dimension than the active image index', function (array $response, string $expected): void {
+    semanticAsset($this->reviewer, 'SEM-MISMATCH', [1.0, 0.0]);
+    Http::fake(['http://127.0.0.1:8088/v1/embed-text' => Http::response($response)]);
+
+    expect(fn () => app(AiSemanticSearchService::class)->searchAdmin('dorpsplein', 'local', $this->reviewer))
+        ->toThrow(ValidationException::class, $expected);
+})->with([
+    'model space mismatch' => [[
+        'embedding' => [1.0, 0.0],
+        'model_space' => 'text-only-space',
+        'dimensions' => 2,
+    ], 'geen actieve beeldindex'],
+    'dimension mismatch' => [[
+        'embedding' => [1.0, 0.0, 0.0],
+        'model_space' => 'clip-nl-proof-space',
+        'dimensions' => 3,
+    ], 'verschillende embeddingdimensies'],
+]);

@@ -1,0 +1,17 @@
+[Unit]
+Description=FotoArchief encrypted second backup copy (disabled template)
+Documentation=docs/BACKUP_RESTORE.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fotoarchief
+Group=fotoarchief
+WorkingDirectory=/srv/fotoarchief
+ExecStart=/bin/sh scripts/backup-second-copy-scheduled.sh /etc/fotoarchief/second-backup.conf
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true
