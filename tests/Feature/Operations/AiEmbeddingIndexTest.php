@@ -10,8 +10,8 @@ use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
+use App\Modules\Ai\Services\PgvectorEmbeddingStore;
 use App\Modules\ArchiveOperations\Models\OperationRun;
-use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Database\Seeders\DatabaseSeeder;
@@ -74,18 +74,16 @@ beforeEach(function (): void {
     ], $this->user);
 });
 
-it('dispatches embedding index runs on the ingest queue', function (): void {
+it('refuses dispatch without the vector backend and never queues unusable index work', function (): void {
     Queue::fake();
 
-    $run = app(AiDispatchService::class)->dispatchEmbeddingIndex([$this->asset->id], 'local', $this->user);
-
-    expect($run->operation_type)->toBe(ProcessAiIndexJob::TYPE)
-        ->and($run->payload['provider'])->toBe('local')
-        ->and($run->total_items)->toBe(1);
-    Queue::assertPushed(ProcessAiIndexJob::class);
+    expect(app(PgvectorEmbeddingStore::class)->available())->toBeFalse()
+        ->and(fn () => app(AiDispatchService::class)->dispatchEmbeddingIndex([$this->asset->id], 'local', $this->user))
+        ->toThrow(ValidationException::class, 'pgvector is niet beschikbaar');
+    Queue::assertNothingPushed();
 });
 
-it('stores source-bound image embeddings in a shared multimodal model space', function (): void {
+it('does not silently index into JSON storage when pgvector is unavailable', function (): void {
     Http::fake([
         'http://127.0.0.1:8088/v1/embed-image' => Http::response([
             'embedding' => [0.25, 0.5, 0.75],
@@ -102,21 +100,14 @@ it('stores source-bound image embeddings in a shared multimodal model space', fu
         'total_items' => 1,
     ]);
 
-    (new ProcessAiIndexJob($run->id))->handle();
-
-    $generation = AiEmbeddingGeneration::query()->where('model_space', 'clip-nl-proof-space')->firstOrFail();
-    $embedding = AiEmbedding::query()->where('asset_file_id', $this->file->id)->firstOrFail();
-    expect($run->fresh()->status)->toBe(OperationRun::STATUS_COMPLETED)
-        ->and($generation->status)->toBe(AiEmbeddingGeneration::STATUS_ACTIVE)
-        ->and($generation->dimensions)->toBe(3)
-        ->and($generation->capability_receipt['text_embeddings_required_for_queries'])->toBeTrue()
-        ->and($embedding->source_file_sha256)->toBe($this->file->sha256)
-        ->and($embedding->embedding)->toBe([0.25, 0.5, 0.75])
-        ->and(AiRun::query()->where('run_type', AiRun::TYPE_EMBEDDING)->count())->toBe(1)
-        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.index.item_succeeded')->count())->toBe(1);
+    expect(fn () => (new ProcessAiIndexJob($run->id))->handle())
+        ->toThrow(ValidationException::class, 'pgvector is niet beschikbaar');
+    expect(AiEmbedding::query()->count())->toBe(0)
+        ->and(AiRun::query()->count())->toBe(0);
+    Http::assertNothingSent();
 });
 
-it('fails closed when an existing model space has incompatible dimensions', function (): void {
+it('keeps a disabled embedding capability blocked before checking the vector backend', function (): void {
     AiEmbeddingGeneration::query()->create([
         'provider_kind' => 'local',
         'provider_name' => 'owned-http',
@@ -144,12 +135,21 @@ it('fails closed when an existing model space has incompatible dimensions', func
         'total_items' => 1,
     ]);
 
-    expect(fn () => (new ProcessAiIndexJob($run->id))->handle())
-        ->toThrow(RuntimeException::class, 'andere provider, dimensie of status');
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1',
+        'embeddings_enabled' => false,
+        'local_provider_enabled' => '1',
+        'local_endpoint' => 'http://127.0.0.1:8088',
+        'embeddings_provider' => 'local',
+        'max_assets_per_batch' => 10,
+        'derivative_max_pixels' => 512,
+        'request_timeout_seconds' => 15,
+    ], $this->user);
 
-    expect($run->fresh()->status)->toBe(OperationRun::STATUS_QUEUED)
-        ->and(AiEmbedding::query()->count())->toBe(0)
-        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->where('event_type', 'ai.index.item_failed')->count())->toBe(1);
+    (new ProcessAiIndexJob($run->id))->handle();
+
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_CANCELLED)
+        ->and(AiEmbedding::query()->count())->toBe(0);
 });
 
 it('refuses embedding index batches when embeddings are disabled', function (): void {

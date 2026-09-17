@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Modules\Ai\Services;
 
 use App\Models\User;
-use App\Modules\Ai\Models\AiEmbedding;
-use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Publication\Models\Publication;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -17,6 +16,7 @@ class AiSemanticSearchService
 {
     public function __construct(
         private readonly AiConfigurationService $configuration,
+        private readonly PgvectorEmbeddingStore $vectors,
     ) {}
 
     /**
@@ -25,7 +25,13 @@ class AiSemanticSearchService
     public function searchAdmin(string $query, string $provider, User $user, int $limit = 10): array
     {
         $limit = max(1, min($limit, 25));
-        $ranked = $this->rankEmbeddings($query, $provider, 500);
+        $eligibleAssets = Asset::query()->select('assets.id');
+        if (! $user->hasPermission('assets.view')) {
+            $eligibleAssets->whereRaw('1 = 0');
+        } elseif (! $user->hasPermission('assets.publish')) {
+            $eligibleAssets->where('created_by_user_id', $user->id);
+        }
+        $ranked = $this->rankEmbeddings($query, $provider, $limit, $eligibleAssets->toBase());
         $assets = Asset::query()->whereIn('id', array_column($ranked, 'asset_id'))->get()->keyBy('id');
         $matches = array_filter($ranked, function (array $match) use ($assets, $user): bool {
             $asset = $assets->get($match['asset_id']);
@@ -44,10 +50,8 @@ class AiSemanticSearchService
     public function searchPublic(string $query, string $provider, int $limit = 24): Collection
     {
         $limit = max(1, min($limit, 24));
-        // Visibility is an SQL authorization predicate, not a ranking signal.
-        // Rank a bounded candidate set first, then retain enough authorized
-        // publications to satisfy the requested page where they exist.
-        $matches = $this->rankEmbeddings($query, $provider, 500);
+        $eligibleAssets = Publication::query()->publiclyVisible()->select('publications.asset_id')->toBase();
+        $matches = $this->rankEmbeddings($query, $provider, $limit, $eligibleAssets);
         if ($matches === []) {
             return collect();
         }
@@ -69,7 +73,7 @@ class AiSemanticSearchService
     /**
      * @return list<array{asset_id: string, accession_number: string|null, title: string|null, score: float, model_space: string}>
      */
-    private function rankEmbeddings(string $query, string $provider, int $limit): array
+    private function rankEmbeddings(string $query, string $provider, int $limit, Builder $eligibleAssets): array
     {
         $query = trim($query);
         $settings = $this->configuration->effective();
@@ -91,15 +95,16 @@ class AiSemanticSearchService
             throw ValidationException::withMessages($errors);
         }
 
+        $this->vectors->requireAvailable();
+        $generation = app(AiIndexGenerationService::class)->activeForProvider($provider);
+        if ($generation === null || $generation->requested_model !== (string) ($settings['embeddings_model'] ?? '')) {
+            throw ValidationException::withMessages(['query' => __('ai.errors.semantic_no_index')]);
+        }
+
         $queryEmbedding = app(AiProviderResolver::class)->resolveEmbeddings($provider)
             ->embedText($query, ['model' => (string) ($settings['embeddings_model'] ?? '')]);
 
-        $generation = AiEmbeddingGeneration::query()
-            ->where('provider_kind', $provider)
-            ->where('model_space', $queryEmbedding['model_space'])
-            ->where('status', AiEmbeddingGeneration::STATUS_ACTIVE)
-            ->first();
-        if (! $generation instanceof AiEmbeddingGeneration) {
+        if ($generation->model_space !== $queryEmbedding['model_space']) {
             throw ValidationException::withMessages([
                 'query' => __('ai.errors.semantic_no_index'),
             ]);
@@ -110,62 +115,9 @@ class AiSemanticSearchService
             ]);
         }
 
-        $candidateLimit = 500;
-        $matches = [];
-        AiEmbedding::query()
-            ->with('asset')
-            ->where('ai_embedding_generation_id', $generation->id)
-            ->whereNull('stale_at')
-            ->latest('indexed_at')
-            ->limit($candidateLimit)
-            ->get()
-            ->each(function (AiEmbedding $embedding) use (&$matches, $queryEmbedding, $generation): void {
-                $asset = $embedding->asset;
-                $imageEmbedding = $embedding->embedding;
-                if ($asset === null || ! is_array($imageEmbedding)) {
-                    return;
-                }
-                $score = $this->cosine($queryEmbedding['embedding'], array_values($imageEmbedding));
-                if ($score <= 0.0) {
-                    return;
-                }
-                $matches[] = [
-                    'asset_id' => $asset->id,
-                    'accession_number' => $asset->accession_number,
-                    'title' => $asset->title,
-                    'score' => round($score, 6),
-                    'model_space' => $generation->model_space,
-                ];
-            });
-
-        usort($matches, fn (array $a, array $b): int => $b['score'] <=> $a['score']);
-
-        return array_slice($matches, 0, $limit);
-    }
-
-    /**
-     * @param  list<float|int>  $a
-     * @param  list<float|int>  $b
-     */
-    private function cosine(array $a, array $b): float
-    {
-        if ($a === [] || count($a) !== count($b)) {
-            return 0.0;
-        }
-        $dot = 0.0;
-        $normA = 0.0;
-        $normB = 0.0;
-        foreach ($a as $i => $value) {
-            $left = (float) $value;
-            $right = (float) $b[$i];
-            $dot += $left * $right;
-            $normA += $left * $left;
-            $normB += $right * $right;
-        }
-        if ($normA <= 0.0 || $normB <= 0.0) {
-            return 0.0;
-        }
-
-        return $dot / (sqrt($normA) * sqrt($normB));
+        return array_values(array_filter(
+            $this->vectors->nearest($generation, $queryEmbedding['embedding'], $limit, $eligibleAssets),
+            static fn (array $match): bool => $match['score'] > 0.0,
+        ));
     }
 }

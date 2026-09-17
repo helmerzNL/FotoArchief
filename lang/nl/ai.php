@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'pgvector_provision_description' => 'Bereid vectoropslag voor nadat de beheerder de pgvector-extensie heeft geinstalleerd.',
+    'pgvector_provisioned' => 'pgvector-opslag is gereed. Bouw nu een nieuwe embeddingindex.',
     'common' => [
         'yes' => 'ja',
         'no' => 'nee',
@@ -25,6 +27,8 @@ return [
             'native_ready' => ':provider geconfigureerd / klaar',
             'image_ready' => 'Beeldanalyse gereed (provider + model + toestemming)',
             'embeddings_ready' => 'Embeddings gereed (provider + model + toestemming)',
+            'pgvector_available' => 'pgvector beschikbaar',
+            'pgvector_unavailable' => 'pgvector ontbreekt. Alleen semantische indexering en zoeken zijn geblokkeerd; overige AI-instellingen en beeldanalyse blijven apart beschikbaar.',
             'configured_notice' => '"Geconfigureerd" betekent dat de database een versleutelde API-sleutel en een positief budget bevat. De sleutel wordt nooit getoond, teruggegeven, gelogd of geserialiseerd.',
             'key_set' => 'ingesteld',
             'key_missing' => 'niet ingesteld',
@@ -209,6 +213,9 @@ return [
         'rejected' => 'AI-suggestie afgewezen zonder metadata te wijzigen.',
     ],
     'errors' => [
+        'generation_outdated' => 'Een nieuwere indexgeneratie is al geactiveerd. Start een nieuwe indextaak; deze oude herbouw kan de actuele index niet overschrijven.',
+        'embedding_response_missing' => 'Het antwoord met de beeldembedding ontbreekt.',
+        'generation_sources_changed' => 'Niet alle geselecteerde bronnen zijn nog actueel en volledig geïndexeerd. Probeer deze taak opnieuw voordat de index kan worden geactiveerd.',
         'asset_batch_count' => 'Selecteer 1 tot :limit assets voor een AI-batch.',
         'index_batch_count' => 'Selecteer 1 tot :limit assets voor een AI-indexbatch.',
         'unknown_reference_format' => 'Onbekend formaat voor AI-fotoreferenties. Start een nieuwe taak.',
@@ -259,6 +266,8 @@ return [
         'semantic_query_required' => 'Vul een zoekvraag in.',
         'semantic_no_index' => 'Er is geen actieve beeldindex voor het model_space van deze tekstquery.',
         'semantic_dimension_mismatch' => 'Tekstquery en beeldindex gebruiken verschillende embeddingdimensies.',
+        'pgvector_unavailable' => 'pgvector is niet beschikbaar; alleen semantische embeddings en zoeken zijn geblokkeerd.',
+        'invalid_embedding' => 'De embedding bevat ongeldige numerieke waarden.',
         'budget_reached' => 'Maandbudget voor :provider/:capability is bereikt of niet geconfigureerd.',
         'config_key_decrypt' => 'De API-sleutel voor :provider kan niet worden ontsleuteld. Controleer APP_KEY.',
         'config_missing' => 'AI-providerconfiguratie ontbreekt voor :provider.',
@@ -312,6 +321,7 @@ return [
         'openrouter_embedding' => 'OpenRouter: antwoord miste data.0.embedding.',
     ],
     'audit' => [
+        'generation_activated' => 'Nieuwe pgvector-indexgeneratie geactiveerd.',
         'item_succeeded' => 'AI-item succesvol verwerkt.',
         'log_succeeded' => 'AI operation item succeeded.',
         'log_failed' => 'AI operation item failed.',

@@ -81,7 +81,7 @@ abstract class OperationJob implements ShouldQueue
     /**
      * Process at most CHUNK_SIZE items.
      *
-     * @return array{processed: int, failed: int, finished: bool, result?: array<string, mixed>}
+     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, result?: array<string, mixed>}
      */
     abstract protected function executeChunk(OperationRun $run): array;
 
@@ -128,7 +128,7 @@ abstract class OperationJob implements ShouldQueue
                 // the cancelled status and released claim set by the cancellation
                 // itself must not be overwritten by this job.
                 $run->forceFill([
-                    'processed_items' => $run->processed_items + $outcome['processed'],
+                    'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
                     'failed_items' => $run->failed_items + $outcome['failed'],
                 ])->save();
 
@@ -136,7 +136,7 @@ abstract class OperationJob implements ShouldQueue
             }
 
             $run->forceFill([
-                'processed_items' => $run->processed_items + $outcome['processed'],
+                'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
                 'failed_items' => $run->failed_items + $outcome['failed'],
             ])->save();
 

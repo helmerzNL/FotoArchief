@@ -11,7 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class AiConfigurationService
 {
-    public function __construct(private readonly AiProviderConfigService $providerConfigs) {}
+    public function __construct(
+        private readonly AiProviderConfigService $providerConfigs,
+        private readonly PgvectorEmbeddingStore $vectors,
+    ) {}
 
     private const BOOL_KEYS = [
         'global_enabled',
@@ -109,6 +112,8 @@ class AiConfigurationService
             (bool) ($settings['embeddings_native_consent'] ?? false),
             (string) ($settings['embeddings_model'] ?? ''),
         );
+        $settings['pgvector_available'] = $this->vectors->available();
+        $settings['embeddings_backend_ready'] = $settings['pgvector_available'];
 
         return $settings;
     }

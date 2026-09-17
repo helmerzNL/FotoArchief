@@ -17,6 +17,7 @@ class AiDispatchService
         private readonly AiConfigurationService $configuration,
         private readonly OperationRunService $runs,
         private readonly AiAssetBatchService $batches,
+        private readonly PgvectorEmbeddingStore $vectors,
     ) {}
 
     /**
@@ -83,6 +84,8 @@ class AiDispatchService
         }
 
         $assetIds = $this->batches->normalize($assetIds, $user)['asset_ids'];
+
+        $this->vectors->requireAvailable();
 
         return $this->runs->dispatchRun(ProcessAiIndexJob::class, ProcessAiIndexJob::TYPE, $user, [
             'asset_ids' => $assetIds,

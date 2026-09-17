@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ai\Services;
 
+use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\Catalogue\Models\Asset;
@@ -14,6 +15,27 @@ use Throwable;
 
 final class AiOperationAuditService
 {
+    public function generation(OperationRun $run, AiEmbeddingGeneration $generation, ?Throwable $exception = null): void
+    {
+        $severity = $exception === null ? 'info' : 'error';
+        $message = $exception === null ? __('ai.audit.generation_activated') : Str::limit($exception->getMessage(), 2000, '');
+        $context = array_merge($this->context($run, null, $generation->provider_kind, $generation->requested_model), [
+            'generation_id' => $generation->id,
+            'base_generation_id' => $generation->base_generation_id,
+            'model_space' => $generation->model_space,
+            'dimensions' => $generation->dimensions,
+            'exception_class' => $exception !== null ? $exception::class : null,
+        ]);
+        OperationRunAuditEvent::query()->create([
+            'operation_run_id' => $run->id,
+            'event_type' => 'ai.index.'.($exception === null ? 'generation_activated' : 'generation_failed'),
+            'severity' => $severity,
+            'message' => $message,
+            'context' => $context,
+        ]);
+        Log::log($severity, $message, $context);
+    }
+
     public function succeeded(
         OperationRun $run,
         Asset $asset,

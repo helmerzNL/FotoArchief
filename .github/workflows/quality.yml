@@ -112,7 +112,7 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: fotoarchief
           POSTGRES_PASSWORD: ci-disposable-database
@@ -133,6 +133,11 @@ jobs:
       FOTOARCHIEF_TEST_PG_PORT: "5432"
       FOTOARCHIEF_TEST_PG_USER: fotoarchief
       FOTOARCHIEF_TEST_PG_PASSWORD: ci-disposable-database
+      FOTOARCHIEF_TEST_PGVECTOR_DATABASE: release_pgvector_test
+      FOTOARCHIEF_TEST_PGVECTOR_HOST: 127.0.0.1
+      FOTOARCHIEF_TEST_PGVECTOR_PORT: "5432"
+      FOTOARCHIEF_TEST_PGVECTOR_USER: fotoarchief
+      FOTOARCHIEF_TEST_PGVECTOR_PASSWORD: ci-disposable-database
       PGPASSWORD: ci-disposable-database
       FOTOARCHIEF_BENCH_DATABASE: release_benchmark_test
       FOTOARCHIEF_BENCH_USER: fotoarchief
@@ -153,8 +158,11 @@ jobs:
           createdb -h 127.0.0.1 -U fotoarchief release_portal_test
           createdb -h 127.0.0.1 -U fotoarchief release_operations_final_test
           createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
+          createdb -h 127.0.0.1 -U fotoarchief release_pgvector_test
       - name: Test real PostgreSQL constraints and upgrade preservation
         run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php tests/Feature/Operations/OperationsPostgresAcceptanceTest.php --compact
+      - name: Exercise the Laravel pgvector application adapter
+        run: vendor/bin/pest tests/Feature/Operations/PgvectorApplicationAdapterTest.php --compact
       - name: Measure real HTTP on 50000 synthetic records
         shell: bash
         run: |

@@ -204,6 +204,8 @@ final class UserVisibleTextScanner
             'stream: OK',
             '1 = 0',
             "SELECT set_config('lock_timeout', '0', false)",
+            'ALTER TABLE ai_embeddings ADD COLUMN IF NOT EXISTS embedding_vector vector',
+            'CREATE INDEX IF NOT EXISTS ai_embeddings_generation_current_idx ON ai_embeddings (ai_embedding_generation_id) WHERE stale_at IS NULL',
             'tesseract unknown',
         ], true)
             || str_starts_with($text, 'translations:check ')

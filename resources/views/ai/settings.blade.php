@@ -40,8 +40,13 @@
             <dd>{{ $settings['image_analysis_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
             <dt>{{ __('ai.settings.status.embeddings_ready') }}</dt>
             <dd>{{ $settings['embeddings_ready'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
+            <dt>{{ __('ai.settings.status.pgvector_available') }}</dt>
+            <dd>{{ $settings['pgvector_available'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
         </dl>
         <p>{{ __('ai.settings.status.configured_notice') }}</p>
+        @unless($settings['pgvector_available'])
+            <p role="alert">{{ __('ai.settings.status.pgvector_unavailable') }}</p>
+        @endunless
     </section>
 
     <section class="card">
