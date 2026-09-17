@@ -40,6 +40,54 @@ process is healthy.
 
 ## Routine commands
 
+### Zoekindex en relevantie (Nederlands)
+
+**Zoekindex beheren** toont per collectie de zichtbare foto's als actueel,
+verouderd, ontbrekend, uitgesloten of mislukt. Actueel gebruikt dezelfde bron-,
+revisie-, checksum- en pgvectorcontroles als semantisch zoeken. Ontbrekende
+vectorondersteuning is een zichtbare fout, geen JSON- of externe fallback.
+Selecteer maximaal 25 ontbrekende/verouderde foto's in een expliciete collectie
+en bevestig een herstelopdracht. Provider, gevraagd model, modelruimte en actieve
+generatie worden opnieuw gecontroleerd; bestaande dispatcher-, rechten- en
+budgetcontroles blijven gelden. Mislukte items worden via hun taak herhaald.
+Alleen eigen generatietaken zijn zichtbaar voor niet-beheerders. Een beheerder
+kan een mislukte omschakeling opnieuw bevestigen: een oudere generatie kan een
+nieuwere head niet overschrijven en veranderde bronnen verhinderen activatie.
+
+Kies expliciet tekstzoeken (catalogusmetadata, geen providerverzoek) of semantisch
+zoeken (ingestelde provider). Een collectiefilter wordt vóór vectorranking en
+resultaatlimiet toegepast. Bevoegde beheerders/catalogusbeheerders kunnen een
+getoond resultaat gedurende één uur als 0, 1 of 2 beoordelen. De ondertekende,
+versleutelde resultaatreferentie bindt gebruiker, zoektekst, foto en modelruimte.
+Opslaan start niet ongemerkt een nieuwe betaalde zoekopdracht. Herhaald beoordelen
+wijzigt hetzelfde label en legt een nieuwe auditgebeurtenis vast. De JSONL-export
+bevat maximaal 10000 eigen, nog toegankelijke labels inclusief zoekteksten:
+behandel dit als interne data. Menselijke labels zijn geen automatische claim
+van representatieve zoekkwaliteit.
+
+### Search index and relevance (English)
+
+**Manage search index** reports visible photos per collection as current, stale,
+missing, excluded or failed. Currency reuses semantic search's source, revision,
+checksum and pgvector checks. Missing vector support is an explicit error, not
+a JSON or external fallback. Select at most 25 missing/stale photos within an
+explicit collection and confirm repair. Provider, requested model, model space
+and active generation are rechecked; existing dispatch, permission and budget
+checks still apply. Retry failed items through their task. Non-administrators
+see only their own generation tasks. An administrator can confirm another switch
+attempt: an older generation cannot replace a newer head, and changed sources
+prevent activation.
+
+Choose text search explicitly (catalogue metadata, no provider request) or
+semantic search (configured provider). Collection eligibility is applied before
+vector ranking and result limits. Authorized administrators/catalogue managers
+can grade a displayed result 0, 1 or 2 for one hour. An authenticated encrypted
+result receipt binds user, query, photo and model space. Saving does not silently
+repeat a paid search. Regrading updates the same label and records a new audit
+event. JSONL export contains at most 10000 own, still-accessible labels including
+queries: treat it as internal data. Human labels do not automatically establish
+representative search quality.
+
 ### Taakwerkbank en auditlog (Nederlands)
 
 Open een taak via het taaknummer: de detailpagina toont de opgeslagen,

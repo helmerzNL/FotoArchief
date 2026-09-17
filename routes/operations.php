@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Modules\Ai\Controllers\AiIndexWorkbenchController;
+use App\Modules\Ai\Controllers\AiRelevanceController;
 use App\Modules\Ai\Controllers\AiSemanticSearchController;
 use App\Modules\Ai\Controllers\AiSettingsController;
 use App\Modules\Ai\Controllers\AiSuggestionReviewController;
@@ -31,6 +33,11 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/ai/providers/{provider}/key', [AiSettingsController::class, 'setProviderKey'])->name('ai.provider.key.set');
     Route::delete('/ai/providers/{provider}/key', [AiSettingsController::class, 'deleteProviderKey'])->name('ai.provider.key.delete');
     Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
+    Route::post('/ai/relevance', [AiRelevanceController::class, 'store'])->name('ai.relevance.store');
+    Route::get('/ai/relevance', [AiRelevanceController::class, 'export'])->name('ai.relevance.export');
+    Route::get('/ai/index-workbench', [AiIndexWorkbenchController::class, 'index'])->name('ai.workbench');
+    Route::post('/ai/index-workbench/repair', [AiIndexWorkbenchController::class, 'repair'])->name('ai.workbench.repair');
+    Route::post('/ai/index-workbench/{generation}/activate', [AiIndexWorkbenchController::class, 'activate'])->name('ai.workbench.activate');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
     Route::post('/ai/suggestions/bulk', [AiSuggestionReviewController::class, 'bulk'])->name('ai.suggestions.bulk');
     Route::post('/ai/suggestions/{suggestion}/undo', [AiSuggestionReviewController::class, 'undo'])->name('ai.suggestions.undo');

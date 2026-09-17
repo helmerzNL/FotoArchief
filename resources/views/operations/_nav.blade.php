@@ -9,6 +9,7 @@
 --}}
 @php
     $operationsNavItems = [
+        ['route' => 'admin.operations.ai.workbench', 'pattern' => 'admin.operations.ai.workbench*', 'label' => __('indexwork.title'), 'abilities' => ['users.manage', 'catalogue.manage']],
         ['route' => 'admin.operations.audit', 'pattern' => 'admin.operations.audit', 'label' => __('workbench.audit'), 'abilities' => ['audit.view']],
         ['route' => 'admin.operations.diagnostics', 'pattern' => 'admin.operations.diagnostics', 'label' => __('operations.navigation.diagnostics'), 'abilities' => ['users.manage', 'audit.view']],
         ['route' => 'admin.operations.ai.edit', 'pattern' => 'admin.operations.ai.*', 'label' => __('operations.navigation.ai_settings'), 'abilities' => ['users.manage']],

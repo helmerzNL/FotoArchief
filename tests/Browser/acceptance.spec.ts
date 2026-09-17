@@ -49,6 +49,20 @@ async function login(page: Page, role = 'administrator') {
   await expect(page).toHaveURL(url(role === 'administrator' ? '/admin' : '/admin/assets'));
 }
 
+test('index coverage and explicit text search work without an AI provider', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/operations/ai/index-workbench'));
+  await expect(page.getByRole('heading', { name: 'Indexdekking', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Generaties en omschakeling', exact: true })).toBeVisible();
+  await page.goto(url('/admin/operations/ai/search'));
+  await expect(page.getByText('Vul een zoekopdracht in om te zoeken.', { exact: true })).toBeVisible();
+  await page.getByLabel('Zoekmethode', { exact: true }).selectOption('text');
+  await page.locator('input[name="q"]').fill(fixture.assets.review.title);
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/admin\/assets\?q=/);
+  await expect(page.getByRole('link', { name: fixture.assets.review.title, exact: true })).toBeVisible();
+});
+
 async function privatePreview(page: Page) {
   const image = page.getByRole('img').first();
   await expect(image).toBeVisible();
