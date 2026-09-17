@@ -245,6 +245,7 @@ return [
         'embeddings_provider_not_ready' => 'De geconfigureerde embeddings-provider is niet gereed (toestemming, model of budget ontbreekt).',
         'asset_missing' => 'Foto :asset bestaat niet meer.',
         'asset_changed_analysis' => 'Foto :asset is tijdens de AI-analyse gewijzigd. Probeer de taak opnieuw.',
+        'operation_claim_changed' => 'De AI-taak is gestopt of door een andere worker overgenomen. Deze worker slaat geen resultaat meer op.',
         'asset_changed_index' => 'Foto :asset is tijdens de AI-indexering gewijzigd. Probeer de taak opnieuw.',
         'model_space_conflict' => 'AI-indexering geweigerd: modelruimte :space hoort bij een andere provider, dimensie of status.',
         'source_missing' => 'Foto :asset heeft geen primair verwerkt bestand voor AI.',

@@ -109,7 +109,7 @@ jobs:
   postgres:
     name: PostgreSQL fresh installation and forward upgrade
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -142,6 +142,7 @@ jobs:
       FOTOARCHIEF_BENCH_DATABASE: release_benchmark_test
       FOTOARCHIEF_BENCH_USER: fotoarchief
       FOTOARCHIEF_BENCH_PASSWORD: ci-disposable-database
+      FOTOARCHIEF_DISPOSABLE_BENCH: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -163,27 +164,20 @@ jobs:
         run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php tests/Feature/Operations/OperationsPostgresAcceptanceTest.php --compact
       - name: Exercise the Laravel pgvector application adapter
         run: vendor/bin/pest tests/Feature/Operations/PgvectorApplicationAdapterTest.php --compact
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Measure real HTTP on 50000 synthetic records
         shell: bash
         run: |
-          php tests/Performance/seed.php
-          php -S 127.0.0.1:8767 -t public tests/Performance/router.php > "$RUNNER_TEMP/performance-server.log" 2>&1 &
-          server=$!
-          trap 'kill "$server"' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8767/login > /dev/null; then break; fi
-            sleep 1
-          done
-          php tests/Performance/measure.php | tee performance.json
-          php tests/Performance/seed-public.php
-          php tests/Performance/measure-public.php | tee performance-public.json
+          node --version
+          php tests/Performance/fixture.php 2>&1 | tee performance-acceptance.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: fotoarchief-performance-${{ github.sha }}
           path: |
-            performance.json
-            performance-public.json
+            performance-acceptance.log
           if-no-files-found: ignore
 
   browser:

@@ -335,14 +335,33 @@ coverage.
 
 ## Running the isolated benchmark
 
-Use an empty PostgreSQL database whose name ends in `_benchmark_test`. Set
+Use an empty loopback PostgreSQL database whose name ends in `_benchmark_test`. Set
 `FOTOARCHIEF_BENCH_DATABASE`, `FOTOARCHIEF_BENCH_HOST`, `FOTOARCHIEF_BENCH_PORT`,
 `FOTOARCHIEF_BENCH_USER` and `FOTOARCHIEF_BENCH_PASSWORD` in the test process.
-Run `php tests/Performance/seed.php`, then serve
-`php -S 127.0.0.1:8767 -t public tests/Performance/router.php` and run
-`php tests/Performance/measure.php`. Stop the test server afterward. The fixture
-refuses a non-empty database and never reads a developer environment file.
+With Node 22 installed, explicitly set `FOTOARCHIEF_DISPOSABLE_BENCH=1` and run
+`php tests/Performance/fixture.php`. The orchestrator creates marked isolated
+storage/caches and four owned PHP workers behind a loopback Node proxy, executes
+sequential and four-client HTTP measurements, seeds 50,000 actual 384-dimensional
+pgvector rows, and evaluates Dutch queries through the real public search route.
+The database user must be able to install pgvector in this disposable database.
+The fixture refuses a non-empty database, missing opt-in and remote targets,
+and never reads a developer environment file. All owned processes and temporary
+files are cleaned up; the populated database is deliberately not dropped.
 Its disposable account and testing router must never be deployed publicly.
+
+The concurrency report requires overlapping application request intervals from
+different PHP process IDs, not merely simultaneous client requests. Metadata
+gates remain p95 <800 ms for admin lists, <700 ms for public filtered search
+and <400 ms for details. The exact-cosine adapter and semantic HTTP gates use
+p95 <700 ms. Each measured route has 40 samples; no threshold is silently
+relaxed for slower local machines.
+
+The provider is a deterministic loopback fixture, not a language/image model.
+Independent Dutch query judgments require precision@5 and recall@5 of 1; a
+deliberately wrong provider ranking must fail those thresholds. This proves
+retrieval/evaluator wiring, not Dutch semantic model quality or production
+capacity. Vectors and 50k metadata are synthetic; no photographs or paid
+provider calls are involved.
 
 ## Batch 1 acceptance evidence for AI result visibility and operations safeguards
 

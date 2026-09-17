@@ -204,11 +204,14 @@ abstract class OperationJob implements ShouldQueue
 
             Queue::connection('ingest')->push(new static($this->runId, $this->chunkNumber + 1));
         } catch (Throwable $exception) {
-            $run->forceFill([
-                'status' => OperationRun::STATUS_QUEUED,
-                'claim_token' => null,
-                'error_message' => $this->describe($exception),
-            ])->save();
+            OperationRun::query()->whereKey($run->id)
+                ->where('claim_token', $token)
+                ->where('status', OperationRun::STATUS_RUNNING)
+                ->update([
+                    'status' => OperationRun::STATUS_QUEUED,
+                    'claim_token' => null,
+                    'error_message' => $this->describe($exception),
+                ]);
 
             throw $exception;
         }

@@ -16,9 +16,9 @@ is geen productieacceptatie.
 | 3. Queue-indexering | Gebouwd | Vector, succesreceipt, audit, cursor en telling worden per item samen gecommit; herpogingen hergebruiken duurzaam opgeslagen resultaten. |
 | 4. Admin/publiek semantisch zoeken | Gebouwd | Echte routes getest tegen PostgreSQL; bron-, ownership- en publicatiefilters vóór de resultaatlimiet, met laatste autorisatiehercontrole. |
 | 5. Generaties/modelwissel | Gebouwd | Afzonderlijke run-generaties, transactionele head-wissel, blokkeren van verouderde parallelle builds, modelwissel, bronhercontrole, generatie-audit en herstel na een daadwerkelijk afgebroken workerproces. |
-| 6. Vorige Dockerrelease upgraden | Gebouwd, CI nog te draaien | Gepinde v0.9.52-image naar huidige build; behoud van account, installatie, sleutel en private bestanden. |
+| 6. Vorige Dockerrelease upgraden | Gebouwd, CI-acceptatie vereist | Gepinde v0.9.52-image naar huidige build; behoud van account, installatie, sleutel en private bestanden. |
 | 7. Vorige ZIPrelease upgraden | Lokaal uitgevoerd | Gepubliceerde v0.9.52-ZIP naar v0.9.53-productiepakket, PostgreSQL, HTTP-onboarding/login/upload, echte worker en tweemaal migreren. |
-| 8. Versleutelde volledige restore | Gebouwd, CI nog te draaien | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
+| 8. Versleutelde volledige restore | Gebouwd, CI-acceptatie vereist | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
 | 9. S3-restore | Lokaal uitgevoerd | Afzonderlijke echte PostgreSQL- en SeaweedFS-diensten; bron gestopt en hersteld naar nieuwe lege diensten, inclusief private installatiestatus en objectchecksums. |
 | 10. Opslagmigratie hervatten | Lokaal getest | Echte workeronderbreking na receipt/cursor; duurzame tellingen, werkelijke disk-omschakeling, afgeleide-checksums en hervatbare bronopruiming. |
 | 11. AI-review in de browser | Lokaal uitgevoerd | Metadatarevisie wijzigen, beschrijving/tag accepteren, afwijzen met reden, echte bronwijziging weigeren en beslissingen teruglezen. |
@@ -26,7 +26,11 @@ is geen productieacceptatie.
 | 13. Rollen in de browser | Lokaal uitgevoerd | Echte logins voor viewer, vrijwilliger, editor en archivaris; ownership, formulieren en geweigerde directe routes. |
 | 14. Publicatie intrekken/embargo/prullenbak | Lokaal uitgevoerd | Anonieme detail-, media- en IIIF-routes: 200 vóór intrekken/verwijderen, 404 erna; embargo altijd 404. |
 | 15. Mobiel en toetsenbord | Lokaal uitgevoerd | Chromium op 360 px: echte stylesheet, preview, labels, zichtbare focus, Tab/Enter, opgeslagen wijziging en geen paginaoverflow. |
-| 16–20 | Nog te bouwen | Geen claim op basis van bestaande stubs of fixtures. |
+| 16. Veilige 50k-fixture | Lokaal uitgevoerd | Expliciete opt-in, gemarkeerde tijdelijke opslag, loopback en lege benchmarkdatabase; 50.000 metadatarecords, waarvan 45.000 openbaar geschikt; vijf negatieve veiligheidscontroles geslaagd. |
+| 17. Werkelijk gelijktijdig HTTP-verkeer | Gebouwd, latency nog niet geaccepteerd | Vier eigen PHP-workers met gemeten overlappende requestintervallen; 40 metingen per route, naast afzonderlijke sequentiele controles. |
+| 18. pgvector-capaciteitsproef | Lokaal uitgevoerd | 50.000 echte 384-dimensionale vectoren, exacte cosine, correcte ranking; adapter-p95 603,65 ms bij een grens van 700 ms. |
+| 19. Nederlandse zoekrelevantie | Lokaal uitgevoerd | Drie onafhankelijke verwachte resultatenlijsten tegen de echte publieke HTTP-zoekroute: precision@5/recall@5 1,0; verkeerde providerranking geeft 0,0 en exitcode 1. |
+| 20. Provideruitval/budget/noodstop | Lokaal getest | 503, 429, timeout, ongeldig antwoord, budgetweigering, noodstop en herstel; eerder opgeslagen analyses blijven behouden bij een latere itemfout. |
 
 ### Uitgevoerde lokale controles
 
@@ -165,6 +169,57 @@ terecht **NIET GESCAND**. Dit is geen live-OpenAI-, ClamAV-, fysieke-mobiele-
 of volledige WCAG-acceptatie. Geen nieuwe operatorvariabelen, Compose-mappings
 of gewijzigde applicatielimieten.
 
+### Capaciteit en storingsherstel 16-20
+
+De nieuwe benchmark gebruikt uitsluitend eigen loopbackdiensten en synthetische
+data: geen echte foto's, productiebelasting of betaalde providerrequests.
+De volledige procedure staat in [RELEASE_ACCEPTANCE.md](RELEASE_ACCEPTANCE.md).
+Vier PHP-processen ontvangen daadwerkelijk overlappende requests; alleen vier
+clientpromises starten geldt niet als bewijs. Per route worden 40 requests
+gemeten. De p95-drempels blijven **800 ms** voor de private lijst/tekstzoekroute,
+**400 ms** voor private/publieke details en **700 ms** voor publiek gefilterd
+zoeken, semantisch zoeken en de pgvector-adapter.
+
+De herhaalde lokale Windows-run haalde de adapterdrempel, maar overschreed
+meerdere HTTP-drempels. Dit is geen geslaagde totale capaciteitsacceptatie;
+de controles zijn niet versoepeld. De private lijst/tekstzoekroute haalde
+sequentieel 700,32/653,93 ms; de private detailroute 758,38 ms en publieke
+filter/detailroutes 1070,19/651,75 ms. Met vier gelijktijdige clients was
+semantisch zoeken 2931,31 ms, met database-p95 2339,52 ms. Alle zes routes
+bewezen overlap tussen vier verschillende PHP-workers. Publieke metingen
+zijn anoniem. De fixture stopt zijn eigen diensten ook bij deze rode gates.
+SQL-planuitvoer is beschikbaar wanneer de afzonderlijke adapterdrempel faalt.
+De relevantieproef verwacht precision@5 en recall@5 van **1,0** voor drie
+vooraf beoordeelde synthetische onderwerpen. Een verkeerde embeddingprovider
+moet diezelfde echte route laten zakken. Dit meet de zoekketen, niet de
+kwaliteit van een echt taal-/beeldmodel.
+
+De storingsproeven vonden twee productfouten: een afgeronde herpoging hield
+de eerdere foutmelding, en een succesvol eerste item kreeg nog geen duurzame
+cursor/telling wanneer een later item faalde. Resultaat, suggesties, audit,
+cursor en absolute telling worden nu per item transactioneel opgeslagen.
+Een herpoging vraagt een bevestigd item niet opnieuw op. Een ingetrokken
+workerclaim mag een later providerantwoord niet alsnog opslaan; foutafhandeling
+overschrijft geen geannuleerde taak of nieuwe claimhouder.
+
+503, 429, timeout en ongeldige antwoorden worden zichtbaar gelogd; reserveringen
+worden vrijgegeven en definitieve metadata wordt niet automatisch overschreven.
+Een uitgeput budget weigert de request voordat transport plaatsvindt. Een
+ontvangen providerantwoord telt wel mee in het lokale budget, ook als de
+worker daarna geen schrijfbevoegdheid meer heeft. Een onzekere upstreamuitkomst
+tussen provideracceptatie en lokale commit kan nog dubbele kosten veroorzaken:
+dit is nadrukkelijk geen exactly-once-facturatiegarantie.
+
+Geen nieuwe productievariabelen, Compose-mappings of verhoogde
+applicatielimieten. De benchmarkvariabelen zijn uitsluitend testconfiguratie.
+De gerichte eindcontrole is geslaagd: **43 tests, 486 assertions**, inclusief
+herstel, claimwisseling en productiearchieven. De volledige suite vond een
+achtergebleven ZIP-testfixture zonder taalcatalogi; die is bijgewerkt en
+ontbrekende/verouderde catalogi hebben nu expliciete weigeringstests.
+PHPStan, Pint, vertaalcontrole, JavaScript-syntax en workflowvalidatie slagen.
+De uiteindelijke Linux-CI- en releasebewijzen worden bij de PR/release vastgelegd;
+lokale Windows-metingen bewijzen geen productiecapaciteit.
+
 ## English
 
 ### Progress
@@ -180,9 +235,9 @@ skipped environment check is not production acceptance.
 | 3. Queue indexing | Built | Vector, success receipt, audit, cursor and count commit together per item; retries reuse durably stored results. |
 | 4. Admin/public semantic search | Built | Real routes tested against PostgreSQL; source, ownership and publication filters before the result limit, with final authorization rechecks. |
 | 5. Generations/model switching | Built | Separate per-run generations, transactional head switching, outdated concurrent-build rejection, model switching, source rechecks, generation audit and recovery from an actually interrupted worker process. |
-| 6. Previous Docker release upgrade | Built, CI pending | Pinned v0.9.52 image to current build; preserve account, installation, key and private files. |
+| 6. Previous Docker release upgrade | Built, CI acceptance required | Pinned v0.9.52 image to current build; preserve account, installation, key and private files. |
 | 7. Previous ZIP release upgrade | Run locally | Published v0.9.52 ZIP to v0.9.53 production package, PostgreSQL, HTTP onboarding/login/upload, real worker and two migration runs. |
-| 8. Encrypted full restore | Built, CI pending | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
+| 8. Encrypted full restore | Built, CI acceptance required | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
 | 9. S3 restore | Run locally | Separate real PostgreSQL and SeaweedFS services; source stopped and restored into new empty services, including private installation state and object checksums. |
 | 10. Resumable storage migration | Tested locally | Actual worker interruption after receipt/cursor; durable counts, actual disk cutover, derivative checksums and resumable source cleanup. |
 | 11. Browser AI review | Run locally | Edit metadata revision, accept description/tag, reject with reason, refuse changed source and read back decisions. |
@@ -190,7 +245,11 @@ skipped environment check is not production acceptance.
 | 13. Browser roles | Run locally | Real viewer, volunteer, editor and archivist logins; ownership, forms and denied direct routes. |
 | 14. Revocation/embargo/trash | Run locally | Anonymous detail, media and IIIF routes: 200 before revocation/trash, 404 afterwards; embargo always 404. |
 | 15. Mobile and keyboard | Run locally | Chromium at 360 px: real stylesheet, preview, labels, visible focus, Tab/Enter, persisted edit and no page overflow. |
-| 16–20 | Still to build | No claim is made from existing stubs or fixtures. |
+| 16. Safe 50k fixture | Run locally | Explicit opt-in, marked temporary storage, loopback and empty benchmark database; 50,000 metadata records, including 45,000 eligible public records; five negative safety checks passed. |
+| 17. Real concurrent HTTP traffic | Built, latency not accepted yet | Four owned PHP workers with measured overlapping request intervals; 40 samples per route alongside separate sequential checks. |
+| 18. pgvector capacity test | Run locally | 50,000 real 384-dimensional vectors, exact cosine and correct ranking; adapter p95 603.65 ms against 700 ms. |
+| 19. Dutch search relevance | Run locally | Three independent expected-result lists against the actual public HTTP search route: precision@5/recall@5 1.0; wrong provider ranking gives 0.0 and exit code 1. |
+| 20. Provider outage/budget/emergency stop | Tested locally | 503, 429, timeout, malformed response, budget refusal, emergency stop and recovery; previously persisted analyses survive a later item failure. |
 
 ### Local checks performed
 
@@ -312,3 +371,51 @@ no provider was called and ClamAV was not executed. New uploads use real
 processing with scanner `none` and correctly display **NIET GESCAND**.
 This is not live OpenAI, ClamAV, physical mobile-device or full WCAG
 acceptance. No new operator variables, Compose mappings or application limits.
+
+### Capacity and fault recovery 16-20
+
+The new benchmark uses only owned loopback services and synthetic data: no
+real photos, production load or paid provider requests. The full procedure is
+in [RELEASE_ACCEPTANCE.md](RELEASE_ACCEPTANCE.md). Four PHP processes receive
+actually overlapping requests; merely starting four client promises is not
+proof. Each route has 40 measured requests. The p95 thresholds remain **800 ms**
+for private listing/text search, **400 ms** for private/public details and
+**700 ms** for public filtered search, semantic search and the pgvector adapter.
+
+The repeated local Windows run passed the adapter threshold but exceeded
+several HTTP thresholds. This is not successful overall capacity acceptance;
+the controls were not weakened. Sequential private list/text search measured
+700.32/653.93 ms, private detail 758.38 ms, and public filtered/detail routes
+1070.19/651.75 ms. With four concurrent clients, semantic search measured
+2931.31 ms, including database p95 of 2339.52 ms. All six routes proved overlap
+between four distinct PHP workers. Public measurements are anonymous. The
+fixture stops its owned services even with red gates. SQL plan output is
+available when the standalone adapter threshold fails. Relevance requires
+precision@5 and recall@5 of **1.0** for three independently judged synthetic
+topics. A wrong embedding provider must fail the same real route. This tests
+the search pipeline, not the quality of a real language/vision model.
+
+Fault tests found two product bugs: a completed retry retained its earlier
+error, and a successful first item had no durable cursor/count when a later
+item failed. Result, suggestions, audit, cursor and absolute count now commit
+transactionally per item. Retrying does not request a confirmed item again.
+A revoked worker claim cannot persist a late provider response; exception
+handling does not overwrite a cancelled task or a new claim owner.
+
+503, 429, timeout and malformed responses are visibly audited; reservations
+are released and definitive metadata is not overwritten automatically.
+An exhausted budget refuses the request before transport. A received provider
+response still counts toward the local budget even when the worker subsequently
+loses write ownership. An ambiguous upstream outcome between provider
+acceptance and local commit can still cause duplicate charges: this explicitly
+does not guarantee exactly-once billing.
+
+No new production variables, Compose mappings or increased application limits.
+Benchmark variables are test configuration only.
+Final targeted checks passed: **43 tests, 486 assertions**, including recovery,
+claim replacement and production archives. The full suite found a stale ZIP
+test fixture without translation catalogues; this was updated and missing/stale
+catalogues now have explicit rejection tests. PHPStan, Pint, translation checks,
+JavaScript syntax and workflow validation pass. Final Linux CI and release
+evidence will be recorded with the PR/release; local Windows measurements do
+not establish production capacity.

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Ai\Exceptions\AiProviderException;
 use App\Modules\Ai\Jobs\ProcessAiAnalysisJob;
+use App\Modules\Ai\Models\AiBudgetLedger;
 use App\Modules\Ai\Models\AiSuggestion;
+use App\Modules\Ai\Services\AiBudgetLedgerService;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
 use App\Modules\Ai\Services\AiProviderConfigService;
@@ -17,6 +20,7 @@ use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Services\MalwareScanner;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -393,4 +397,165 @@ it('restarts a legacy failed AI run from the first item with clean counters', fu
         ->and($run->result)->toBeNull()
         ->and($run->error_message)->toBeNull();
     Queue::assertPushed(ProcessAiAnalysisJob::class);
+});
+
+function asyncNativeFaultFixture(User $user): void
+{
+    Http::preventStrayRequests();
+    app(AiProviderConfigService::class)->update('openai', [
+        'enabled' => true, 'vision_model' => 'gpt-4.1-mini',
+        'cost_cents_per_image' => 1, 'monthly_budget_cents' => 100,
+    ], $user);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'synthetic-fault-fixture-key', $user);
+    app(AiConfigurationService::class)->update(array_merge(
+        app(AiConfigurationService::class)->effective(),
+        ['image_analysis_provider' => 'openai', 'image_analysis_native_consent' => true],
+    ), $user);
+}
+
+function asyncNativeFixtureResponse(): array
+{
+    return [
+        'model' => 'gpt-4.1-mini',
+        'choices' => [['message' => [
+            'content' => '{"description":"Synthetisch herstelde analyse.","tags":["herstel"],"confidence":0.8}',
+        ]]],
+    ];
+}
+
+it('releases budget on provider faults and resumes with visible audit and no stale error', function (string $fault): void {
+    asyncNativeFaultFixture($this->user);
+    $recover = false;
+    Http::fake(['https://api.openai.com/v1/chat/completions' => function () use (&$recover, $fault) {
+        if ($recover) {
+            return Http::response(asyncNativeFixtureResponse());
+        }
+
+        return match ($fault) {
+            'unavailable' => Http::response(['error' => ['message' => 'synthetic outage']], 503),
+            'rate-limit' => Http::response(['error' => ['message' => 'synthetic rate limit']], 429),
+            'malformed' => Http::response(['choices' => []], 200),
+            'connection' => throw new ConnectionException('synthetic connection timeout'),
+        };
+    }]);
+    Queue::fake();
+    $run = app(AiDispatchService::class)->dispatchImageAnalysis([$this->asset->id], 'openai', $this->user);
+    expect(fn () => (new ProcessAiAnalysisJob($run->id))->handle())->toThrow(AiProviderException::class);
+    $ledger = AiBudgetLedger::query()->firstOrFail();
+    expect($ledger->cents_reserved)->toBe(0)
+        ->and($ledger->cents_consumed)->toBe(0)
+        ->and(AiSuggestion::query()->count())->toBe(0)
+        ->and($run->fresh()->status)->toBe(OperationRun::STATUS_QUEUED)
+        ->and($run->fresh()->error_message)->not->toBeEmpty();
+    $event = OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->firstOrFail();
+    expect($event->event_type)->toBe('ai.analysis.item_failed')
+        ->and($event->context['asset_file_id'])->toBe($this->file->id)
+        ->and($event->context['source_sha256'])->toBe($this->file->sha256)
+        ->and(json_encode($event->toArray(), JSON_THROW_ON_ERROR))->not->toContain('synthetic-fault-fixture-key');
+
+    $recover = true;
+    (new ProcessAiAnalysisJob($run->id))->handle();
+    expect($ledger->fresh()->cents_reserved)->toBe(0)
+        ->and($ledger->fresh()->cents_consumed)->toBe(1)
+        ->and($run->fresh()->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and($run->fresh()->processed_items)->toBe(1)
+        ->and($run->fresh()->error_message)->toBeNull()
+        ->and($this->asset->fresh()->description)->toBeNull()
+        ->and(AiSuggestion::query()->count())->toBe(2)
+        ->and(OperationRunAuditEvent::query()->where('operation_run_id', $run->id)->count())->toBe(2);
+})->with(['unavailable', 'rate-limit', 'malformed', 'connection']);
+
+it('refuses a depleted budget before provider transport and cancels safely under emergency stop', function (): void {
+    asyncNativeFaultFixture($this->user);
+    $service = app(AiBudgetLedgerService::class);
+    $ledger = $service->reserve('openai', 'image_analysis', 100);
+    $service->consume($ledger, 100, 100);
+    Queue::fake();
+    $run = app(AiDispatchService::class)->dispatchImageAnalysis([$this->asset->id], 'openai', $this->user);
+    expect(fn () => (new ProcessAiAnalysisJob($run->id))->handle())
+        ->toThrow(AiProviderException::class);
+    Http::assertNothingSent();
+    expect($ledger->fresh()->cents_consumed)->toBe(100)
+        ->and($ledger->fresh()->cents_reserved)->toBe(0)
+        ->and(AiSuggestion::query()->count())->toBe(0)
+        ->and($run->fresh()->error_message)->not->toBeEmpty();
+    $settings = app(AiConfigurationService::class);
+    $settings->update(array_merge($settings->effective(), ['emergency_stop' => true]), $this->user);
+    (new ProcessAiAnalysisJob($run->id))->handle();
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_CANCELLED);
+    Http::assertNothingSent();
+});
+
+it('checkpoints confirmed analysis before a later provider outage so retry never pays for it twice', function (): void {
+    asyncNativeFaultFixture($this->user);
+    $second = Asset::query()->create([
+        'accession_number' => 'FAULT-SECOND', 'title' => 'Second synthetic source', 'created_by_user_id' => $this->user->id,
+    ])->fresh();
+    Storage::disk('local')->put('originals/fault-second.jpg', 'second-synthetic-source');
+    $file = $this->file->replicate();
+    $file->forceFill([
+        'asset_id' => $second->id, 'storage_key' => 'originals/fault-second.jpg',
+        'sha256' => hash('sha256', 'second-synthetic-source'),
+    ])->save();
+    $calls = 0;
+    Http::fake(['https://api.openai.com/v1/chat/completions' => function () use (&$calls) {
+        $calls++;
+
+        return $calls === 2 ? Http::response(['error' => ['message' => 'synthetic second-item outage']], 503)
+            : Http::response(asyncNativeFixtureResponse());
+    }]);
+    Queue::fake();
+    $run = app(AiDispatchService::class)->dispatchImageAnalysis([$this->asset->id, $second->id], 'openai', $this->user);
+    expect(fn () => (new ProcessAiAnalysisJob($run->id))->handle())->toThrow(AiProviderException::class);
+    expect($run->fresh()->payload['cursor'])->toBe(1)
+        ->and($run->fresh()->processed_items)->toBe(1);
+    (new ProcessAiAnalysisJob($run->id))->handle();
+    expect($calls)->toBe(3)
+        ->and(AiBudgetLedger::query()->firstOrFail()->cents_consumed)->toBe(2)
+        ->and($run->fresh()->processed_items)->toBe(2)
+        ->and($run->fresh()->status)->toBe(OperationRun::STATUS_COMPLETED)
+        ->and(AiSuggestion::query()->count())->toBe(4);
+});
+
+it('does not overwrite cancellation or a new owner when an in-flight provider response returns', function (string $status): void {
+    asyncNativeFaultFixture($this->user);
+    Queue::fake();
+    $run = app(AiDispatchService::class)->dispatchImageAnalysis([$this->asset->id], 'openai', $this->user);
+    $claim = $status === OperationRun::STATUS_RUNNING ? (string) str()->uuid() : null;
+    Http::fake(['https://api.openai.com/v1/chat/completions' => function () use ($run, $status, $claim) {
+        OperationRun::query()->whereKey($run->id)->update([
+            'status' => $status, 'claim_token' => $claim,
+        ]);
+
+        return Http::response(asyncNativeFixtureResponse());
+    }]);
+    expect(fn () => (new ProcessAiAnalysisJob($run->id))->handle())
+        ->toThrow(RuntimeException::class, 'gestopt of door een andere worker');
+    expect($run->fresh()->status)->toBe($status)
+        ->and($run->fresh()->claim_token)->toBe($claim)
+        ->and($run->fresh()->processed_items)->toBe(0)
+        ->and(AiSuggestion::query()->count())->toBe(0)
+        ->and(AiBudgetLedger::query()->firstOrFail()->cents_consumed)->toBe(1);
+})->with([OperationRun::STATUS_CANCELLED, OperationRun::STATUS_RUNNING]);
+
+it('does not adopt a replacement claim while refreshing a committed checkpoint', function (): void {
+    asyncNativeFaultFixture($this->user);
+    Queue::fake();
+    $run = app(AiDispatchService::class)->dispatchImageAnalysis([$this->asset->id], 'openai', $this->user);
+    $claim = (string) str()->uuid();
+    OperationRun::retrieved(function (OperationRun $loaded) use ($run, $claim): void {
+        if ($loaded->id === $run->id && $loaded->processed_items === 1 && $loaded->status === OperationRun::STATUS_RUNNING) {
+            OperationRun::query()->whereKey($run->id)->update(['claim_token' => $claim]);
+            $loaded->claim_token = $claim;
+        }
+    });
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response(asyncNativeFixtureResponse())]);
+
+    expect(fn () => (new ProcessAiAnalysisJob($run->id))->handle())
+        ->toThrow(RuntimeException::class, 'gestopt of door een andere worker');
+    expect($run->fresh()->status)->toBe(OperationRun::STATUS_RUNNING)
+        ->and($run->fresh()->claim_token)->toBe($claim)
+        ->and($run->fresh()->processed_items)->toBe(1)
+        ->and(AiSuggestion::query()->count())->toBe(2)
+        ->and(AiBudgetLedger::query()->firstOrFail()->cents_consumed)->toBe(1);
 });

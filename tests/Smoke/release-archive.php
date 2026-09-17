@@ -12,15 +12,15 @@ foreach ($required as $name) {
     if ($zip->locateName($name) === false) {
         throw new RuntimeException('Missing release file: '.$name);
     }
-    $catalogues = glob(dirname(__DIR__, 2).'/lang/nl/*.php');
-    if ($catalogues === false || $catalogues === []) {
-        throw new RuntimeException('No source translation catalogues found.');
-    }
-    foreach ($catalogues as $catalogue) {
-        $name = 'lang/nl/'.basename($catalogue);
-        if ($zip->getFromName($name) !== file_get_contents($catalogue)) {
-            throw new RuntimeException('Missing or stale release catalogue: '.$name);
-        }
+}
+$catalogues = glob(dirname(__DIR__, 2).'/lang/nl/*.php');
+if ($catalogues === false || $catalogues === []) {
+    throw new RuntimeException('No source translation catalogues found.');
+}
+foreach ($catalogues as $catalogue) {
+    $name = 'lang/nl/'.basename($catalogue);
+    if ($zip->getFromName($name) !== file_get_contents($catalogue)) {
+        throw new RuntimeException('Missing or stale release catalogue: '.$name);
     }
 }
 for ($index = 0; $index < $zip->numFiles; $index++) {

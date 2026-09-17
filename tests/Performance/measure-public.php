@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
+$guard = require __DIR__.'/guard.php';
 $base = rtrim(getenv('SMOKE_URL') ?: 'http://127.0.0.1:8767', '/');
-$cookie = tempnam(sys_get_temp_dir(), 'foto-public-benchmark-');
+$cookie = tempnam($guard['root'], 'foto-public-benchmark-');
 require dirname(__DIR__).'/Smoke/http-client.php';
 $exitCode = 0;
 try {

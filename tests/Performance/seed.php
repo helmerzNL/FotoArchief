@@ -28,7 +28,11 @@ try {
             $year = 1850 + $number % 150;
             $rows[] = [
                 'id' => (string) Str::ulid(), 'accession_number' => sprintf('BENCH-%06d', $number),
-                'title' => 'Historische straat '.($number % 200).' foto '.$number,
+                'title' => match (true) {
+                    $number >= 5 && $number < 10 => 'Schepen in de haven foto '.$number,
+                    $number >= 10 && $number < 15 => 'Markt op het dorpsplein foto '.$number,
+                    default => 'Historische straat '.($number % 200).' foto '.$number,
+                },
                 'description' => 'Synthetische metadata voor capaciteitstest; geen erfgoedmateriaal.',
                 'date_precision' => 'year', 'date_earliest' => $year.'-01-01', 'date_latest' => $year.'-12-31',
                 'created_by_user_id' => $user->id, 'created_at' => now(), 'updated_at' => now(),
