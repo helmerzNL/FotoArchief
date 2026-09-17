@@ -2,12 +2,12 @@
 
 ## Nederlands
 
-### Voortgang
+### Oplevering
 
-Dit verslag wordt tijdens de oplevering bijgewerkt. Een voorziening is alleen
-afgerond wanneer de daadwerkelijke toepassingsroute en de genoemde test zijn
-uitgevoerd; een stub, synthetische fixture of een overgeslagen omgevingscheck
-is geen productieacceptatie.
+Dit verslag beschrijft de twintig gebouwde voorzieningen en hun concrete
+testbewijs. De afsluitende Linux-acceptatie staat onderaan; eerdere lokale
+metingen blijven als historische context behouden. Een stub, synthetische
+fixture of overgeslagen omgevingscheck is geen productieacceptatie.
 
 | Functie | Status | Bewijs |
 | --- | --- | --- |
@@ -27,8 +27,8 @@ is geen productieacceptatie.
 | 14. Publicatie intrekken/embargo/prullenbak | Lokaal uitgevoerd | Anonieme detail-, media- en IIIF-routes: 200 vóór intrekken/verwijderen, 404 erna; embargo altijd 404. |
 | 15. Mobiel en toetsenbord | Lokaal uitgevoerd | Chromium op 360 px: echte stylesheet, preview, labels, zichtbare focus, Tab/Enter, opgeslagen wijziging en geen paginaoverflow. |
 | 16. Veilige 50k-fixture | Lokaal uitgevoerd | Expliciete opt-in, gemarkeerde tijdelijke opslag, loopback en lege benchmarkdatabase; 50.000 metadatarecords, waarvan 45.000 openbaar geschikt; vijf negatieve veiligheidscontroles geslaagd. |
-| 17. Werkelijk gelijktijdig HTTP-verkeer | Gebouwd, latency nog niet geaccepteerd | Vier eigen PHP-workers met gemeten overlappende requestintervallen; 40 metingen per route, naast afzonderlijke sequentiele controles. |
-| 18. pgvector-capaciteitsproef | Lokaal uitgevoerd | 50.000 echte 384-dimensionale vectoren, exacte cosine, correcte ranking; adapter-p95 603,65 ms bij een grens van 700 ms. |
+| 17. Werkelijk gelijktijdig HTTP-verkeer | Linux-CI geslaagd | Vier eigen PHP-workers met gemeten overlappende requestintervallen; 40 metingen per route; alle zes routes binnen hun ongewijzigde grenzen. |
+| 18. pgvector-capaciteitsproef | Linux-CI geslaagd | 50.000 echte 384-dimensionale vectoren, exacte cosine, correcte ranking; adapter-p95 366,49 ms bij een grens van 700 ms. |
 | 19. Nederlandse zoekrelevantie | Lokaal uitgevoerd | Drie onafhankelijke verwachte resultatenlijsten tegen de echte publieke HTTP-zoekroute: precision@5/recall@5 1,0; verkeerde providerranking geeft 0,0 en exitcode 1. |
 | 20. Provideruitval/budget/noodstop | Lokaal getest | 503, 429, timeout, ongeldig antwoord, budgetweigering, noodstop en herstel; eerder opgeslagen analyses blijven behouden bij een latere itemfout. |
 
@@ -78,12 +78,12 @@ Een noodstop tijdens de laatste providerrequest verhindert activering.
 Een providerantwoord dat ontvangen is maar nog niet lokaal gecommit, kan bij
 herstel opnieuw worden opgevraagd en opnieuw kosten veroorzaken.
 
-De zoekadapter gebruikt exacte cosine-afstand, geen ANN-index. Er is nog geen
-50k-latencyclaim. Dit blok wijzigt geen Compose- of omgevingstemplate en
+De zoekadapter gebruikt exacte cosine-afstand, geen ANN-index. De latere
+50k-Linux-metingen staan onderaan. Dit blok wijzigt geen Compose- of omgevingstemplate en
 verhoogt geen upload-, rate- of timeoutlimiet. Eigen database-images moeten
 wel pgvector bevatten wanneer semantisch zoeken gewenst is.
-Docker-, S3-, live-provider-, fysieke-apparaat- en representatieve-datasetacceptatie
-blijven afzonderlijke, nog uit te voeren bewijzen.
+Docker- en S3-fixtureacceptatie staan in de latere Linux-run. Live-provider-,
+fysieke-apparaat- en representatieve-productiedatasetacceptatie blijven apart nodig.
 
 ### Herstelvoorzieningen 6-10
 
@@ -217,7 +217,7 @@ herstel, claimwisseling en productiearchieven. De volledige suite vond een
 achtergebleven ZIP-testfixture zonder taalcatalogi; die is bijgewerkt en
 ontbrekende/verouderde catalogi hebben nu expliciete weigeringstests.
 PHPStan, Pint, vertaalcontrole, JavaScript-syntax en workflowvalidatie slagen.
-De uiteindelijke Linux-CI- en releasebewijzen worden bij de PR/release vastgelegd;
+De Linux-CI-bewijzen staan hieronder en de releasebewijzen bij de PR/release;
 lokale Windows-metingen bewijzen geen productiecapaciteit.
 
 ### Linux-CI-correcties
@@ -240,16 +240,40 @@ blijven vóór de resultaatlimiet staan. Er is geen ANN-benadering, cache van
 autorisatie of versoepelde drempel toegevoegd.
 
 Gerichte regressies: **47 tests, 175 assertions**, inclusief echte pgvector-
-zoekroutes, publicatie en begrensde autorisatiescopes. De definitieve
-capaciteitsacceptatie vereist een nieuwe volledige Linux-run op deze reparatie.
+zoekroutes, publicatie en begrensde autorisatiescopes.
+
+### Geverifieerde Linux-acceptatie
+
+[Run 35238095877](https://github.com/helmerzNL/FotoArchief/actions/runs/35238095877)
+op codecommit `1c0d1ab` is volledig groen: PHP 8.5, browseracceptatie,
+PostgreSQL/forward-upgrade/50k, productie-ZIP/S3 en Docker-upgrade/versleutelde
+restore. De pgvector-job voert **17 tests, 98 assertions** tegen echte vectoropslag uit.
+
+| Meting | p95 (ms) | Grens (ms) |
+| --- | ---: | ---: |
+| Exacte pgvector-adapter | 366,49 | 700 |
+| Gelijktijdig privaat overzicht | 279,17 | 800 |
+| Gelijktijdig privaat tekstzoeken | 66,66 | 800 |
+| Gelijktijdig privaat detail | 83,06 | 400 |
+| Gelijktijdig publiek filteren | 121,61 | 700 |
+| Gelijktijdig publiek detail | 52,34 | 400 |
+| Gelijktijdig publiek semantisch zoeken | 553,84 | 700 |
+
+Alle gelijktijdige routes bewijzen vier werkelijk overlappende PHP-workers
+en 40 meetrequests. De vijf veiligheidsweigeringen slagen; de drie
+Nederlandse relevantiequeries halen precision@5/recall@5 **1,0** en de
+verkeerde-rankingcontrole faalt aantoonbaar met **0,0** en exitcode 1.
+De eerdere rode gates zijn opgelost zonder hun grenzen te wijzigen.
+Dit is gecontroleerde fixtureacceptatie, geen algemene productiecapaciteitsgarantie.
 
 ## English
 
-### Progress
+### Delivery
 
-This report is updated during delivery. A provision is complete only when its
-real application path and stated test have run; a stub, synthetic fixture, or
-skipped environment check is not production acceptance.
+This report describes the twenty implemented features and their actual test
+evidence. Final Linux acceptance is recorded below; earlier local measurements
+remain as historical context. A stub, synthetic fixture or skipped environment
+check is not production acceptance.
 
 | Feature | Status | Evidence |
 | --- | --- | --- |
@@ -269,8 +293,8 @@ skipped environment check is not production acceptance.
 | 14. Revocation/embargo/trash | Run locally | Anonymous detail, media and IIIF routes: 200 before revocation/trash, 404 afterwards; embargo always 404. |
 | 15. Mobile and keyboard | Run locally | Chromium at 360 px: real stylesheet, preview, labels, visible focus, Tab/Enter, persisted edit and no page overflow. |
 | 16. Safe 50k fixture | Run locally | Explicit opt-in, marked temporary storage, loopback and empty benchmark database; 50,000 metadata records, including 45,000 eligible public records; five negative safety checks passed. |
-| 17. Real concurrent HTTP traffic | Built, latency not accepted yet | Four owned PHP workers with measured overlapping request intervals; 40 samples per route alongside separate sequential checks. |
-| 18. pgvector capacity test | Run locally | 50,000 real 384-dimensional vectors, exact cosine and correct ranking; adapter p95 603.65 ms against 700 ms. |
+| 17. Real concurrent HTTP traffic | Passed Linux CI | Four owned PHP workers with measured overlapping request intervals; 40 samples per route; all six routes meet their unchanged limits. |
+| 18. pgvector capacity test | Passed Linux CI | 50,000 real 384-dimensional vectors, exact cosine and correct ranking; adapter p95 366.49 ms against 700 ms. |
 | 19. Dutch search relevance | Run locally | Three independent expected-result lists against the actual public HTTP search route: precision@5/recall@5 1.0; wrong provider ranking gives 0.0 and exit code 1. |
 | 20. Provider outage/budget/emergency stop | Tested locally | 503, 429, timeout, malformed response, budget refusal, emergency stop and recovery; previously persisted analyses survive a later item failure. |
 
@@ -319,12 +343,12 @@ during the final provider request prevents activation. A received provider
 response that has not yet committed locally may be requested and billed again
 during recovery.
 
-The search adapter uses exact cosine distance, not an ANN index. No 50k latency
-claim is made yet. This batch changes no Compose/environment template and
+The search adapter uses exact cosine distance, not an ANN index. Later 50k
+Linux measurements are recorded below. This batch changes no Compose/environment template and
 raises no upload, rate or timeout limit. Operator-owned database images must
 include pgvector when semantic search is required.
-Docker, S3, live-provider, physical-device and representative-dataset acceptance
-remain separate evidence that has not yet been executed.
+Docker and S3 fixture acceptance is recorded in the later Linux run. Live-provider,
+physical-device and representative production-dataset acceptance remains separate.
 
 ### Recovery features 6-10
 
@@ -439,8 +463,8 @@ Final targeted checks passed: **43 tests, 486 assertions**, including recovery,
 claim replacement and production archives. The full suite found a stale ZIP
 test fixture without translation catalogues; this was updated and missing/stale
 catalogues now have explicit rejection tests. PHPStan, Pint, translation checks,
-JavaScript syntax and workflow validation pass. Final Linux CI and release
-evidence will be recorded with the PR/release; local Windows measurements do
+JavaScript syntax and workflow validation pass. Linux CI evidence is recorded
+below and release evidence with the PR/release; local Windows measurements do
 not establish production capacity.
 
 ### Linux CI corrections
@@ -463,5 +487,28 @@ the result limit. No ANN approximation, authorization cache or relaxed
 threshold was introduced.
 
 Targeted regressions: **47 tests, 175 assertions**, including actual pgvector
-search routes, publication and bounded authorization scopes. Final capacity
-acceptance requires another complete Linux run on this correction.
+search routes, publication and bounded authorization scopes.
+
+### Verified Linux acceptance
+
+[Run 35238095877](https://github.com/helmerzNL/FotoArchief/actions/runs/35238095877)
+on code commit `1c0d1ab` is entirely green: PHP 8.5, browser acceptance,
+PostgreSQL/forward upgrade/50k, production ZIP/S3 and Docker upgrade/encrypted
+restore. The pgvector job runs **17 tests, 98 assertions** against actual vector storage.
+
+| Measurement | p95 (ms) | Limit (ms) |
+| --- | ---: | ---: |
+| Exact pgvector adapter | 366.49 | 700 |
+| Concurrent private listing | 279.17 | 800 |
+| Concurrent private text search | 66.66 | 800 |
+| Concurrent private detail | 83.06 | 400 |
+| Concurrent public filtering | 121.61 | 700 |
+| Concurrent public detail | 52.34 | 400 |
+| Concurrent public semantic search | 553.84 | 700 |
+
+Every concurrent route proves four genuinely overlapping PHP workers and
+40 measured requests. All five safety rejections pass; the three Dutch
+relevance queries achieve precision@5/recall@5 **1.0**, and the wrong-ranking
+control demonstrably fails with **0.0** and exit code 1. The earlier red
+gates were resolved without changing their limits. This is controlled fixture
+acceptance, not a general production-capacity guarantee.
