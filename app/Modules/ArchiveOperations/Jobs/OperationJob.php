@@ -122,6 +122,16 @@ abstract class OperationJob implements ShouldQueue
             $outcome = $this->executeChunk($run);
 
             if ($run->status === OperationRun::STATUS_CANCELLED) {
+                // The chunk was cancelled mid-way (a capability went unavailable
+                // between items). Items already processed or failed before the
+                // cancellation happened for real and must still be counted, but
+                // the cancelled status and released claim set by the cancellation
+                // itself must not be overwritten by this job.
+                $run->forceFill([
+                    'processed_items' => $run->processed_items + $outcome['processed'],
+                    'failed_items' => $run->failed_items + $outcome['failed'],
+                ])->save();
+
                 return;
             }
 

@@ -527,14 +527,22 @@ Er is geen private of onbekende Komodo API gefabriceerd. De operatorprocedure in
 upgradechecks en te bewaren bewijzen. Live Komodo-acceptatie blijft
 **GEBLOKKEERD** tot een disposable Komodo-doel met versie, server/Periphery,
 private stackomgeving en toestemming om te deployen beschikbaar is.
-13. **Dockhand upgrade**: `quality.yml` blijft Dockhand v1.0.48 digest-pinned
-op een disposable GitHub-runner starten en importeert de echte Compose/template
-via de gedocumenteerde API. De nieuwe stap maakt daarna een geverifieerde
-backup van de manager-stack, draait `scripts/upgrade-compose.sh` op diezelfde
-stack, vergelijkt de hash van `storage/app/installation/state.json` en de
-geladen APP_KEY, controleert dat `/setup` gesloten blijft en herhaalt de
-account/fotopreview/anonieme-denial smoke. Lokaal niet uitgevoerd omdat Docker
-niet beschikbaar is; bewijs blijft **pending CI**.
+13. **Managed-stack upgrade-helper preservatie-smoke (niet de Dockhand-UI-
+upgrade)**: `quality.yml` start nog steeds Dockhand v1.0.48 digest-pinned op
+een disposable GitHub-runner en importeert de echte Compose/template via de
+gedocumenteerde API, tegen dezelfde image die deze run zelf bouwde
+(`FOTOARCHIEF_SKIP_IMAGE_PULL=1`, geen versiewissel). De stap maakt daarna een
+geverifieerde backup van de manager-stack en draait `scripts/upgrade-compose.sh`
+op diezelfde stack en hetzelfde image, vergelijkt de hash van
+`storage/app/installation/state.json` en de geladen APP_KEY, controleert dat
+`/setup` gesloten blijft en herhaalt de account/fotopreview/anonieme-denial
+smoke. Dit bewijst dat de upgrade-helper de bestaande installatie ongemoeid
+laat wanneer image en versie gelijk blijven; het is uitdrukkelijk geen bewijs
+van een door Dockhand geïnitieerde upgrade van een eerdere naar een nieuwe
+versie via de manager-UI. Die echte vorige-naar-nieuwe-versie-manager-flow
+blijft **GEBLOKKEERD** tot een disposable Dockhand-doel met twee daadwerkelijk
+verschillende, gepubliceerde image-versies beschikbaar is. Lokaal niet
+uitgevoerd omdat Docker niet beschikbaar is; bewijs blijft **pending CI**.
 14. **S3/Hetzner live provision**: de opt-in real-provider test blijft
 environment-gated en vraagt geen geheimen. Wanneer `FOTOARCHIEF_TEST_S3_*`
 aanwezig is, controleert de test installatieprobe, ingest, originele en
@@ -584,14 +592,22 @@ No private or unknown Komodo API was fabricated. The operator procedure in
 upgrade checks and evidence to keep. Live Komodo acceptance remains
 **BLOCKED** until a disposable Komodo target with version, server/Periphery,
 private stack environment and permission to deploy is available.
-13. **Dockhand upgrade**: `quality.yml` still starts digest-pinned Dockhand
-v1.0.48 on a disposable GitHub runner and imports the real Compose/template
-through the documented API. The new step then creates a verified backup of that
-managed stack, runs `scripts/upgrade-compose.sh` against the same stack,
-compares the hash of `storage/app/installation/state.json` and the loaded
-APP_KEY, checks `/setup` remains closed and repeats the account/photo preview/
-anonymous-denial smoke. Not run locally because Docker is unavailable; evidence
-remains **pending CI**.
+13. **Managed-stack upgrade-helper preservation smoke (not the Dockhand UI
+upgrade)**: `quality.yml` still starts digest-pinned Dockhand v1.0.48 on a
+disposable GitHub runner and imports the real Compose/template through the
+documented API, against the same image this run itself built
+(`FOTOARCHIEF_SKIP_IMAGE_PULL=1`, no version change). The step then creates a
+verified backup of that managed stack and runs `scripts/upgrade-compose.sh`
+against the same stack and the same image, compares the hash of
+`storage/app/installation/state.json` and the loaded APP_KEY, checks `/setup`
+remains closed and repeats the account/photo preview/anonymous-denial smoke.
+This proves the upgrade helper leaves an existing installation untouched when
+the image and version stay the same; it is explicitly not evidence of a
+Dockhand-initiated upgrade from a previous to a new version through the
+manager UI. That real previous-to-new-version manager flow remains
+**BLOCKED** until a disposable Dockhand target with two genuinely different,
+published image versions is available. Not run locally because Docker is
+unavailable; evidence remains **pending CI**.
 14. **S3/Hetzner live provision**: the opt-in real-provider test remains
 environment-gated and requests no secrets. When `FOTOARCHIEF_TEST_S3_*` is
 present, the test checks the installation probe, ingest, original and derivative

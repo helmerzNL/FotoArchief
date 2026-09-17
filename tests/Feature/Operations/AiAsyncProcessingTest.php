@@ -297,6 +297,77 @@ it('cancels a queued AI run after the emergency stop is enabled without contacti
         ->and(AiSuggestion::query()->count())->toBe(0);
 });
 
+it('preserves processed and failed counters for items already completed before a mid-chunk cancellation, without overwriting the cancelled status or claim', function (): void {
+    $calls = 0;
+    Http::fake([
+        'http://127.0.0.1:8088/v1/analyze-image' => function () use (&$calls) {
+            $calls++;
+            if ($calls > 1) {
+                throw new RuntimeException('No second provider request expected once the run is cancelled mid-chunk.');
+            }
+
+            // Simulate the capability going unavailable while this first item is
+            // still in flight, so the second item is never attempted.
+            $settings = app(AiConfigurationService::class)->effective();
+            app(AiConfigurationService::class)->update(array_merge($settings, ['emergency_stop' => true]), $this->user);
+
+            return Http::response([
+                'description' => 'Eerste veilige testfoto.',
+                'tags' => ['Eerste'],
+                'model_id' => 'local-caption-proof',
+                'model_space' => 'local-caption-proof',
+                'confidence' => 0.8,
+            ]);
+        },
+    ]);
+
+    $secondAsset = Asset::query()->create([
+        'accession_number' => 'AI-ASYNC-SECOND-'.(string) str()->ulid(),
+        'title' => 'Async AI contract second item',
+        'created_by_user_id' => $this->user->id,
+    ])->fresh();
+    Storage::disk('local')->put('originals/async-ai-second.jpg', 'safe-derived-image-bytes-second');
+    $secondImage = imagecreatetruecolor(800, 600);
+    imagefill($secondImage, 0, 0, 0xCCBBAA);
+    ob_start();
+    imagejpeg($secondImage, null, 90);
+    $secondDerivative = ob_get_clean();
+    imagedestroy($secondImage);
+    Storage::disk('local')->put('derivatives/async-ai-second-preview-1200.jpg', $secondDerivative);
+    $secondFile = AssetFile::query()->create([
+        'asset_id' => $secondAsset->id,
+        'storage_disk' => 'local',
+        'storage_key' => 'originals/async-ai-second.jpg',
+        'sha256' => hash('sha256', 'safe-derived-image-bytes-second'),
+        'media_type' => 'image/jpeg',
+        'byte_size' => 12345,
+        'ingest_status' => 'ready_private',
+        'scanner_status' => 'clean',
+        'derivatives' => ['preview1200' => 'derivatives/async-ai-second-preview-1200.jpg'],
+        'is_primary' => true,
+    ]);
+
+    $run = OperationRun::query()->create([
+        'operation_type' => ProcessAiAnalysisJob::TYPE,
+        'status' => OperationRun::STATUS_QUEUED,
+        'requested_by_user_id' => $this->user->id,
+        'payload' => ['asset_ids' => [$this->asset->id, $secondAsset->id], 'provider' => 'local', 'cursor' => 0],
+        'total_items' => 2,
+    ]);
+
+    (new ProcessAiAnalysisJob($run->id))->handle();
+
+    $run->refresh();
+    expect($run->status)->toBe(OperationRun::STATUS_CANCELLED)
+        ->and($run->processed_items)->toBe(1)
+        ->and($run->failed_items)->toBe(0)
+        ->and($run->claim_token)->toBeNull()
+        ->and($run->error_message)->toContain('AI-taak geannuleerd')
+        ->and($calls)->toBe(1)
+        ->and(AiSuggestion::query()->where('asset_id', $this->asset->id)->count())->toBeGreaterThan(0)
+        ->and(AiSuggestion::query()->where('asset_id', $secondAsset->id)->count())->toBe(0);
+});
+
 it('restarts a legacy failed AI run from the first item with clean counters', function (): void {
     Queue::fake();
     $run = OperationRun::query()->create([
