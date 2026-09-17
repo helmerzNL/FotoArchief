@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
+$guard = require __DIR__.'/guard.php';
 $base = rtrim(getenv('SMOKE_URL') ?: 'http://127.0.0.1:8767', '/');
-$cookie = tempnam(sys_get_temp_dir(), 'foto-benchmark-');
+$cookie = tempnam($guard['root'], 'foto-benchmark-');
 require dirname(__DIR__).'/Smoke/http-client.php';
 $exitCode = 0;
 try {
@@ -16,14 +17,17 @@ try {
     [$status, $html] = request('GET', '/admin/assets');
     check($status === 200 && str_contains($html, 'Historische straat'), 'Benchmark did not return seeded assets.');
     check(preg_match('~/admin/assets/[0-9A-HJKMNP-TV-Z]{26}~i', $html, $match) === 1, 'Benchmark detail link missing.');
+    $detail = $match[0];
+    [$status, $body] = request('GET', $detail);
+    check($status === 200 && preg_match('/BENCH-[0-9]{6}/', $body, $accession) === 1, 'Benchmark asset identity missing.');
     $results = [];
-    foreach (['/admin/assets' => 800, '/admin/assets?q=straat' => 800, $match[0] => 400] as $path => $limit) {
+    foreach (['/admin/assets' => 800, '/admin/assets?q=straat' => 800, $detail => 400] as $path => $limit) {
         $times = [];
         for ($iteration = 0; $iteration < 45; $iteration++) {
             $start = hrtime(true);
             [$status, $body] = request('GET', $path);
             $elapsed = (hrtime(true) - $start) / 1e6;
-            check($status === 200 && str_contains($body, 'Historische straat'), 'Measured endpoint returned an incorrect result.');
+            check($status === 200 && str_contains($body, $path === $detail ? $accession[0] : 'Historische straat'), "Measured endpoint {$path} returned an incorrect result (HTTP {$status}).");
             if ($iteration >= 5) {
                 $times[] = $elapsed;
             }

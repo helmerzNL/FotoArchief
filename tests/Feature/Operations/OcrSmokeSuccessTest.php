@@ -138,11 +138,17 @@ it('fails rather than passing when the binary runs but returns nothing useful', 
         ->assertExitCode(1);
 });
 
-it('lets the queued job write real machine text back to the dossier', function (): void {
+it('lets the queued job write real machine text back to the dossier', function (string $disk): void {
     Storage::fake('local');
     installStubTesseract();
 
     $file = ocrSmokeDossier();
+    if ($disk !== 'local') {
+        Storage::fake($disk);
+        Storage::disk($disk)->put($file->storage_key, Storage::disk('local')->get($file->storage_key));
+        Storage::disk('local')->delete($file->storage_key);
+        $file->update(['storage_disk' => $disk]);
+    }
 
     (new ProcessAssetOcrJob($file->id))->handle(app(TesseractOcrService::class));
 
@@ -152,7 +158,7 @@ it('lets the queued job write real machine text back to the dossier', function (
         ->and(strtoupper((string) $record->extracted_text))->toContain('ARCHIEF')
         ->and($record->is_edited)->toBeFalse()
         ->and($record->processed_at)->not->toBeNull();
-});
+})->with(['local', 'relocated']);
 
 it('reports the binary as available with its version and languages', function (): void {
     installStubTesseract();

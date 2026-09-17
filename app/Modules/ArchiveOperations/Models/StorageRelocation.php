@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $target_key
  * @property string $sha256
  * @property bool $is_verified
+ * @property array<string, string>|null $verified_derivatives
  * @property CarbonImmutable|null $cutover_completed_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
@@ -32,6 +33,7 @@ class StorageRelocation extends CatalogueModel
     /** @var array<string, string> */
     protected $casts = [
         'is_verified' => 'boolean',
+        'verified_derivatives' => 'array',
         'cutover_completed_at' => 'immutable_datetime',
     ];
 

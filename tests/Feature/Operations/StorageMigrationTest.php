@@ -49,10 +49,136 @@ beforeEach(function (): void {
     config(['filesystems.disks.s3' => ['driver' => 's3']]);
 });
 
+test('migration scopes source disks and refuses incomplete or changed targets', function (string $boundary): void {
+    $asset = Asset::query()->create(['accession_number' => 'GUARDED-COPY', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id, 'storage_disk' => 'local', 'storage_key' => 'originals/guarded',
+        'sha256' => hash('sha256', 'original'), 'media_type' => 'image/jpeg', 'byte_size' => 8,
+        'derivatives' => ['derivatives/guarded'],
+    ]);
+    AssetFile::query()->create([
+        'asset_id' => $asset->id, 'storage_disk' => 'unrelated', 'storage_key' => 'originals/unrelated',
+        'sha256' => hash('sha256', 'unrelated'), 'media_type' => 'image/jpeg', 'byte_size' => 9, 'is_primary' => false,
+    ]);
+    Storage::disk('local')->put($file->storage_key, 'original');
+    Storage::disk('local')->put('derivatives/guarded', 'preview');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->prepareMigration('local', 's3', $this->admin);
+    expect($migration->total_files)->toBe(1);
+    if ($boundary === 'copy') {
+        Storage::disk('local')->delete('derivatives/guarded');
+        $service->relocateChunk($migration, null, 25);
+        expect($service->finalizeMigration($migration)->status)->toBe('failed_verification');
+        Storage::disk('local')->put('derivatives/guarded', 'preview');
+        $service->relocateChunk($migration, null, 25);
+        expect($service->finalizeMigration($migration)->status)->toBe('verified')
+            ->and($migration->fresh()->failed_files)->toBe(0);
+    } else {
+        $service->relocateChunk($migration, null, 25);
+        $service->finalizeMigration($migration);
+        if ($boundary === 'cleanup') {
+            $service->cutover($migration, $this->admin);
+        }
+        Storage::disk('s3')->put('derivatives/guarded', 'corrupt');
+        expect(fn () => $boundary === 'cleanup'
+            ? $service->cleanupSourceFiles($migration->fresh(), $this->admin)
+            : $service->cutover($migration->fresh(), $this->admin))->toThrow(RuntimeException::class);
+    }
+    expect(Storage::disk('local')->get($file->storage_key))->toBe('original')
+        ->and(Storage::disk('local')->get('derivatives/guarded'))->toBe('preview')
+        ->and($file->fresh()->storage_disk)->toBe($boundary === 'cleanup' ? 's3' : 'local');
+})->with(['copy', 'cutover', 'cleanup']);
+
 test('unauthorized users cannot access storage migration', function (): void {
     $response = $this->actingAs($this->viewer)->get('/admin/operations/storage-migration');
 
     $response->assertForbidden();
+});
+
+test('cleanup refuses out-of-band file binding changes after cutover', function (string $change): void {
+    $asset = Asset::query()->create(['accession_number' => 'CHANGED-CLEANUP', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id, 'storage_disk' => 'local', 'storage_key' => 'originals/binding',
+        'sha256' => hash('sha256', 'original'), 'media_type' => 'image/jpeg', 'byte_size' => 8,
+        'derivatives' => [],
+    ]);
+    Storage::disk('local')->put($file->storage_key, 'original');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->startMigration('local', 's3', $this->admin);
+    $service->cutover($migration, $this->admin);
+    AssetFile::query()->whereKey($file->id)->update(match ($change) {
+        'disk' => ['storage_disk' => 'local'],
+        'key' => ['storage_key' => 'originals/replacement'],
+        'checksum' => ['sha256' => hash('sha256', 'replacement')],
+    });
+
+    expect(fn () => $service->cleanupSourceFiles($migration->fresh(), $this->admin))
+        ->toThrow(RuntimeException::class, __('operations.storage.source_changed'));
+    expect(Storage::disk('local')->get('originals/binding'))->toBe('original')
+        ->and($migration->fresh()->status)->toBe('cutover_completed')
+        ->and($migration->fresh()->source_cleaned_at)->toBeNull();
+})->with(['disk', 'key', 'checksum']);
+
+test('verified receipts recover stale counters without copying and backfill legacy derivative checksums', function (): void {
+    $asset = Asset::query()->create(['accession_number' => 'LEGACY-COPY', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id, 'storage_disk' => 'local', 'storage_key' => 'originals/legacy',
+        'sha256' => hash('sha256', 'original'), 'media_type' => 'image/jpeg', 'byte_size' => 8,
+        'derivatives' => ['derivatives/legacy'],
+    ]);
+    Storage::disk('local')->put($file->storage_key, 'original');
+    Storage::disk('local')->put('derivatives/legacy', 'preview');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->startMigration('local', 's3', $this->admin);
+    $migration->update(['verified_files' => 0, 'copied_files' => 0, 'failed_files' => 1]);
+    $migration->relocations()->update(['verified_derivatives' => null]);
+
+    $service->relocateChunk($migration, $file->id, 25);
+    expect($migration->fresh()->verified_files)->toBe(1)
+        ->and($migration->fresh()->failed_files)->toBe(0);
+    $service->cutover($service->finalizeMigration($migration), $this->admin);
+    expect($migration->relocations()->sole()->verified_derivatives)->toBe([
+        'derivatives/legacy' => hash('sha256', 'preview'),
+    ]);
+});
+
+test('cleanup reports failed deletes and resumes after partial deletion without trusting corrupt targets', function (): void {
+    $asset = Asset::query()->create(['accession_number' => 'CLEANUP-RETRY', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id, 'storage_disk' => 'local', 'storage_key' => 'originals/retry',
+        'sha256' => hash('sha256', 'original'), 'media_type' => 'image/jpeg', 'byte_size' => 8,
+        'derivatives' => ['derivatives/retry'],
+    ]);
+    $source = Storage::disk('local');
+    $source->put($file->storage_key, 'original');
+    $source->put('derivatives/retry', 'preview');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->startMigration('local', 's3', $this->admin);
+    $service->cutover($migration, $this->admin);
+
+    $failingSource = Mockery::mock($source);
+    $failingSource->shouldReceive('delete')->with($file->storage_key)->once()->andReturnUsing(fn (): bool => $source->delete($file->storage_key));
+    $failingSource->shouldReceive('delete')->with('derivatives/retry')->once()->andReturn(false);
+    Storage::set('local', $failingSource);
+    try {
+        expect(fn () => $service->cleanupSourceFiles($migration->fresh(), $this->admin))
+            ->toThrow(RuntimeException::class, __('operations.storage.cleanup_failed'));
+    } finally {
+        Storage::set('local', $source);
+    }
+    expect($source->exists($file->storage_key))->toBeFalse()
+        ->and($source->get('derivatives/retry'))->toBe('preview')
+        ->and($migration->fresh()->status)->toBe('cutover_completed')
+        ->and($migration->fresh()->source_cleaned_at)->toBeNull();
+
+    Storage::disk('s3')->put('derivatives/retry', 'corrupt');
+    expect(fn () => $service->cleanupSourceFiles($migration->fresh(), $this->admin))->toThrow(RuntimeException::class);
+    expect($source->get('derivatives/retry'))->toBe('preview');
+    Storage::disk('s3')->put('derivatives/retry', 'preview');
+    expect($service->cleanupSourceFiles($migration->fresh(), $this->admin))->toBe(1)
+        ->and($migration->fresh()->status)->toBe('completed')
+        ->and($source->exists('derivatives/retry'))->toBeFalse()
+        ->and(Storage::disk('s3')->get($file->storage_key))->toBe('original');
 });
 
 test('storage migration copies files, derivatives and verifies checksums without premature deletion', function (): void {

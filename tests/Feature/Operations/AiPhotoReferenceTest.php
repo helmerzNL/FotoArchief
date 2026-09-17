@@ -9,6 +9,7 @@ use App\Modules\Ai\Jobs\ProcessAiIndexJob;
 use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiAssetBatchService;
 use App\Modules\Ai\Services\AiConfigurationService;
+use App\Modules\Ai\Services\PgvectorEmbeddingStore;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\Catalogue\Models\Asset;
@@ -18,6 +19,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
 
@@ -25,6 +27,13 @@ beforeEach(function (): void {
     $this->seed(DatabaseSeeder::class);
     Queue::fake();
     Storage::fake('local');
+    // This suite verifies photo-reference workflows; the real vector database
+    // contract is exercised separately by PgvectorApplicationAdapterTest.
+    $this->partialMock(PgvectorEmbeddingStore::class, function (MockInterface $mock): void {
+        $mock->shouldReceive('available')->andReturn(true);
+        $mock->shouldReceive('requireAvailable')->andReturnNull();
+        $mock->shouldReceive('persist')->andReturnNull();
+    });
     Http::fake([
         'http://127.0.0.1:8088/v1/analyze-image' => Http::response([
             'description' => 'Een testfoto.',

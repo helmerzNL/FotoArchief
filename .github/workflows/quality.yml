@@ -109,10 +109,10 @@ jobs:
   postgres:
     name: PostgreSQL fresh installation and forward upgrade
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
-        image: postgres:16-alpine
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: fotoarchief
           POSTGRES_PASSWORD: ci-disposable-database
@@ -133,10 +133,16 @@ jobs:
       FOTOARCHIEF_TEST_PG_PORT: "5432"
       FOTOARCHIEF_TEST_PG_USER: fotoarchief
       FOTOARCHIEF_TEST_PG_PASSWORD: ci-disposable-database
+      FOTOARCHIEF_TEST_PGVECTOR_DATABASE: release_pgvector_test
+      FOTOARCHIEF_TEST_PGVECTOR_HOST: 127.0.0.1
+      FOTOARCHIEF_TEST_PGVECTOR_PORT: "5432"
+      FOTOARCHIEF_TEST_PGVECTOR_USER: fotoarchief
+      FOTOARCHIEF_TEST_PGVECTOR_PASSWORD: ci-disposable-database
       PGPASSWORD: ci-disposable-database
       FOTOARCHIEF_BENCH_DATABASE: release_benchmark_test
       FOTOARCHIEF_BENCH_USER: fotoarchief
       FOTOARCHIEF_BENCH_PASSWORD: ci-disposable-database
+      FOTOARCHIEF_DISPOSABLE_BENCH: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -153,30 +159,77 @@ jobs:
           createdb -h 127.0.0.1 -U fotoarchief release_portal_test
           createdb -h 127.0.0.1 -U fotoarchief release_operations_final_test
           createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
+          createdb -h 127.0.0.1 -U fotoarchief release_pgvector_test
       - name: Test real PostgreSQL constraints and upgrade preservation
         run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php tests/Feature/Operations/OperationsPostgresAcceptanceTest.php --compact
+      - name: Exercise the Laravel pgvector application adapter
+        run: vendor/bin/pest tests/Feature/Operations/PgvectorApplicationAdapterTest.php --compact
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Measure real HTTP on 50000 synthetic records
         shell: bash
         run: |
-          php tests/Performance/seed.php
-          php -S 127.0.0.1:8767 -t public tests/Performance/router.php > "$RUNNER_TEMP/performance-server.log" 2>&1 &
-          server=$!
-          trap 'kill "$server"' EXIT
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent http://127.0.0.1:8767/login > /dev/null; then break; fi
-            sleep 1
-          done
-          php tests/Performance/measure.php | tee performance.json
-          php tests/Performance/seed-public.php
-          php tests/Performance/measure-public.php | tee performance-public.json
+          node --version
+          php tests/Performance/fixture.php 2>&1 | tee performance-acceptance.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: fotoarchief-performance-${{ github.sha }}
           path: |
-            performance.json
-            performance-public.json
+            performance-acceptance.log
           if-no-files-found: ignore
+
+  browser:
+    name: Browser acceptance (11-15)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: browser_fixture
+          POSTGRES_PASSWORD: disposable-fixture-password
+          POSTGRES_DB: acceptance_browser_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U browser_fixture -d acceptance_browser_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          coverage: none
+          tools: composer:v2
+          extensions: pdo_pgsql, pdo_sqlite, gd, exif, fileinfo, zip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tests/Browser/package-lock.json
+      - run: composer install --no-interaction --no-progress --prefer-dist
+      - run: npm ci
+        working-directory: tests/Browser
+      - run: npm run typecheck
+        working-directory: tests/Browser
+      - run: npx playwright install --with-deps chromium
+        working-directory: tests/Browser
+      - name: Exercise real browser routes with isolated PostgreSQL and ingest worker
+        env:
+          FOTOARCHIEF_DISPOSABLE_BROWSER: "1"
+          FOTOARCHIEF_BROWSER_DATABASE: acceptance_browser_test
+          FOTOARCHIEF_BROWSER_DB_PORT: "5432"
+          FOTOARCHIEF_BROWSER_DB_USER: browser_fixture
+        run: php tests/Browser/fixture.php --run
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-acceptance-${{ github.sha }}
+          path: |
+            tests/Browser/playwright-report
+            tests/Browser/test-results
 
   container:
     name: Container smoke test
@@ -308,6 +361,14 @@ jobs:
           (cd dist && sha256sum fotoarchief-docker.tar.gz IMAGE-LOCAL.txt > DOCKER-SHA256SUMS)
       - name: Back up the accepted archive consistently
         run: sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-backup"
+      - name: Encrypt and recover the complete accepted backup
+        run: |
+          umask 077
+          openssl rand -base64 48 > "$RUNNER_TEMP/recovery-key"
+          sh scripts/backup-copy-encrypted.sh "$RUNNER_TEMP/fotoarchief-backup" "$RUNNER_TEMP/fotoarchief-backup.enc" "$RUNNER_TEMP/recovery-key"
+          sh scripts/backup-restore-encrypted-copy.sh "$RUNNER_TEMP/fotoarchief-backup.enc" "$RUNNER_TEMP/fotoarchief-decrypted" "$RUNNER_TEMP/recovery-key"
+          cmp "$RUNNER_TEMP/fotoarchief-backup/SHA256SUMS" "$RUNNER_TEMP/fotoarchief-decrypted/SHA256SUMS"
+          rm "$RUNNER_TEMP/recovery-key"
       - name: Restore into separate empty volumes and database
         env:
           COMPOSE_PROJECT_NAME: fotoarchief-restore
@@ -315,7 +376,13 @@ jobs:
           SMOKE_URL: http://127.0.0.1:8081
           SMOKE_RESTORE: "1"
         run: |
-          sh scripts/restore-compose.sh "$RUNNER_TEMP/fotoarchief-backup" --confirm-empty-target
+          sh scripts/restore-compose.sh "$RUNNER_TEMP/fotoarchief-decrypted" --confirm-empty-target
+          php tests/Smoke/http-onboarding.php
+          if sh scripts/restore-compose.sh "$RUNNER_TEMP/fotoarchief-decrypted" --confirm-empty-target; then
+            echo "::error::Restore unexpectedly accepted a nonempty target."
+            exit 1
+          fi
+          docker compose -f deploy/compose.yaml up -d --wait app worker scheduler
           php tests/Smoke/http-onboarding.php
       - name: Upload tested image for offline installation
         uses: actions/upload-artifact@v4
@@ -343,6 +410,7 @@ jobs:
           exit 1
       - name: Import templates through the real manager API and accept the new stack
         env:
+          APP_IMAGE: ghcr.io/helmerznl/fotoarchief:v0.9.52@sha256:7348497b470e9d40b1dc0c42f087a78c636f6ba0a6aec27fc251cdfe5efa38ef
           FOTOARCHIEF_DISPOSABLE_MANAGER: "1"
           COMPOSE_PROJECT_NAME: fotoarchief-managed
           APP_HTTP_PORT: "8082"
@@ -373,7 +441,7 @@ jobs:
           docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat storage/app/installation/setup-code.txt > "$SMOKE_SETUP_CODE_FILE"
           php tests/Smoke/http-onboarding.php
           rm "$SMOKE_SETUP_CODE_FILE"
-      - name: Accept managed-stack upgrade preservation
+      - name: Accept previous-release to current Docker upgrade
         env:
           FOTOARCHIEF_DISPOSABLE_MANAGER: "1"
           COMPOSE_PROJECT_NAME: fotoarchief-managed
@@ -381,10 +449,15 @@ jobs:
           SMOKE_URL: http://127.0.0.1:8082
           SMOKE_RESTORE: "1"
         run: |
+          test "$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat VERSION)" = 0.9.52
           before_state="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
           before_key="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("app.key");' | sha256sum | awk '{print $1}')"
+          docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sh -c 'find storage/app/private -type f -exec sha256sum {} \; | sort' > "$RUNNER_TEMP/upgrade-private-before"
           sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
           FOTOARCHIEF_SKIP_IMAGE_PULL=1 APP_IMAGE="$APP_IMAGE" sh scripts/upgrade-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
+          test "$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat VERSION)" = "$(cat VERSION)"
+          docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sh -c 'find storage/app/private -type f -exec sha256sum {} \; | sort' > "$RUNNER_TEMP/upgrade-private-after"
+          cmp "$RUNNER_TEMP/upgrade-private-before" "$RUNNER_TEMP/upgrade-private-after"
           after_state="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sha256sum storage/app/installation/state.json | awk '{print $1}')"
           after_key="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("app.key");' | sha256sum | awk '{print $1}')"
           test "$before_state" = "$after_state"
@@ -413,7 +486,18 @@ jobs:
   webhosting:
     name: Production PHP archive
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: zip_release_test
+          POSTGRES_USER: fotoarchief
+          POSTGRES_PASSWORD: ci-disposable-database
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fotoarchief -d zip_release_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -421,9 +505,36 @@ jobs:
           php-version: "8.5"
           coverage: none
           tools: composer:v2
-          extensions: pdo_pgsql, gd, exif, fileinfo, zip
+          extensions: pdo_pgsql, gd, exif, fileinfo, zip, curl
       - name: Build locked production packages
         run: php scripts/build-release.php
+      - name: Download and verify previous published ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "$RUNNER_TEMP/previous-release"
+          gh release download v0.9.52 --repo "$GITHUB_REPOSITORY" --pattern fotoarchief-v0.9.52-webhosting.zip --pattern SHA256SUMS --dir "$RUNNER_TEMP/previous-release"
+          (cd "$RUNNER_TEMP/previous-release" && grep 'fotoarchief-v0.9.52-webhosting.zip$' SHA256SUMS | sha256sum --check --strict)
+      - name: Accept actual published ZIP upgrade with PostgreSQL and HTTP
+        env:
+          FOTOARCHIEF_DISPOSABLE_WEBHOSTING_UPGRADE: "1"
+          FOTOARCHIEF_RELEASE_DATABASE: zip_release_test
+          FOTOARCHIEF_RELEASE_DB_USER: fotoarchief
+          FOTOARCHIEF_RELEASE_DB_PASSWORD: ci-disposable-database
+        run: php tests/Smoke/webhosting-release-upgrade.php "$RUNNER_TEMP/previous-release/fotoarchief-v0.9.52-webhosting.zip" dist/*-webhosting.zip
+      - name: Prepare pinned private S3 recovery fixture
+        run: |
+          mkdir "$RUNNER_TEMP/seaweedfs"
+          curl --fail --location --retry 3 https://github.com/seaweedfs/seaweedfs/releases/download/4.47/linux_amd64.tar.gz -o "$RUNNER_TEMP/seaweedfs.tar.gz"
+          echo "31fb804858885f9e7f18b6d3b1da09e824baac3e6a55b5a62c3c4c77e6ed6d7d  $RUNNER_TEMP/seaweedfs.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/seaweedfs.tar.gz" -C "$RUNNER_TEMP/seaweedfs"
+          test -x "$(pg_config --bindir)/initdb"
+          echo "FOTOARCHIEF_TEST_PG_BIN=$(pg_config --bindir)" >> "$GITHUB_ENV"
+          echo "FOTOARCHIEF_TEST_WEED_BIN=$RUNNER_TEMP/seaweedfs/weed" >> "$GITHUB_ENV"
+      - name: Recover PostgreSQL and private S3 into independently empty services
+        env:
+          FOTOARCHIEF_DISPOSABLE_S3_RECOVERY: "1"
+        run: php tests/Smoke/s3-release-recovery.php dist/*-webhosting.zip
       - name: Verify uploadable package without development dependencies
         run: |
           php tests/Smoke/release-archive.php dist/*-webhosting.zip

@@ -22,9 +22,15 @@ try {
         [$status] = request('POST', '/setup/complete', [
             '_token' => token($body),
             'db_host' => getenv('SMOKE_DB_HOST') ?: 'postgres', 'db_port' => getenv('SMOKE_DB_PORT') ?: '5432',
-            'db_database' => 'fotoarchief', 'db_username' => 'fotoarchief',
+            'db_database' => getenv('SMOKE_DB_DATABASE') ?: 'fotoarchief',
+            'db_username' => getenv('SMOKE_DB_USER') ?: 'fotoarchief',
             'db_password' => getenv('DB_PASSWORD') ?: 'ci-disposable-database', 'db_sslmode' => 'prefer',
-            'disk' => 'local', 'path_style' => '1', 'name' => 'Release acceptance',
+            'disk' => getenv('SMOKE_STORAGE_DISK') ?: 'local', 'path_style' => '1', 'name' => 'Release acceptance',
+            'endpoint' => getenv('SMOKE_S3_ENDPOINT') ?: '',
+            'region' => getenv('SMOKE_S3_REGION') ?: '',
+            'bucket' => getenv('SMOKE_S3_BUCKET') ?: '',
+            'access_key' => getenv('SMOKE_S3_ACCESS_KEY') ?: '',
+            'secret_key' => getenv('SMOKE_S3_SECRET_KEY') ?: '',
             'email' => 'release@example.test', 'password' => 'disposable-smoke-password',
             'password_confirmation' => 'disposable-smoke-password',
         ]);

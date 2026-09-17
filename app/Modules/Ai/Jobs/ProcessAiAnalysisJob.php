@@ -16,6 +16,7 @@ use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -29,6 +30,7 @@ class ProcessAiAnalysisJob extends OperationJob
 
     protected function executeChunk(OperationRun $run): array
     {
+        $claimToken = $run->claim_token;
         $payload = $run->payload ?? [];
         $assetIds = array_values(array_filter($payload['asset_ids'] ?? [], 'is_string'));
         $provider = (string) ($payload['provider'] ?? 'local');
@@ -46,12 +48,12 @@ class ProcessAiAnalysisJob extends OperationJob
         $costCents = $isNative ? $providerConfigs->cost($provider, 'image_analysis') : 0;
 
         if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
-            return ['processed' => 0, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+            return ['processed' => 0, 'processed_total' => $run->processed_items, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
         }
 
         foreach ($slice as $assetId) {
             if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
-                return ['processed' => $processed, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
+                return ['processed' => $processed, 'processed_total' => $run->processed_items, 'failed' => $failed, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
             }
             $asset = null;
             $file = null;
@@ -90,35 +92,50 @@ class ProcessAiAnalysisJob extends OperationJob
                     throw new RuntimeException(__('ai.errors.asset_changed_analysis', ['asset' => $assetId]));
                 }
 
-                $aiRun = AiRun::query()->firstOrCreate(
-                    ['idempotency_key' => $this->idempotencyKey($provider, $file)],
-                    [
-                        'run_type' => AiRun::TYPE_IMAGE_ANALYSIS,
-                        'status' => AiRun::STATUS_SUCCEEDED,
-                        'asset_id' => $asset->id,
-                        'asset_file_id' => $file->id,
-                        'source_asset_lock_version' => $sourceLock,
-                        'source_file_sha256' => $sourceSha,
-                        'provider_kind' => $provider,
-                        'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
-                        'model_id' => (string) ($analysis['model_id'] ?? 'unreported'),
-                        'model_version' => is_string($analysis['model_version'] ?? null) ? $analysis['model_version'] : null,
-                        'model_space' => is_string($analysis['model_space'] ?? null) ? $analysis['model_space'] : null,
-                        'input_contract' => [
-                            'derivative' => 'configured-ai-derivative',
-                            'metadata_stripped' => true,
-                            'automatic_metadata_write' => false,
+                DB::transaction(function () use ($run, $claimToken, $asset, $file, $analysis, $sourceLock, $sourceSha, $provider, $model, $isNative, $audit, $payload, $cursor, $processed): void {
+                    $checkpoint = OperationRun::query()->lockForUpdate()->findOrFail($run->id);
+                    if ($checkpoint->status !== OperationRun::STATUS_RUNNING || $checkpoint->claim_token !== $claimToken) {
+                        throw new RuntimeException(__('ai.errors.operation_claim_changed'));
+                    }
+                    $aiRun = AiRun::query()->firstOrCreate(
+                        ['idempotency_key' => $this->idempotencyKey($provider, $file)],
+                        [
+                            'run_type' => AiRun::TYPE_IMAGE_ANALYSIS,
+                            'status' => AiRun::STATUS_SUCCEEDED,
+                            'asset_id' => $asset->id,
+                            'asset_file_id' => $file->id,
+                            'source_asset_lock_version' => $sourceLock,
+                            'source_file_sha256' => $sourceSha,
+                            'provider_kind' => $provider,
+                            'provider_name' => $isNative ? "native-{$provider}" : ($provider === 'external' ? 'external-http' : 'owned-http'),
+                            'model_id' => (string) ($analysis['model_id'] ?? 'unreported'),
+                            'model_version' => is_string($analysis['model_version'] ?? null) ? $analysis['model_version'] : null,
+                            'model_space' => is_string($analysis['model_space'] ?? null) ? $analysis['model_space'] : null,
+                            'input_contract' => [
+                                'derivative' => 'configured-ai-derivative',
+                                'metadata_stripped' => true,
+                                'automatic_metadata_write' => false,
+                            ],
+                            'result_summary' => ['suggestion_count' => 0],
+                            'started_at' => now(),
+                            'finished_at' => now(),
                         ],
-                        'result_summary' => ['suggestion_count' => 0],
-                        'started_at' => now(),
-                        'finished_at' => now(),
-                    ],
-                );
+                    );
 
-                $suggestions = $this->storeSuggestions($aiRun, $asset, $file, $analysis, $sourceLock, $sourceSha);
-                $aiRun->forceFill(['result_summary' => ['suggestion_count' => $suggestions]])->save();
+                    $suggestions = $this->storeSuggestions($aiRun, $asset, $file, $analysis, $sourceLock, $sourceSha);
+                    $aiRun->forceFill(['result_summary' => ['suggestion_count' => $suggestions]])->save();
+                    $audit->succeeded($run, $asset, $file, $provider, $model);
+                    $checkpoint->forceFill([
+                        'payload' => array_merge($payload, ['cursor' => $cursor + $processed + 1]),
+                        'processed_items' => $checkpoint->processed_items + 1,
+                        'error_message' => null,
+                    ])->save();
+                });
+                $run->refresh();
+                if ($run->status !== OperationRun::STATUS_RUNNING || $run->claim_token !== $claimToken) {
+                    throw new RuntimeException(__('ai.errors.operation_claim_changed'));
+                }
                 $processed++;
-                $audit->succeeded($run, $asset, $file, $provider, $model);
             } catch (Throwable $exception) {
                 if ($file === null && $asset instanceof Asset) {
                     $primaryFile = $asset->files->firstWhere('is_primary', true);
@@ -131,10 +148,10 @@ class ProcessAiAnalysisJob extends OperationJob
         }
 
         $nextCursor = $cursor + count($slice);
-        $run->forceFill(['payload' => array_merge($payload, ['cursor' => $nextCursor])])->save();
 
         return [
             'processed' => $processed,
+            'processed_total' => $run->processed_items,
             'failed' => $failed,
             'finished' => $nextCursor >= count($assetIds),
             'result' => ['provider' => $provider],

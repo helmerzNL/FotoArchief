@@ -9,6 +9,7 @@ use App\Modules\ArchiveOperations\Models\StorageMigration;
 use App\Modules\ArchiveOperations\Models\StorageRelocation;
 use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,7 +27,7 @@ class StorageMigrationService
 
         foreach ($configuredDisks as $diskName) {
             $driver = config("filesystems.disks.{$diskName}.driver", 'unknown');
-            $fileCount = AssetFile::query()->count();
+            $fileCount = $this->sourceFiles((string) $diskName)->count();
 
             $result[(string) $diskName] = [
                 'driver' => is_string($driver) ? $driver : 'unknown',
@@ -54,7 +55,7 @@ class StorageMigrationService
             'source_disk' => $sourceDisk,
             'target_disk' => $targetDisk,
             'status' => 'verifying',
-            'total_files' => AssetFile::query()->count(),
+            'total_files' => $this->sourceFiles($sourceDisk)->count(),
             'copied_files' => 0,
             'verified_files' => 0,
             'failed_files' => 0,
@@ -79,7 +80,7 @@ class StorageMigrationService
      */
     public function relocateChunk(StorageMigration $migration, ?string $afterFileId, int $limit): array
     {
-        $files = AssetFile::query()
+        $files = $this->sourceFiles($migration->source_disk)
             ->when($afterFileId !== null, fn ($query) => $query->where('id', '>', $afterFileId))
             ->orderBy('id')
             ->limit($limit)
@@ -116,6 +117,8 @@ class StorageMigrationService
             }
         }
 
+        $this->reconcileProgress($migration);
+
         return [
             'processed' => $processed,
             'failed' => $failed,
@@ -135,6 +138,17 @@ class StorageMigrationService
             ->where('asset_file_id', $file->id)
             ->where('is_verified', true)
             ->exists();
+    }
+
+    /** @return Builder<AssetFile> */
+    private function sourceFiles(string $disk): Builder
+    {
+        return AssetFile::query()->where(function (Builder $query) use ($disk): void {
+            $query->where('storage_disk', $disk);
+            if ($disk === 'local') {
+                $query->orWhereNull('storage_disk');
+            }
+        });
     }
 
     /**
@@ -157,8 +171,11 @@ class StorageMigrationService
                 throw new RuntimeException("Kan bronbestand [{$file->storage_key}] niet lezen.");
             }
 
-            $written = $targetStorage->put($file->storage_key, $stream, ['visibility' => 'private']);
-            fclose($stream);
+            try {
+                $written = $targetStorage->put($file->storage_key, $stream, ['visibility' => 'private']);
+            } finally {
+                fclose($stream);
+            }
 
             if (! $written) {
                 throw new RuntimeException("Schrijven naar doelbestand [{$file->storage_key}] mislukt.");
@@ -166,40 +183,40 @@ class StorageMigrationService
 
             $derivatives = (array) ($file->derivatives ?? []);
             foreach ($derivatives as $key) {
-                if (is_string($key) && $sourceStorage->exists($key)) {
-                    $derivStream = $sourceStorage->readStream($key);
-                    if (is_resource($derivStream)) {
-                        $targetStorage->put($key, $derivStream, ['visibility' => 'private', 'ContentType' => 'image/jpeg']);
-                        fclose($derivStream);
+                if (! is_string($key) || ! $sourceStorage->exists($key)) {
+                    throw new RuntimeException(__('operations.storage.incomplete_derivative'));
+                }
+                $derivStream = $sourceStorage->readStream($key);
+                if (! is_resource($derivStream)) {
+                    throw new RuntimeException(__('operations.storage.incomplete_derivative'));
+                }
+                try {
+                    if (! $targetStorage->put($key, $derivStream, ['visibility' => 'private', 'ContentType' => 'image/jpeg'])) {
+                        throw new RuntimeException(__('operations.storage.incomplete_derivative'));
                     }
+                } finally {
+                    fclose($derivStream);
                 }
             }
 
-            $targetSha256 = $this->calculateSha256($targetStorage, $file->storage_key);
-            if ($targetSha256 !== $file->sha256) {
-                throw new RuntimeException("Checksum mismatch op doel: verwacht {$file->sha256}, kreeg {$targetSha256}");
-            }
+            $checksums = $this->verifyTarget($file, $sourceStorage, $targetStorage);
 
-            StorageRelocation::updateOrCreate([
-                'storage_migration_id' => $migration->id,
-                'asset_file_id' => $file->id,
-            ], [
-                'source_disk' => $migration->source_disk,
-                'target_disk' => $migration->target_disk,
-                'source_key' => $file->storage_key,
-                'target_key' => $file->storage_key,
-                'sha256' => $targetSha256,
-                'is_verified' => true,
-                'cutover_completed_at' => null,
-                'error_message' => null,
-            ]);
-
-            $migration->increment('copied_files');
-            $migration->increment('verified_files');
+            $this->recordRelocation($migration, $file, $file->sha256, true, derivatives: $checksums);
 
             return true;
         } catch (\Throwable $exception) {
-            StorageRelocation::updateOrCreate([
+            $this->recordRelocation($migration, $file, $file->sha256, false, Str::limit($exception->getMessage(), 950));
+
+            return false;
+        }
+    }
+
+    /** @param array<string, string>|null $derivatives */
+    private function recordRelocation(StorageMigration $migration, AssetFile $file, string $checksum, bool $verified, ?string $error = null, ?array $derivatives = null): void
+    {
+        DB::transaction(function () use ($migration, $file, $checksum, $verified, $error, $derivatives): void {
+            StorageMigration::query()->whereKey($migration->id)->lockForUpdate()->firstOrFail();
+            StorageRelocation::query()->updateOrCreate([
                 'storage_migration_id' => $migration->id,
                 'asset_file_id' => $file->id,
             ], [
@@ -207,15 +224,27 @@ class StorageMigrationService
                 'target_disk' => $migration->target_disk,
                 'source_key' => $file->storage_key,
                 'target_key' => $file->storage_key,
-                'sha256' => $file->sha256,
-                'is_verified' => false,
-                'error_message' => Str::limit($exception->getMessage(), 950),
+                'sha256' => $checksum,
+                'is_verified' => $verified,
+                'verified_derivatives' => $derivatives,
+                'cutover_completed_at' => null,
+                'error_message' => $error,
             ]);
+            $this->reconcileProgress($migration);
+        });
+    }
 
-            $migration->increment('failed_files');
-
-            return false;
-        }
+    private function reconcileProgress(StorageMigration $migration): void
+    {
+        DB::transaction(function () use ($migration): void {
+            StorageMigration::query()->whereKey($migration->id)->lockForUpdate()->firstOrFail();
+            $successful = $migration->relocations()->where('is_verified', true)->count();
+            $migration->update([
+                'copied_files' => $successful,
+                'verified_files' => $successful,
+                'failed_files' => $migration->relocations()->where('is_verified', false)->count(),
+            ]);
+        });
     }
 
     /**
@@ -224,6 +253,7 @@ class StorageMigrationService
      */
     public function finalizeMigration(StorageMigration $migration): StorageMigration
     {
+        $this->reconcileProgress($migration);
         $migration->refresh();
 
         $migration->update([
@@ -259,6 +289,24 @@ class StorageMigrationService
         }
 
         DB::transaction(function () use ($migration): void {
+            $migration = StorageMigration::query()->whereKey($migration->id)->lockForUpdate()->firstOrFail();
+            if ($migration->status !== 'verified'
+                || $migration->relocations()->where('is_verified', true)->count() !== $migration->total_files
+                || $this->sourceFiles($migration->source_disk)->count() !== $migration->total_files) {
+                throw new RuntimeException(__('operations.storage.source_changed'));
+            }
+            foreach ($migration->relocations()->where('is_verified', true)->cursor() as $relocation) {
+                $file = AssetFile::query()->whereKey($relocation->asset_file_id)->lockForUpdate()->firstOrFail();
+                if (($file->storage_disk ?? 'local') !== $migration->source_disk) {
+                    throw new RuntimeException(__('operations.storage.source_changed'));
+                }
+                if ($file->storage_key !== $relocation->target_key || $file->sha256 !== $relocation->sha256) {
+                    throw new RuntimeException(__('operations.storage.source_changed'));
+                }
+                $checksums = $this->verifyTarget($file, Storage::disk($migration->source_disk), Storage::disk($migration->target_disk), $relocation->verified_derivatives);
+                $relocation->update(['verified_derivatives' => $checksums]);
+                $file->update(['storage_disk' => $migration->target_disk]);
+            }
             $migration->relocations()->where('is_verified', true)->update([
                 'cutover_completed_at' => now(),
             ]);
@@ -272,6 +320,7 @@ class StorageMigrationService
 
     public function cleanupSourceFiles(StorageMigration $migration, User $user): int
     {
+        $migration->refresh();
         if ($migration->status !== 'cutover_completed') {
             throw new RuntimeException(__('operations.generated.t_5f360cd8359c9635'));
         }
@@ -279,23 +328,25 @@ class StorageMigrationService
         $sourceStorage = Storage::disk($migration->source_disk);
         $targetStorage = Storage::disk($migration->target_disk);
         $relocations = $migration->relocations()->whereNotNull('cutover_completed_at')->get();
+        if ($relocations->count() !== $migration->total_files) {
+            throw new RuntimeException(__('operations.storage.source_changed'));
+        }
         $deletedCount = 0;
 
         foreach ($relocations as $relocation) {
-            // Verify target file actually exists before deleting source
-            if ($targetStorage->exists($relocation->target_key)) {
-                $sourceStorage->delete($relocation->source_key);
-
-                $file = $relocation->file;
-                $derivatives = (array) ($file->derivatives ?? []);
-                foreach ($derivatives as $key) {
-                    if (is_string($key) && $sourceStorage->exists($key)) {
-                        $sourceStorage->delete($key);
-                    }
+            $file = $this->cleanupFile($migration, $relocation);
+            $checksums = $this->verifyTarget($file, $sourceStorage, $targetStorage, $relocation->verified_derivatives);
+            $relocation->update(['verified_derivatives' => $checksums]);
+        }
+        foreach ($relocations as $relocation) {
+            $file = $this->cleanupFile($migration, $relocation);
+            $this->verifyTarget($file, $sourceStorage, $targetStorage, $relocation->verified_derivatives);
+            foreach ([$relocation->source_key, ...array_keys($relocation->verified_derivatives ?? [])] as $key) {
+                if ($sourceStorage->exists($key) && ! $sourceStorage->delete($key)) {
+                    throw new RuntimeException(__('operations.storage.cleanup_failed'));
                 }
-
-                $deletedCount++;
             }
+            $deletedCount++;
         }
 
         $migration->update([
@@ -306,6 +357,49 @@ class StorageMigrationService
         return $deletedCount;
     }
 
+    private function cleanupFile(StorageMigration $migration, StorageRelocation $relocation): AssetFile
+    {
+        $file = AssetFile::query()->find($relocation->asset_file_id);
+        if ($file === null || ! $relocation->is_verified
+            || $relocation->source_disk !== $migration->source_disk
+            || $relocation->target_disk !== $migration->target_disk
+            || ($file->storage_disk ?? 'local') !== $migration->target_disk
+            || $file->storage_key !== $relocation->target_key
+            || $file->sha256 !== $relocation->sha256) {
+            throw new RuntimeException(__('operations.storage.source_changed'));
+        }
+
+        return $file;
+    }
+
+    /**
+     * @param  array<string, string>|null  $expectedDerivatives
+     * @return array<string, string>
+     */
+    private function verifyTarget(AssetFile $file, Filesystem $source, Filesystem $target, ?array $expectedDerivatives = null): array
+    {
+        if (! $target->exists($file->storage_key) || $this->calculateSha256($target, $file->storage_key) !== $file->sha256) {
+            throw new RuntimeException(__('operations.storage.target_invalid'));
+        }
+        $checksums = [];
+        foreach ((array) ($file->derivatives ?? []) as $key) {
+            if (! is_string($key) || ! $target->exists($key)
+                || ($expectedDerivatives === null && ! $source->exists($key))) {
+                throw new RuntimeException(__('operations.storage.incomplete_derivative'));
+            }
+            $expected = $expectedDerivatives === null ? $this->calculateSha256($source, $key) : ($expectedDerivatives[$key] ?? null);
+            if ($expected === null || $expected !== $this->calculateSha256($target, $key)) {
+                throw new RuntimeException(__('operations.storage.incomplete_derivative'));
+            }
+            $checksums[$key] = $expected;
+        }
+        if ($expectedDerivatives !== null && count($checksums) !== count($expectedDerivatives)) {
+            throw new RuntimeException(__('operations.storage.incomplete_derivative'));
+        }
+
+        return $checksums;
+    }
+
     private function calculateSha256(Filesystem $storage, string $path): string
     {
         $stream = $storage->readStream($path);
@@ -314,13 +408,17 @@ class StorageMigrationService
         }
 
         $context = hash_init('sha256');
-        while (! feof($stream)) {
-            $buffer = fread($stream, 1024 * 1024);
-            if ($buffer !== false && $buffer !== '') {
+        try {
+            while (! feof($stream)) {
+                $buffer = fread($stream, 1024 * 1024);
+                if ($buffer === false || ($buffer === '' && ! feof($stream))) {
+                    throw new RuntimeException("Kan bestand niet lezen voor SHA-256 berekening: {$path}");
+                }
                 hash_update($context, $buffer);
             }
+        } finally {
+            fclose($stream);
         }
-        fclose($stream);
 
         return hash_final($context);
     }

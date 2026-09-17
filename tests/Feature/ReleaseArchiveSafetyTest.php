@@ -9,6 +9,11 @@ function createReleaseArchiveFixture(string $path, array $extraFiles = []): void
     $zip = new ZipArchive;
     expect($zip->open($path, ZipArchive::CREATE | ZipArchive::EXCL))->toBeTrue();
 
+    $catalogues = [];
+    foreach (File::glob(base_path('lang/nl/*.php')) as $catalogue) {
+        $catalogues['lang/nl/'.basename($catalogue)] = File::get($catalogue);
+    }
+    expect($catalogues)->not->toBeEmpty();
     $files = array_merge([
         'artisan' => '<?php echo "artisan";',
         'public/index.php' => '<?php echo "index";',
@@ -23,7 +28,7 @@ function createReleaseArchiveFixture(string $path, array $extraFiles = []): void
         'composer.lock' => json_encode(['packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
         'vendor/composer/installed.json' => json_encode(['dev' => false, 'packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
         'storage/logs/.gitignore' => "*\n!.gitignore\n",
-    ], $extraFiles);
+    ], $catalogues, $extraFiles);
 
     foreach ($files as $name => $contents) {
         expect($zip->addFromString($name, $contents))->toBeTrue();
@@ -80,6 +85,22 @@ it('accepts production archives and refuses private installed-instance state', f
         expect($status)->toBe(0)
             ->and($stdout)->toContain('Disposable webhosting upgrade preserved APP_KEY')
             ->and($stderr)->toBe('');
+
+        $staleCatalogue = $directory.'/stale-catalogue.zip';
+        createReleaseArchiveFixture($staleCatalogue, ['lang/nl/operations.php' => '<?php return [];']);
+        [$status, $stdout, $stderr] = runReleaseArchiveValidator($staleCatalogue);
+        expect($status)->not->toBe(0)
+            ->and($stdout.$stderr)->toContain('Missing or stale release catalogue: lang/nl/operations.php');
+
+        $missingCatalogue = $directory.'/missing-catalogue.zip';
+        createReleaseArchiveFixture($missingCatalogue);
+        $zip = new ZipArchive;
+        expect($zip->open($missingCatalogue))->toBeTrue()
+            ->and($zip->deleteName('lang/nl/ai.php'))->toBeTrue()
+            ->and($zip->close())->toBeTrue();
+        [$status, $stdout, $stderr] = runReleaseArchiveValidator($missingCatalogue);
+        expect($status)->not->toBe(0)
+            ->and($stdout.$stderr)->toContain('Missing release file: lang/nl/ai.php');
 
         $privateState = $directory.'/private-state.zip';
         createReleaseArchiveFixture($privateState, [

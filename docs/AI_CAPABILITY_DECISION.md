@@ -5,6 +5,20 @@
 **Scope:** image-content analysis, Dutch suggestions and multimodal semantic
 search for FotoArchief
 
+## pgvector-implementatie / pgvector implementation
+
+**Nederlands:** de echte pgvector-adapter, per-item queuecheckpoints en veilige
+generatieherbouw zijn beschreven in het
+[opleveringsverslag](VECTOR_RECOVERY_DELIVERY.md), inclusief de
+operatorcommando's voor migratie en later toegevoegde extensies. De lokale
+PostgreSQL-tests vervangen onderstaande live-provideracceptatie niet.
+
+**English:** the real pgvector adapter, per-item queue checkpoints and safe
+generation rebuilds are documented in the
+[delivery report](VECTOR_RECOVERY_DELIVERY.md), including operator commands
+for migration and extensions installed later. Local PostgreSQL tests do not
+replace the live-provider acceptance gate below.
+
 ## Decision
 
 FotoArchief supports AI only as an explicit opt-in capability. The first

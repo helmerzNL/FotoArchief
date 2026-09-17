@@ -81,7 +81,7 @@ abstract class OperationJob implements ShouldQueue
     /**
      * Process at most CHUNK_SIZE items.
      *
-     * @return array{processed: int, failed: int, finished: bool, result?: array<string, mixed>}
+     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, failed_total?: int, result?: array<string, mixed>}
      */
     abstract protected function executeChunk(OperationRun $run): array;
 
@@ -128,16 +128,16 @@ abstract class OperationJob implements ShouldQueue
                 // the cancelled status and released claim set by the cancellation
                 // itself must not be overwritten by this job.
                 $run->forceFill([
-                    'processed_items' => $run->processed_items + $outcome['processed'],
-                    'failed_items' => $run->failed_items + $outcome['failed'],
+                    'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
+                    'failed_items' => $outcome['failed_total'] ?? ($run->failed_items + $outcome['failed']),
                 ])->save();
 
                 return;
             }
 
             $run->forceFill([
-                'processed_items' => $run->processed_items + $outcome['processed'],
-                'failed_items' => $run->failed_items + $outcome['failed'],
+                'processed_items' => $outcome['processed_total'] ?? ($run->processed_items + $outcome['processed']),
+                'failed_items' => $outcome['failed_total'] ?? ($run->failed_items + $outcome['failed']),
             ])->save();
 
             if ($outcome['finished']) {
@@ -204,11 +204,14 @@ abstract class OperationJob implements ShouldQueue
 
             Queue::connection('ingest')->push(new static($this->runId, $this->chunkNumber + 1));
         } catch (Throwable $exception) {
-            $run->forceFill([
-                'status' => OperationRun::STATUS_QUEUED,
-                'claim_token' => null,
-                'error_message' => $this->describe($exception),
-            ])->save();
+            OperationRun::query()->whereKey($run->id)
+                ->where('claim_token', $token)
+                ->where('status', OperationRun::STATUS_RUNNING)
+                ->update([
+                    'status' => OperationRun::STATUS_QUEUED,
+                    'claim_token' => null,
+                    'error_message' => $this->describe($exception),
+                ]);
 
             throw $exception;
         }

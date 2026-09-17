@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+$started = microtime(true);
 
 if (PHP_SAPI === 'cli-server') {
     $public = realpath(dirname(__DIR__, 2).'/public');
@@ -17,4 +22,16 @@ if (PHP_SAPI === 'cli-server') {
 }
 
 $app = require __DIR__.'/bootstrap.php';
-$app->handleRequest(Request::capture());
+$databaseMilliseconds = 0.0;
+DB::listen(static function (QueryExecuted $query) use (&$databaseMilliseconds): void {
+    $databaseMilliseconds += $query->time;
+});
+$kernel = $app->make(Kernel::class);
+$request = Request::capture();
+$response = $kernel->handle($request);
+$response->headers->set('X-Benchmark-Pid', (string) getmypid());
+$response->headers->set('X-Benchmark-Started', sprintf('%.6f', $started));
+$response->headers->set('X-Benchmark-Finished', sprintf('%.6f', microtime(true)));
+$response->headers->set('X-Benchmark-Db-Ms', sprintf('%.3f', $databaseMilliseconds));
+$response->send();
+$kernel->terminate($request, $response);

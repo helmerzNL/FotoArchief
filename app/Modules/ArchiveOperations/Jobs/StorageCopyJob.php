@@ -32,14 +32,21 @@ class StorageCopyJob extends OperationJob
         $cursor = is_string($payload['cursor'] ?? null) ? $payload['cursor'] : null;
         $chunk = $service->relocateChunk($migration, $cursor, self::CHUNK_SIZE);
 
-        $run->forceFill(['payload' => array_merge($payload, ['cursor' => $chunk['last_id']])])->save();
+        $migration->refresh();
+        $run->forceFill([
+            'payload' => array_merge($payload, ['cursor' => $chunk['last_id']]),
+            'processed_items' => $migration->verified_files,
+            'failed_items' => $migration->failed_files,
+        ])->save();
 
         if ($chunk['finished']) {
             $finalized = $service->finalizeMigration($migration);
 
             return [
                 'processed' => $chunk['processed'],
+                'processed_total' => $run->processed_items,
                 'failed' => $chunk['failed'],
+                'failed_total' => $run->failed_items,
                 'finished' => true,
                 'result' => [
                     'migration_id' => $finalized->id,
@@ -52,7 +59,9 @@ class StorageCopyJob extends OperationJob
 
         return [
             'processed' => $chunk['processed'],
+            'processed_total' => $run->processed_items,
             'failed' => $chunk['failed'],
+            'failed_total' => $run->failed_items,
             'finished' => false,
         ];
     }
