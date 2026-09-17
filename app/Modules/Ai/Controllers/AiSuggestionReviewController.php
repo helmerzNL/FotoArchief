@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\Ai\Services\AiSuggestionReviewService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,15 @@ class AiSuggestionReviewController extends Controller
 
         $suggestions = AiSuggestion::query()
             ->with(['asset', 'assetFile', 'run'])
-            ->where('review_status', AiSuggestion::REVIEW_PENDING)
+            ->where(function (Builder $query): void {
+                $query->where('review_status', AiSuggestion::REVIEW_PENDING)
+                    ->orWhere(function (Builder $query): void {
+                        $query->where('review_status', AiSuggestion::REVIEW_SUPERSEDED)
+                            ->whereHas('assetFile', fn ($file) => $file->where('is_primary', true)
+                                ->whereColumn('asset_files.asset_id', 'ai_suggestions.asset_id')
+                                ->whereColumn('asset_files.sha256', 'ai_suggestions.source_file_sha256'));
+                    });
+            })
             ->when(! $user->hasPermission('assets.publish'), function ($query) use ($user): void {
                 $query->whereHas('asset', fn ($assetQuery) => $assetQuery->where('created_by_user_id', $user->id));
             })

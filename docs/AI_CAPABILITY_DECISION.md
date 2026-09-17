@@ -122,7 +122,8 @@ These are implementation defaults until a later measured proof tightens them:
   workers read the current clean primary file, call the chosen provider and
   store suggestions as pending review without metadata writes.
 - Step 45 exposes pending AI suggestions for human review. Accepting a
-  suggestion re-checks the asset lock version and source checksum, writes
+  suggestion re-checks the submitted current asset lock version and the current
+  primary file identity/checksum (not the analysis-time metadata revision), writes
   ordinary metadata/tag changes, increments the asset lock version and records
   an audit event. Rejecting a suggestion changes only review status.
 - Step 46 builds a bounded image-embedding index through operation runs.

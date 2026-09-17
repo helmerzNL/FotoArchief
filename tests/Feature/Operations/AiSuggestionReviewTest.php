@@ -170,10 +170,10 @@ it('rejects suggestions without changing asset metadata', function (): void {
 
 it('supersedes stale suggestions instead of applying them', function (): void {
     $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Oude bronversie.');
-    $this->asset->forceFill(['lock_version' => 2])->save();
+    $suggestion->update(['source_file_sha256' => str_repeat('c', 64)]);
 
     $this->actingAs($this->user)->from('/admin/operations/ai/suggestions')->post("/admin/operations/ai/suggestions/{$suggestion->id}/accept", [
-        'lock_version' => 2,
+        'lock_version' => 1,
     ])->assertRedirect('/admin/operations/ai/suggestions')
         ->assertSessionHasErrors('suggestion');
 
@@ -210,13 +210,85 @@ it('returns photo reviews to the photo and preserves existing acceptance guards'
 
 it('keeps stale photo review errors visible without applying metadata', function (): void {
     $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Verouderde beschrijving');
+    $this->file->update(['is_primary' => false]);
     $this->asset->update(['lock_version' => 2]);
     $this->actingAs($this->user)->from(route('admin.assets.show', $this->asset))
         ->post(route('admin.operations.ai.suggestions.accept', $suggestion), ['return_to' => 'asset', 'lock_version' => 2])
         ->assertSessionHasErrors('suggestion');
-    $this->get(route('admin.assets.show', $this->asset))->assertOk()->assertSee('oudere bronversie');
+    $this->get(route('admin.assets.show', $this->asset))->assertOk()->assertSee('primaire fotobestand');
     expect($this->asset->fresh()->description)->toBeNull();
 });
+
+it('accepts sibling tags and description after unrelated metadata edits', function (): void {
+    Http::preventStrayRequests();
+    $suggestions = [
+        aiSuggestion(AiSuggestion::TYPE_TAG, 'Dorpsplein'),
+        aiSuggestion(AiSuggestion::TYPE_TAG, 'Molen'),
+        aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Een molen op het dorpsplein.'),
+    ];
+    $this->asset->update(['title' => 'Handmatig aangepast', 'lock_version' => 2]);
+    foreach ($suggestions as $suggestion) {
+        $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), [
+            'return_to' => 'asset', 'lock_version' => $this->asset->fresh()->lock_version,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('admin.assets.show', $this->asset).'#ai-results');
+        expect($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_ACCEPTED);
+    }
+    expect($this->asset->fresh()->lock_version)->toBe(5)
+        ->and($this->asset->fresh()->title)->toBe('Handmatig aangepast')
+        ->and($this->asset->fresh()->description)->toBe('Een molen op het dorpsplein.')
+        ->and($this->asset->tags()->count())->toBe(2)
+        ->and(AssetAuditEvent::query()->where('event_type', 'ai.suggestion.accepted')->count())->toBe(3);
+});
+
+it('recovers previously superseded suggestions on both review surfaces without reanalysis', function (): void {
+    Http::preventStrayRequests();
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'Herstelbaar voorstel');
+    $suggestion->update(['review_status' => AiSuggestion::REVIEW_SUPERSEDED]);
+    $this->asset->update(['lock_version' => 3]);
+    $url = route('admin.operations.ai.suggestions.accept', $suggestion);
+    $this->actingAs($this->user)->get(route('admin.assets.show', $this->asset))->assertOk()->assertSee($url);
+    $this->get(route('admin.operations.ai.suggestions.index'))->assertOk()->assertSee('Herstelbaar voorstel');
+    $this->post($url, ['lock_version' => 3])->assertSessionHasNoErrors();
+    expect($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_ACCEPTED);
+});
+
+it('keeps stale form conflicts retryable without invalidating the suggestion', function (): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Voorstel');
+    $this->asset->update(['description' => 'Gelijktijdige edit', 'lock_version' => 2]);
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), [
+        'lock_version' => 1,
+    ])->assertSessionHasErrors('lock_version');
+    expect($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($this->asset->fresh()->description)->toBe('Gelijktijdige edit');
+});
+
+it('refuses replacement primary files even when the old file checksum is unchanged', function (): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'Oud beeld');
+    $this->file->update(['is_primary' => false]);
+    $replacement = $this->file->replicate();
+    $replacement->is_primary = true;
+    $replacement->storage_key = 'originals/replacement.jpg';
+    $replacement->sha256 = str_repeat('c', 64);
+    $replacement->save();
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), [
+        'lock_version' => 1,
+    ])->assertSessionHasErrors('suggestion');
+    expect($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_SUPERSEDED)
+        ->and($this->asset->tags()->count())->toBe(0);
+    $this->get(route('admin.operations.ai.suggestions.index'))->assertOk()->assertDontSee('Oud beeld');
+    $this->get(route('admin.assets.show', $this->asset))->assertOk()
+        ->assertDontSee(route('admin.operations.ai.suggestions.accept', $suggestion));
+});
+
+it('does not reopen human reviewed suggestions', function (string $status): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Niet opnieuw toepassen');
+    $suggestion->update(['review_status' => $status]);
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), [
+        'lock_version' => 1,
+    ])->assertSessionHasErrors('suggestion');
+    expect($suggestion->fresh()->review_status)->toBe($status)
+        ->and($this->asset->fresh()->description)->toBeNull();
+})->with([AiSuggestion::REVIEW_ACCEPTED, AiSuggestion::REVIEW_REJECTED]);
 
 it('distinguishes missing analysis empty output and embedding output', function (): void {
     $this->run->delete();

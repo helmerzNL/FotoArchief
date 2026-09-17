@@ -67,9 +67,13 @@ De historie is gepagineerd met 10 analyses/indexeringen per pagina.
 Bekijken start geen providerrequest en wijzigt geen metadata.
 
 Bevoegde medewerkers kunnen een voorstel accepteren of afwijzen en keren
-daarna terug naar de foto. De bestaande rechten-, checksum- en revisiecontroles
-blijven gelden: wijzigingen aan de foto, waaronder acceptatie, kunnen andere
-voorstellen uit een oudere revisie ongeldig maken. Alleen bekijken geeft geen
+daarna terug naar de foto. Metadatawijzigingen en acceptatie van een voorstel
+maken andere voorstellen niet ongeldig: het primaire bestand en de checksum
+bepalen of de beeldbron nog klopt. Ook eerder als verouderd gemarkeerde
+voorstellen kunnen opnieuw worden beoordeeld als die bron nog overeenkomt.
+Geaccepteerde en afgewezen voorstellen blijven afgesloten. Een intussen
+gewijzigd formulier vereist wel herladen om gelijktijdige edits te beschermen.
+Alleen bekijken geeft geen
 beoordelingsrecht; private resultaten komen niet op de openbare fotopagina.
 
 Bij een AI-achtergrondtaak staat **Foto's en AI-resultaten bekijken**. Deze link
@@ -268,9 +272,12 @@ superseded suggestions remain visible. History is paginated with 10 analysis/
 indexing records per page. Viewing starts no provider request and changes no metadata.
 
 Authorized staff can accept or reject a suggestion and return to the photo.
-Existing permission, checksum, and revision guards remain in force: changes to
-the photo, including acceptance, can invalidate other suggestions from an older
-revision. Read access does not grant review permission; private results are not
+Metadata edits and accepting one suggestion do not invalidate the others:
+the current primary file and checksum determine whether the image source still
+matches. Previously superseded suggestions can be reviewed again when their
+source still matches. Accepted and rejected suggestions remain closed. A stale
+form still requires reloading to protect concurrent edits.
+Read access does not grant review permission; private results are not
 shown on the public photo page.
 
 AI background jobs have a **View photos and AI results** link. It shows up to

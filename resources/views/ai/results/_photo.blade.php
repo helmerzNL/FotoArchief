@@ -29,7 +29,7 @@
                         </p>
                         @if($suggestion->review_note)<p>{{ __('ai.results.review_note', ['note' => $suggestion->review_note]) }}</p>@endif
                         @can('update', $asset)
-                            @if($suggestion->review_status === 'pending')
+                            @if($suggestion->canReview())
                                 @if(in_array($suggestion->suggestion_type, ['description', 'tag'], true))
                                     <form method="post" action="{{ route('admin.operations.ai.suggestions.accept', $suggestion) }}">
                                         @csrf
