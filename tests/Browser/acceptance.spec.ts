@@ -66,9 +66,14 @@ test('11 - review preserves metadata revisions, rejects changed source and recor
   await page.getByRole('textbox', { name: 'Titel', exact: true }).fill('Browser review aangepast');
   await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
   await expect(page.getByText('Bronrevisie 1 · huidige revisie 2', { exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Te accepteren beschrijving (vervangt de huidige beschrijving)', exact: true })
+    .fill('Menselijk gecorrigeerd marktplein.');
   await page.getByRole('button', { name: 'Voorstel accepteren', exact: true }).first().click();
   await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true }))
-    .toHaveValue('Gecontroleerd marktplein uit de browserproef.');
+    .toHaveValue('Menselijk gecorrigeerd marktplein.');
+  await expect(page.getByText('Gecontroleerd marktplein uit de browserproef.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mijn acceptatie terugdraaien', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Voorstel accepteren', exact: true }).first().click();
   await expect(page.getByRole('textbox', { name: 'Tags (komma-gescheiden, maximaal 20)', exact: true }))
     .toHaveValue('browser-marktplein');
@@ -186,4 +191,24 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
     viewport: innerWidth, page: document.documentElement.scrollWidth,
   }));
   expect(dimensions.page).toBeLessThanOrEqual(dimensions.viewport);
+});
+
+test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {
+  await login(page, 'volunteer');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url('/admin/operations/ai/suggestions'));
+  await page.getByRole('combobox', { name: 'Beoordelingsstatus', exact: true }).selectOption('pending');
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  const selections = page.getByRole('checkbox', { name: /^Voorstel .* selecteren$/ });
+  const count = await selections.count();
+  expect(count).toBe(3);
+  await selections.first().check();
+  await page.getByRole('combobox', { name: 'Beslissing', exact: true }).selectOption('reject');
+  await page.getByRole('checkbox', { name: 'Ik bevestig de geselecteerde voorstellen en beslissing.', exact: true }).check();
+  await page.getByRole('button', { name: 'Toepassen op geselecteerde voorstellen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Resultaten per voorstel' })).toBeVisible();
+  await expect(selections).toHaveCount(count - 1);
+  await page.getByRole('combobox', { name: 'Beoordelingsstatus', exact: true }).selectOption('rejected');
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  await expect(page.locator('article')).toHaveCount(1);
 });

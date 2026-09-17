@@ -59,6 +59,19 @@ De ingestelde batchlimiet blijft gelden voor de ingevoerde selectie.
 
 ### AI-resultaten bekijken en beoordelen
 
+De centrale reviewwerkvoorraad ondersteunt collectie, provideridentificatie,
+datumbereik en status. Huidige metadata en het oorspronkelijke voorstel staan
+bij elkaar. Een beschrijving kan voor acceptatie worden aangepast; afzonderlijke
+tags zijn afzonderlijke voorstellen. Selecteer maximaal 25 voorstellen en
+bevestig de bulkbeslissing; ieder voorstel krijgt een zichtbaar resultaat.
+Bron- en formuliercontroles gelden ook bij bulkacties. Er wordt geen provider aangeroepen.
+
+Een eigen acceptatie uit versie 0.9.54 of later kan vanuit het filter
+Geaccepteerd worden teruggedraaid, uitsluitend zolang de fotorevisie sinds die
+acceptatie ongewijzigd is. Een bestaande tagkoppeling wordt niet verwijderd.
+Het oorspronkelijke voorstel, herstelbewijs en auditgebeurtenissen blijven behouden.
+Oudere acceptaties zonder herstelbewijs worden niet onveilig gereconstrueerd.
+
 Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
 **AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
 beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
@@ -264,6 +277,19 @@ photo count once after validation. The configured batch limit still applies to
 the submitted selection.
 
 ### Viewing and reviewing AI results
+
+The central review queue supports collection, provider identifier, date range
+and status filters. Current metadata and the original proposal appear together.
+Descriptions can be edited before acceptance; individual tags are individual
+proposals. Select at most 25 proposals and confirm the bulk decision; each
+proposal receives a visible outcome. Source and form guards also apply to bulk
+actions. No provider is called.
+
+Your own acceptance from version 0.9.54 onwards can be undone from the Accepted
+filter only while the photo revision remains unchanged since that acceptance.
+An existing tag link is not removed. The original proposal, recovery receipt
+and audit events remain stored. Older acceptances without recovery receipts
+are not reconstructed unsafely.
 
 From `0.9.51`, every private photo page has an **AI results** link and panel,
 before the metadata form. It shows the stored description and tags, provider,

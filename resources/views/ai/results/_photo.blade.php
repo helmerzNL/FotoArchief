@@ -5,7 +5,7 @@
         $runTypeLabels = ['embedding' => __('ai.results.run_types.embedding'), 'image_analysis' => __('ai.results.run_types.image_analysis')];
         $statusLabels = ['succeeded' => __('ai.results.statuses.succeeded'), 'failed' => __('ai.results.statuses.failed'), 'queued' => __('ai.results.statuses.queued'), 'running' => __('ai.results.statuses.running'), 'cancelled' => __('ai.results.statuses.cancelled')];
         $suggestionTypeLabels = ['description' => __('ai.results.suggestion_types.description'), 'tag' => __('ai.results.suggestion_types.tag'), 'object' => __('ai.results.suggestion_types.object')];
-        $reviewStatusLabels = ['pending' => __('ai.results.review_statuses.pending'), 'accepted' => __('ai.results.review_statuses.accepted'), 'rejected' => __('ai.results.review_statuses.rejected'), 'superseded' => __('ai.results.review_statuses.superseded')];
+        $reviewStatusLabels = ['pending' => __('ai.results.review_statuses.pending'), 'accepted' => __('ai.results.review_statuses.accepted'), 'rejected' => __('ai.results.review_statuses.rejected'), 'superseded' => __('ai.results.review_statuses.superseded'), 'reverted' => __('review.states.reverted')];
     @endphp
     @forelse($aiRuns as $aiRun)
         <article style="border-block-end: 1px solid var(--border); padding-block: 1rem;">
@@ -35,6 +35,10 @@
                                         @csrf
                                         <input type="hidden" name="return_to" value="asset">
                                         <input type="hidden" name="lock_version" value="{{ $asset->lock_version }}">
+                                        @if($suggestion->suggestion_type === 'description')
+                                            <p>{{ __('review.current') }}: {{ $asset->description }}</p>
+                                            <label>{{ __('review.description') }} <textarea name="edited_description" maxlength="10000" required>{{ $suggestion->value }}</textarea></label>
+                                        @endif
                                         <button>{{ __('ai.results.accept') }}</button>
                                     </form>
                                 @endif
@@ -43,6 +47,13 @@
                                     <input type="hidden" name="return_to" value="asset">
                                     <label>{{ __('ai.results.reject_label') }} <input name="review_note" maxlength="500"></label>
                                     <button class="secondary">{{ __('ai.results.reject') }}</button>
+                                </form>
+                            @endif
+                            @if($suggestion->review_status === 'accepted' && $suggestion->reviewed_by_user_id === auth()->id() && $suggestion->acceptance_receipt)
+                                <form method="post" action="{{ route('admin.operations.ai.suggestions.undo', $suggestion) }}">
+                                    @csrf
+                                    <input type="hidden" name="lock_version" value="{{ $asset->lock_version }}">
+                                    <button>{{ __('review.undo') }}</button>
                                 </form>
                             @endif
                         @endcan

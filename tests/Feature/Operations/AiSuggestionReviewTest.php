@@ -9,6 +9,8 @@ use App\Modules\Ai\Models\AiSuggestion;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use App\Modules\Catalogue\Models\Collection;
+use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -69,6 +71,123 @@ function aiSuggestion(string $type, string $value): AiSuggestion
         'value' => $value,
     ]);
 }
+
+it('filters the review work queue without hiding the original proposal or current metadata', function (): void {
+    $this->asset->update(['description' => 'Current human description']);
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Original proposal');
+    $collection = Collection::query()->create(['title' => 'Review collection', 'slug' => 'review-collection']);
+    $this->asset->collections()->attach($collection->id, ['id' => (string) str()->ulid()]);
+    $this->actingAs($this->user)->get(route('admin.operations.ai.suggestions.index', [
+        'collection' => $collection->id, 'provider' => 'owned-http', 'from' => now()->toDateString(),
+    ]))->assertOk()->assertSee('Current human description')->assertSee('Original proposal')
+        ->assertViewHas('suggestions', fn ($rows) => $rows->total() === 1);
+    $this->get(route('admin.operations.ai.suggestions.index', ['provider' => 'missing']))
+        ->assertOk()->assertViewHas('suggestions', fn ($rows) => $rows->total() === 0);
+    $suggestion->update(['review_status' => 'rejected']);
+    $this->get(route('admin.operations.ai.suggestions.index', ['status' => 'rejected']))
+        ->assertOk()->assertSee('Original proposal');
+});
+
+it('accepts an edited description and safely undoes its own acceptance without altering the original', function (): void {
+    $this->asset->update(['description' => 'Human original']);
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'AI original');
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), [
+        'lock_version' => 1, 'edited_description' => 'Human corrected AI',
+    ])->assertSessionHasNoErrors();
+    expect($this->asset->fresh()->description)->toBe('Human corrected AI')
+        ->and($suggestion->fresh()->value)->toBe('AI original');
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 2])
+        ->assertSessionHasNoErrors();
+    expect($this->asset->fresh()->description)->toBe('Human original')
+        ->and($suggestion->fresh()->review_status)->toBe('reverted')
+        ->and(AssetAuditEvent::where('event_type', 'ai.suggestion.reverted')->count())->toBe(1);
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 3])
+        ->assertSessionHasErrors('suggestion');
+});
+
+it('never undoes another reviewers acceptance or a subsequent metadata revision', function (): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Accepted');
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), ['lock_version' => 1])
+        ->assertSessionHasNoErrors();
+    $suggestion->update(['reviewed_by_user_id' => null]);
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 2])
+        ->assertSessionHasErrors('suggestion');
+    $suggestion->update(['reviewed_by_user_id' => $this->user->id]);
+    $this->asset->update(['description' => 'Later edit', 'lock_version' => 3]);
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 3])
+        ->assertSessionHasErrors('lock_version');
+    expect($this->asset->fresh()->description)->toBe('Later edit');
+});
+
+it('keeps existing tags when undoing an acceptance that did not add a link', function (): void {
+    $tag = Tag::query()->create(['name' => 'Plein', 'slug' => 'plein']);
+    $this->asset->tags()->attach($tag->id, ['id' => (string) str()->ulid()]);
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'Plein');
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), ['lock_version' => 1])->assertSessionHasNoErrors();
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 2])->assertSessionHasNoErrors();
+    expect($this->asset->tags()->count())->toBe(1);
+});
+
+it('processes only selected tags with one photo snapshot and reports stale items individually', function (): void {
+    $first = aiSuggestion(AiSuggestion::TYPE_TAG, 'Plein');
+    $second = aiSuggestion(AiSuggestion::TYPE_TAG, 'Huis');
+    $unselected = aiSuggestion(AiSuggestion::TYPE_TAG, 'Boom');
+    $stale = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Stale');
+    $stale->update(['source_file_sha256' => str_repeat('e', 64)]);
+    $payload = [
+        'confirm' => 1, 'decision' => 'accept', 'selected' => [$first->id, $second->id, $stale->id],
+        'versions' => [$first->id => 1, $second->id => 1, $stale->id => 1],
+    ];
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.bulk'), $payload)
+        ->assertSessionHas('review_results', fn ($results) => count($results) === 3);
+    expect($this->asset->tags()->count())->toBe(2)
+        ->and($unselected->fresh()->review_status)->toBe('pending')
+        ->and($stale->fresh()->review_status)->toBe('superseded');
+    unset($payload['confirm']);
+    $this->post(route('admin.operations.ai.suggestions.bulk'), $payload)->assertSessionHasErrors('confirm');
+});
+
+it('requires the original bulk snapshot and rejects duplicate selections', function (): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'Plein');
+    $payload = ['confirm' => 1, 'decision' => 'accept', 'selected' => [$suggestion->id], 'versions' => [$suggestion->id => 1]];
+    $this->asset->update(['lock_version' => 2]);
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.bulk'), $payload)
+        ->assertSessionHas('review_results', fn ($results) => $results[0]['message'] === __('ai.errors.photo_changed'));
+    expect($suggestion->fresh()->review_status)->toBe('pending');
+    $payload['selected'][] = $suggestion->id;
+    $this->post(route('admin.operations.ai.suggestions.bulk'), $payload)->assertSessionHasErrors('selected.0');
+});
+
+it('preauthorizes the entire bulk selection before making any changes', function (): void {
+    $own = aiSuggestion(AiSuggestion::TYPE_TAG, 'Own tag');
+    $other = aiSuggestion(AiSuggestion::TYPE_TAG, 'Other tag');
+    $foreignAsset = Asset::query()->create(['accession_number' => 'FOREIGN', 'title' => 'Foreign']);
+    $other->update(['asset_id' => $foreignAsset->id]);
+    $this->user->roles()->sync([Role::where('key', 'volunteer')->firstOrFail()->id]);
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.bulk'), [
+        'confirm' => 1, 'decision' => 'accept', 'selected' => [$own->id, $other->id],
+        'versions' => [$own->id => 1, $other->id => 1],
+    ])->assertForbidden();
+    expect($own->fresh()->review_status)->toBe('pending');
+});
+
+it('supports an end-date-only filter and excludes deleted photos', function (): void {
+    aiSuggestion(AiSuggestion::TYPE_TAG, 'Plein');
+    $this->actingAs($this->user)->get(route('admin.operations.ai.suggestions.index', ['until' => now()->toDateString()]))
+        ->assertOk()->assertViewHas('suggestions', fn ($rows) => $rows->total() === 1);
+    $this->asset->delete();
+    $this->get(route('admin.operations.ai.suggestions.index'))->assertOk()
+        ->assertViewHas('suggestions', fn ($rows) => $rows->total() === 0);
+});
+
+it('undoes a newly added tag but refuses legacy acceptance without a receipt', function (): void {
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'Plein');
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.accept', $suggestion), ['lock_version' => 1])->assertSessionHasNoErrors();
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 2])->assertSessionHasNoErrors();
+    expect($this->asset->tags()->count())->toBe(0);
+    $suggestion->update(['review_status' => 'accepted', 'acceptance_receipt' => null]);
+    $this->post(route('admin.operations.ai.suggestions.undo', $suggestion), ['lock_version' => 3])->assertSessionHasErrors('suggestion');
+});
 
 it('scopes the review index and review actions to the current owners', function (): void {
     $this->user->roles()->sync([Role::query()->where('key', 'volunteer')->firstOrFail()->id]);

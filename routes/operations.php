@@ -30,6 +30,8 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::delete('/ai/providers/{provider}/key', [AiSettingsController::class, 'deleteProviderKey'])->name('ai.provider.key.delete');
     Route::get('/ai/search', AiSemanticSearchController::class)->name('ai.search');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
+    Route::post('/ai/suggestions/bulk', [AiSuggestionReviewController::class, 'bulk'])->name('ai.suggestions.bulk');
+    Route::post('/ai/suggestions/{suggestion}/undo', [AiSuggestionReviewController::class, 'undo'])->name('ai.suggestions.undo');
     Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
     Route::post('/ai/suggestions/{suggestion}/reject', [AiSuggestionReviewController::class, 'reject'])->name('ai.suggestions.reject');
 
