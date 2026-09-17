@@ -120,7 +120,8 @@ try {
     ]]], JSON_THROW_ON_ERROR));
     $startPostgres = static function (string $data) use ($pgBin, $suffix, $pgPort, $database, $root, $processEnv): Process {
         recoveryCommand([$pgBin.'/initdb'.$suffix, '-D', $data, '-U', 'release_fixture', '--auth=trust', '--encoding=UTF8', '--locale=C'], $root);
-        $process = new Process([$pgBin.'/postgres'.$suffix, '-D', $data, '-h', '127.0.0.1', '-p', (string) $pgPort], $root, timeout: null);
+        $process = new Process([$pgBin.'/postgres'.$suffix, '-D', $data, '-h', '127.0.0.1', '-p', (string) $pgPort,
+            '-c', 'unix_socket_directories='], $root, timeout: null);
         $process->start();
         try {
             for ($attempt = 0; $attempt < 100; $attempt++) {

@@ -52,6 +52,14 @@ it('admits only current clean source rows in an active pgvector generation', fun
         ->toBe([$this->embedding->id]);
 });
 
+it('applies model visibility on the joined asset without a duplicate asset lookup', function (): void {
+    $query = app(PgvectorEmbeddingStore::class)->currentCandidates($this->generation);
+
+    expect($query->from)->toBe('assets')
+        ->and(substr_count($query->toSql(), 'from "assets"'))->toBe(1)
+        ->and($query->pluck('ai_embeddings.id')->all())->toBe([$this->embedding->id]);
+});
+
 it('excludes invalid sources and generations before vector ranking', function (string $change): void {
     match ($change) {
         'stale' => $this->embedding->update(['stale_at' => now()]),
@@ -79,7 +87,7 @@ it('rejects a file belonging to a different asset even when its checksum matches
     expect(app(PgvectorEmbeddingStore::class)->currentCandidates($this->generation)->exists())->toBeFalse();
 });
 
-it('applies the authorized asset subquery before the result limit', function (): void {
+it('applies the authorized asset subquery before the result limit', function (bool $windowed): void {
     $authorized = Asset::query()->create(['accession_number' => 'VECTOR-AUTHORIZED'])->fresh();
     $file = AssetFile::query()->create([
         'asset_id' => $authorized->id,
@@ -101,8 +109,15 @@ it('applies the authorized asset subquery before the result limit', function ():
         'indexed_at' => now(),
     ]);
     $scope = Asset::query()->select('assets.id')->whereKey($authorized->id)->toBase();
+    if ($windowed) {
+        $scope = Asset::query()->select('assets.id')
+            ->whereIn('assets.id', [$this->asset->id, $authorized->id])
+            ->orderByDesc('accession_number')->offset(1)->limit(1)->toBase();
+    }
+    $originalSql = $scope->toSql();
     $query = app(PgvectorEmbeddingStore::class)->currentCandidates($this->generation, $scope);
 
     expect($query->count())->toBe(1)
-        ->and($query->limit(1)->pluck('ai_embeddings.asset_id')->all())->toBe([$authorized->id]);
-});
+        ->and($query->limit(1)->pluck('ai_embeddings.asset_id')->all())->toBe([$authorized->id])
+        ->and($scope->toSql())->toBe($originalSql);
+})->with(['direct authorization' => false, 'windowed authorization' => true]);

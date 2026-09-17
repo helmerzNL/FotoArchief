@@ -8,6 +8,7 @@ use App\Modules\Ai\Models\AiEmbedding;
 use App\Modules\Ai\Models\AiEmbeddingGeneration;
 use App\Modules\Catalogue\Models\Asset;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\Grammars\PostgresGrammar;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -118,9 +119,9 @@ class PgvectorEmbeddingStore
 
     public function currentCandidates(AiEmbeddingGeneration $generation, ?Builder $eligibleAssets = null, bool $activeOnly = true): Builder
     {
-        return DB::table('ai_embeddings')
+        $query = Asset::query()->toBase()
+            ->join('ai_embeddings', 'ai_embeddings.asset_id', '=', 'assets.id')
             ->join('ai_embedding_generations', 'ai_embedding_generations.id', '=', 'ai_embeddings.ai_embedding_generation_id')
-            ->join('assets', 'assets.id', '=', 'ai_embeddings.asset_id')
             ->join('asset_files', 'asset_files.id', '=', 'ai_embeddings.asset_file_id')
             ->where('ai_embeddings.ai_embedding_generation_id', $generation->id)
             ->when($activeOnly, fn (Builder $query): Builder => $query->where('ai_embedding_generations.status', AiEmbeddingGeneration::STATUS_ACTIVE))
@@ -131,9 +132,20 @@ class PgvectorEmbeddingStore
             ->whereColumn('assets.lock_version', 'ai_embeddings.source_asset_lock_version')
             ->where('asset_files.is_primary', true)
             ->where('asset_files.scanner_status', 'clean')
-            ->where('asset_files.ingest_status', 'ready_private')
-            ->whereIn('assets.id', Asset::query()->select('assets.id')->toBase())
-            ->when($eligibleAssets !== null, fn (Builder $query): Builder => $query->whereIn('assets.id', $eligibleAssets));
+            ->where('asset_files.ingest_status', 'ready_private');
+
+        if ($eligibleAssets !== null) {
+            // OFFSET 0 keeps PostgreSQL from flattening eligibility into the
+            // checksum joins and repeating public checks for every vector.
+            // Wrap, rather than mutate, the caller's limits and offsets.
+            $eligibleIds = $query->newQuery()->fromSub($eligibleAssets, 'eligible_assets');
+            if ($query->getGrammar() instanceof PostgresGrammar) {
+                $eligibleIds->offset(0);
+            }
+            $query->whereIn('assets.id', $eligibleIds);
+        }
+
+        return $query;
     }
 
     /** @param array<int, float|int> $values */

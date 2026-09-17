@@ -38,6 +38,13 @@ beforeEach(function (): void {
     $this->seed(DatabaseSeeder::class);
 });
 
+it('shares one asset existence check across all public eligibility requirements', function (): void {
+    $query = Publication::query()->publiclyVisible();
+
+    expect(substr_count($query->toSql(), 'from "assets"'))->toBe(1)
+        ->and($query->toSql())->toContain('"asset_rights"', '"asset_files"', '"assets"."deleted_at"');
+});
+
 it('walks a photo through draft, review and published while sharing one predicate', function (): void {
     $editor = publicationUser('editor');
     $asset = publishableAsset($editor);

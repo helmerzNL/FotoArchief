@@ -112,9 +112,13 @@ it('persists and searches application embeddings through pgvector without JSON f
 
     $store->persist($embedding, [1.0, 0.0, 0.0]);
 
+    $eligible = Asset::query()->select('assets.id')->whereKey($asset->id)->limit(1)->offset(0)->toBase();
+    $scopeSql = $eligible->toSql();
     expect($embedding->fresh()->embedding)->toBeNull()
-        ->and($store->nearest($generation, [1.0, 0.0, 0.0], 10))
-        ->toBe([['asset_id' => $asset->id, 'accession_number' => 'PGVECTOR-001', 'title' => null, 'score' => 1.0, 'model_space' => 'test-clip:3:cosine']]);
+        ->and($store->nearest($generation, [1.0, 0.0, 0.0], 10, $eligible))
+        ->toBe([['asset_id' => $asset->id, 'accession_number' => 'PGVECTOR-001', 'title' => null, 'score' => 1.0, 'model_space' => 'test-clip:3:cosine']])
+        ->and($store->currentCandidates($generation, $eligible)->toSql())->toContain('"eligible_assets" offset 0')
+        ->and($eligible->toSql())->toBe($scopeSql);
 });
 
 function pgvectorWorkflow(int $count = 2, bool $fakeProvider = true): array

@@ -16,9 +16,9 @@ is geen productieacceptatie.
 | 3. Queue-indexering | Gebouwd | Vector, succesreceipt, audit, cursor en telling worden per item samen gecommit; herpogingen hergebruiken duurzaam opgeslagen resultaten. |
 | 4. Admin/publiek semantisch zoeken | Gebouwd | Echte routes getest tegen PostgreSQL; bron-, ownership- en publicatiefilters vóór de resultaatlimiet, met laatste autorisatiehercontrole. |
 | 5. Generaties/modelwissel | Gebouwd | Afzonderlijke run-generaties, transactionele head-wissel, blokkeren van verouderde parallelle builds, modelwissel, bronhercontrole, generatie-audit en herstel na een daadwerkelijk afgebroken workerproces. |
-| 6. Vorige Dockerrelease upgraden | Gebouwd, CI-acceptatie vereist | Gepinde v0.9.52-image naar huidige build; behoud van account, installatie, sleutel en private bestanden. |
+| 6. Vorige Dockerrelease upgraden | Linux-CI uitgevoerd | Gepinde v0.9.52-image naar huidige build; behoud van account, installatie, sleutel en private bestanden. |
 | 7. Vorige ZIPrelease upgraden | Lokaal uitgevoerd | Gepubliceerde v0.9.52-ZIP naar v0.9.53-productiepakket, PostgreSQL, HTTP-onboarding/login/upload, echte worker en tweemaal migreren. |
-| 8. Versleutelde volledige restore | Gebouwd, CI-acceptatie vereist | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
+| 8. Versleutelde volledige restore | Linux-CI uitgevoerd | Volledige Compose-backup versleutelen, ontsleutelen en herstellen naar lege volumes/database; bestaande doeldata weigeren. |
 | 9. S3-restore | Lokaal uitgevoerd | Afzonderlijke echte PostgreSQL- en SeaweedFS-diensten; bron gestopt en hersteld naar nieuwe lege diensten, inclusief private installatiestatus en objectchecksums. |
 | 10. Opslagmigratie hervatten | Lokaal getest | Echte workeronderbreking na receipt/cursor; duurzame tellingen, werkelijke disk-omschakeling, afgeleide-checksums en hervatbare bronopruiming. |
 | 11. AI-review in de browser | Lokaal uitgevoerd | Metadatarevisie wijzigen, beschrijving/tag accepteren, afwijzen met reden, echte bronwijziging weigeren en beslissingen teruglezen. |
@@ -220,6 +220,29 @@ PHPStan, Pint, vertaalcontrole, JavaScript-syntax en workflowvalidatie slagen.
 De uiteindelijke Linux-CI- en releasebewijzen worden bij de PR/release vastgelegd;
 lokale Windows-metingen bewijzen geen productiecapaciteit.
 
+### Linux-CI-correcties
+
+Run `35235157534` bevestigt de volledige PHP-suite, browseracceptatie en
+Docker-upgrade/versleutelde restore. Twee andere gates faalden terecht:
+de tijdelijke S3-hersteldatabase gebruikte een niet-schrijfbare Linux-socketmap;
+de adapter-p95 was **815,39 ms** en gelijktijdig publiek semantisch zoeken
+**5727,92 ms**, beide boven **700 ms**.
+
+De hersteldatabase gebruikt nu alleen loopback-TCP, zonder Unix-socket.
+Het echte SQL-plan toonde 48.500 herhaalde asset-opzoekingen per dubbele
+controle. De kandidaatquery gebruikt de modelscope rechtstreeks op de
+gejoinde asset; publicatievoorwaarden delen nu één asset-EXISTS. De toegestane
+ID-subquery blijft in PostgreSQL een afzonderlijke querygrens (`OFFSET 0`),
+zodat de bronchecksum-join de publicatiecontroles niet per vector herhaalt.
+Een omhullende subquery behoudt bestaande caller-limieten/offsets.
+Alle bron-, scan-, eigendoms-, embargo-, rechten- en prullenbakcontroles
+blijven vóór de resultaatlimiet staan. Er is geen ANN-benadering, cache van
+autorisatie of versoepelde drempel toegevoegd.
+
+Gerichte regressies: **47 tests, 175 assertions**, inclusief echte pgvector-
+zoekroutes, publicatie en begrensde autorisatiescopes. De definitieve
+capaciteitsacceptatie vereist een nieuwe volledige Linux-run op deze reparatie.
+
 ## English
 
 ### Progress
@@ -235,9 +258,9 @@ skipped environment check is not production acceptance.
 | 3. Queue indexing | Built | Vector, success receipt, audit, cursor and count commit together per item; retries reuse durably stored results. |
 | 4. Admin/public semantic search | Built | Real routes tested against PostgreSQL; source, ownership and publication filters before the result limit, with final authorization rechecks. |
 | 5. Generations/model switching | Built | Separate per-run generations, transactional head switching, outdated concurrent-build rejection, model switching, source rechecks, generation audit and recovery from an actually interrupted worker process. |
-| 6. Previous Docker release upgrade | Built, CI acceptance required | Pinned v0.9.52 image to current build; preserve account, installation, key and private files. |
+| 6. Previous Docker release upgrade | Run in Linux CI | Pinned v0.9.52 image to current build; preserve account, installation, key and private files. |
 | 7. Previous ZIP release upgrade | Run locally | Published v0.9.52 ZIP to v0.9.53 production package, PostgreSQL, HTTP onboarding/login/upload, real worker and two migration runs. |
-| 8. Encrypted full restore | Built, CI acceptance required | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
+| 8. Encrypted full restore | Run in Linux CI | Encrypt the complete Compose backup, decrypt and restore into empty volumes/database; reject existing target data. |
 | 9. S3 restore | Run locally | Separate real PostgreSQL and SeaweedFS services; source stopped and restored into new empty services, including private installation state and object checksums. |
 | 10. Resumable storage migration | Tested locally | Actual worker interruption after receipt/cursor; durable counts, actual disk cutover, derivative checksums and resumable source cleanup. |
 | 11. Browser AI review | Run locally | Edit metadata revision, accept description/tag, reject with reason, refuse changed source and read back decisions. |
@@ -419,3 +442,26 @@ catalogues now have explicit rejection tests. PHPStan, Pint, translation checks,
 JavaScript syntax and workflow validation pass. Final Linux CI and release
 evidence will be recorded with the PR/release; local Windows measurements do
 not establish production capacity.
+
+### Linux CI corrections
+
+Run `35235157534` confirms the full PHP suite, browser acceptance and Docker
+upgrade/encrypted restore. Two other gates correctly failed: the temporary
+S3 recovery database used an unwritable Linux socket directory; adapter p95
+was **815.39 ms** and concurrent public semantic search **5727.92 ms**,
+both exceeding **700 ms**.
+
+The recovery database now uses loopback TCP only, without a Unix socket.
+The actual SQL plan showed 48,500 repeated asset lookups per duplicated
+check. The candidate query applies model scopes directly to the joined asset;
+publication requirements now share one asset EXISTS. The eligible-ID subquery
+remains a separate PostgreSQL query boundary (`OFFSET 0`), preventing the
+source-checksum join from repeating publication checks for every vector.
+A wrapping subquery preserves existing caller limits/offsets.
+All source, scan, ownership, embargo, rights and trash checks still precede
+the result limit. No ANN approximation, authorization cache or relaxed
+threshold was introduced.
+
+Targeted regressions: **47 tests, 175 assertions**, including actual pgvector
+search routes, publication and bounded authorization scopes. Final capacity
+acceptance requires another complete Linux run on this correction.

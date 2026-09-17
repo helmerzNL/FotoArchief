@@ -75,46 +75,23 @@ class Publication extends CatalogueModel
                 $q->whereNull('publications.embargo_until')->orWhereDate('publications.embargo_until', '<=', now()->toDateString());
             })
             ->whereHas('asset', function (Builder $q): void {
-                $q->whereColumn('assets.lock_version', 'publications.published_lock_version');
-            })
-            ->whereHas('asset.rights', function (Builder $q): void {
-                $q->where('verification_status', 'verified');
-            })
-            // A plain whereHas() (EXISTS) is enough to prove "exactly one
-            // current file", not merely "at least one": Operations'
-            // asset_files.is_primary column and its partial unique index
-            // asset_files_single_primary_per_asset (migrations
-            // 2026_09_17_230000/240000, now unconditionally integrated - see
-            // docs/CONTRACT_ACTIVE_FILE.md) already guarantee at most one
-            // is_primary = true row per asset at the database level, so
-            // finding one that is also ready_private/clean already proves
-            // uniqueness - a second COUNT(*) = 1 subquery would only be
-            // re-deriving what the index already enforces. This matters at
-            // scale: Laravel compiles whereHas(..., '=', 1) as a correlated
-            // (SELECT COUNT(*) ...) = 1 subquery per row, which cannot use a
-            // semi-join/EXISTS plan and regressed 50k-row search p95 from
-            // ~438ms to ~1913ms; the plain EXISTS form restores the
-            // index-friendly plan while staying exactly as fail-closed. This
-            // column is a required migration on every environment (there is
-            // no supported deployment without it), so the check is
-            // unconditional rather than guarded behind a Schema::hasColumn()
-            // probe, which would cost an extra query per request for no
-            // remaining protection.
-            ->whereHas('asset.files', function (Builder $q): void {
-                $q->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->where('is_primary', true);
-            });
+                // One asset EXISTS avoids repeating its primary-key lookup for
+                // every publication requirement when joined to vector candidates.
+                $q->whereColumn('assets.lock_version', 'publications.published_lock_version')
+                    ->whereHas('rights', function (Builder $rights): void {
+                        $rights->where('verification_status', 'verified');
+                    })
+                    // The required single-primary partial unique index proves
+                    // uniqueness; EXISTS avoids a correlated COUNT per asset.
+                    ->whereHas('files', function (Builder $files): void {
+                        $files->where('ingest_status', 'ready_private')
+                            ->where('scanner_status', 'clean')->where('is_primary', true);
+                    });
 
-        // Forward-compatible cross-module guard (see
-        // docs/CONTRACT_SOFT_DELETE.md): Operations owns adding a recoverable
-        // `assets.deleted_at` column later. The moment that column exists,
-        // every public predicate here must deny a deleted asset without a
-        // second coordinated change. Until then this is a no-op against the
-        // current schema, so it cannot break anything today.
-        if (Schema::hasColumn('assets', 'deleted_at')) {
-            $query->whereHas('asset', function (Builder $q): void {
-                $q->whereNull('assets.deleted_at');
+                if (Schema::hasColumn('assets', 'deleted_at')) {
+                    $q->whereNull('assets.deleted_at');
+                }
             });
-        }
 
         return $query;
     }
