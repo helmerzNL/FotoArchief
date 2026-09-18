@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Tag bewerken: ' . $tag->name . ' - FotoArchief')
+@section('title', 'Tag bewerken: ' . $tag->name . ' - Vistora')
 @section('content')
 <p class="eyebrow"><a href="{{ route('catalogue.tags.show', $tag) }}">{{ __('catalogue.generated.t_5a66e7b59b5cf49c') }}</a></p>
 <h1>{{ __('catalogue.generated.t_9b02a395dbf71608') }} {{ $tag->name }}</h1>

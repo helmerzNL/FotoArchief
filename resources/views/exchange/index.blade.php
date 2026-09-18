@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Uitwisseling - FotoArchief')
+@section('title', 'Uitwisseling - Vistora')
 @section('content')
 <p class="eyebrow">{{ __('exchange.generated.t_49964d7d8c8ecabc') }}</p><h1>Uitwisseling</h1>
 <p class="intro">{{ __('exchange.generated.t_0e5b86fc09892257') }}</p>

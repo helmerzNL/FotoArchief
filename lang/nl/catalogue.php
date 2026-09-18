@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'fragments' => [
-        'application_suffix' => ' - FotoArchief',
+        'application_suffix' => ' - Vistora',
         'attempts' => 'poging(en)',
         'bytes' => 'bytes',
         'dating' => 'Datering',

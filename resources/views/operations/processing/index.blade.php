@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Verwerkingscentrum - FotoArchief Operaties')
+@section('title', 'Verwerkingscentrum - Vistora Operaties')
 @section('content')
     @include('operations._nav')
     <p class="eyebrow">{{ __('operations.generated.t_19dde8a3c6f6b4e7') }}</p>

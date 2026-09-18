@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $collection->title.' - FotoArchief')
+@section('title', $collection->title.' - Vistora')
 @section('content')
     <p class="eyebrow">Collectie</p>
     <h1>{{ $collection->title }}</h1>

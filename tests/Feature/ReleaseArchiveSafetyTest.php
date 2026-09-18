@@ -14,6 +14,13 @@ function createReleaseArchiveFixture(string $path, array $extraFiles = []): void
         $catalogues['lang/nl/'.basename($catalogue)] = File::get($catalogue);
     }
     expect($catalogues)->not->toBeEmpty();
+    $branding = [];
+    foreach (File::allFiles(public_path('brand')) as $asset) {
+        $branding['public/brand/'.str_replace('\\', '/', $asset->getRelativePathname())] = $asset->getContents();
+    }
+    foreach (['theme.js', 'manifest.webmanifest', 'favicon.ico'] as $asset) {
+        $branding['public/'.$asset] = File::get(public_path($asset));
+    }
     $files = array_merge([
         'artisan' => '<?php echo "artisan";',
         'public/index.php' => '<?php echo "index";',
@@ -28,7 +35,7 @@ function createReleaseArchiveFixture(string $path, array $extraFiles = []): void
         'composer.lock' => json_encode(['packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
         'vendor/composer/installed.json' => json_encode(['dev' => false, 'packages' => [['name' => 'example/package', 'version' => '1.0.0']]], JSON_THROW_ON_ERROR),
         'storage/logs/.gitignore' => "*\n!.gitignore\n",
-    ], $catalogues, $extraFiles);
+    ], $catalogues, $branding, $extraFiles);
 
     foreach ($files as $name => $contents) {
         expect($zip->addFromString($name, $contents))->toBeTrue();
@@ -85,6 +92,22 @@ it('accepts production archives and refuses private installed-instance state', f
         expect($status)->toBe(0)
             ->and($stdout)->toContain('Disposable webhosting upgrade preserved APP_KEY')
             ->and($stderr)->toBe('');
+
+        $staleBranding = $directory.'/stale-branding.zip';
+        createReleaseArchiveFixture($staleBranding, ['public/brand/tokens.css' => ':root{}']);
+        [$status, $stdout, $stderr] = runReleaseArchiveValidator($staleBranding);
+        expect($status)->not->toBe(0)
+            ->and($stdout.$stderr)->toContain('Missing or stale release branding asset: public/brand/tokens.css');
+
+        $missingFont = $directory.'/missing-font.zip';
+        createReleaseArchiveFixture($missingFont);
+        $zip = new ZipArchive;
+        expect($zip->open($missingFont))->toBeTrue()
+            ->and($zip->deleteName('public/brand/fonts/source-sans-regular.woff2'))->toBeTrue()
+            ->and($zip->close())->toBeTrue();
+        [$status, $stdout, $stderr] = runReleaseArchiveValidator($missingFont);
+        expect($status)->not->toBe(0)
+            ->and($stdout.$stderr)->toContain('Missing or stale release branding asset: public/brand/fonts/source-sans-regular.woff2');
 
         $staleCatalogue = $directory.'/stale-catalogue.zip';
         createReleaseArchiveFixture($staleCatalogue, ['lang/nl/operations.php' => '<?php return [];']);

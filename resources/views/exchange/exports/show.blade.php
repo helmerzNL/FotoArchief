@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Export - FotoArchief')
+@section('title', 'Export - Vistora')
 @section('content')
 <p class="eyebrow">Uitwisseling</p><h1>Export</h1>
 <p class="intro">{{ $export->typeLabel() }} &middot; {{ $export->statusLabel() }}</p>

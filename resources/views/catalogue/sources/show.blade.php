@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $source->name.' — FotoArchief')
+@section('title', $source->name.' — Vistora')
 @section('content')
 <div class="card">
     <div class="eyebrow"><a href="{{ route('catalogue.sources.index') }}">{{ __('catalogue.generated.t_4a55a2c336166042') }}</a></div>

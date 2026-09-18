@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'login' => [
-        'title' => 'Inloggen - FotoArchief',
+        'title' => 'Inloggen - Vistora',
         'area' => 'Beheeromgeving',
         'heading' => 'Welkom terug',
         'intro' => 'Log in met je passkey, herstelcode of tijdelijke wachtwoord.',

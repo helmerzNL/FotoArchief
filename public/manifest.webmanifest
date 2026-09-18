@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Vistora",
+  "short_name": "Vistora",
+  "description": "Historische beelden. Dichtbij gebracht.",
+  "lang": "nl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ec",
+  "theme_color": "#f7f3ec",
+  "icons": [
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/brand/monochrome.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "monochrome" }
+  ]
+}

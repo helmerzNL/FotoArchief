@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', __('auth.login.title'))
 @section('content')
-    <section class="card narrow">
+    <section class="card narrow auth-card">
         <p class="eyebrow">{{ __('auth.login.area') }}</p>
         <h1>{{ __('auth.login.heading') }}</h1>
         <p>{{ __('auth.login.intro') }}</p>

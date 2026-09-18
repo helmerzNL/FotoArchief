@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Catalogusoverzicht — FotoArchief')
+@section('title', 'Catalogusoverzicht — Vistora')
 @section('content')
 <div class="card">
     <div class="eyebrow">Beheer</div>

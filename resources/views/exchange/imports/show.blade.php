@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Importvoorbeeld - FotoArchief')
+@section('title', 'Importvoorbeeld - Vistora')
 @section('content')
 @php($summary = $import->summary ?? [])
 <p class="eyebrow">Uitwisseling</p><h1>Importvoorbeeld</h1>

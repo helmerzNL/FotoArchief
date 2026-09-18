@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 return [
-    'application_suffix' => ' - FotoArchief',
+    'application_suffix' => ' - Vistora',
     'generated' => [
         't_026fa7e0fe75a1a5' => 'Delen via WhatsApp',
         't_05722e41037c766f' => 'Publieke collectie',

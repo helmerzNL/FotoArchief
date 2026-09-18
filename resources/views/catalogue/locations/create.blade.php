@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Nieuwe locatie — FotoArchief')
+@section('title', 'Nieuwe locatie — Vistora')
 @section('content')
 <div class="card narrow">
     <div class="eyebrow"><a href="{{ route('catalogue.locations.index') }}">{{ __('catalogue.generated.t_0929a94eafb121fd') }}</a></div>

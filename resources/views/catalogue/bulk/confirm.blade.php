@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Batch-bewerking bevestigen - FotoArchief')
+@section('title', 'Batch-bewerking bevestigen - Vistora')
 @section('content')
 <p class="eyebrow"><a href="{{ route('admin.assets.index') }}">{{ __('catalogue.generated.t_65f8a04d2b51e459') }}</a></p>
 <h1>{{ __('catalogue.generated.t_2d4e35046e927ab6') }}{{ $assets->count() }} geselecteerd)</h1>
