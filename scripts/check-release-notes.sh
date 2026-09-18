@@ -27,7 +27,7 @@ if ! awk -v tag="$tag" '
     }
     {
         sub(/\r$/, "")
-        if ($0 == expected[step + 1]) {
+        if (step < 9 && $0 == expected[step + 1]) {
             step++
             next
         }
