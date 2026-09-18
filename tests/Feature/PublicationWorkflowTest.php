@@ -117,3 +117,76 @@ it('denies a volunteer without assets.publish from approving a publication', fun
     $this->actingAs($volunteer)->post("/admin/publications/{$asset->id}/submit", ['privacy_cleared' => '1', 'download_policy' => 'preview_only'])->assertRedirect();
     $this->actingAs($volunteer)->post("/admin/publications/{$asset->id}/publish")->assertForbidden();
 });
+
+it('retains real approval evidence and permits explicit re-review without changing the permalink', function (): void {
+    $user = publicationUser();
+    $asset = publishableAsset($user);
+    $this->actingAs($user)->get(route('admin.publications.show', $asset))->assertOk()->assertSee(__('publishwork.no_snapshot'));
+    $input = ['privacy_cleared' => 1, 'download_policy' => 'preview_only', 'embargo_until' => now()->addDay()->toDateString()];
+    $this->post(route('admin.publications.submit', $asset), $input)->assertRedirect();
+    $this->post(route('admin.publications.publish', $asset))->assertRedirect();
+    $publication = $asset->publication()->sole();
+    $slug = $publication->permalink_slug;
+    expect($publication->approval_snapshot['metadata']['title'])->toBe('Marktplein');
+    $this->get(route('admin.publications.show', $asset))->assertSee(__('publishwork.unchanged'));
+    $asset->update(['title' => 'New title', 'lock_version' => 2]);
+    $this->get(route('admin.publications.show', $asset))->assertSee('Marktplein')->assertSee('New title');
+    $this->post(route('admin.publications.submit', $asset), $input)->assertRedirect();
+    $this->post(route('admin.publications.publish', $asset))->assertRedirect();
+    expect($publication->refresh()->approval_snapshot['metadata']['title'])->toBe('New title');
+    expect($publication->permalink_slug)->toBe($slug);
+    expect(Publication::query()->publiclyVisible()->count())->toBe(0);
+    $this->get(route('admin.publications.index', ['embargo' => 1]))->assertOk()->assertSee('New title')->assertSee(__('publishwork.checks')['embargo']);
+    $this->travel(2)->days();
+    expect(Publication::query()->publiclyVisible()->count())->toBe(1);
+});
+
+it('rejects approval and submission when only a superseded file is clean', function (): void {
+    $user = publicationUser();
+    $asset = publishableAsset($user);
+    $asset->files()->update(['is_primary' => false]);
+    $this->actingAs($user)->post(route('admin.publications.submit', $asset), ['privacy_cleared' => 1, 'download_policy' => 'none'])->assertSessionHasErrors();
+    Publication::query()->create(['asset_id' => $asset->id, 'status' => 'in_review', 'privacy_cleared' => true]);
+    $this->post(route('admin.publications.publish', $asset))->assertConflict();
+    $checks = $this->get(route('admin.publications.show', $asset))->assertOk()->viewData('checks');
+    expect($checks['primary'])->toBeFalse()->and($checks['scan'])->toBeFalse()->and($checks['visible'])->toBeFalse();
+});
+
+it('confirms bulk decisions with partial results and detects changes outside asset metadata', function (): void {
+    $user = publicationUser();
+    $first = publishableAsset($user);
+    $second = publishableAsset($user);
+    foreach ([$first, $second] as $asset) {
+        $this->actingAs($user)->post(route('admin.publications.submit', $asset), ['privacy_cleared' => 1, 'download_policy' => 'none'])->assertRedirect();
+    }
+    $input = ['asset_ids' => [$first->id, $second->id], 'decision' => 'publish'];
+    $receipt = $this->post(route('admin.publications.bulk.preview'), $input)->assertOk()->viewData('receipt');
+    expect(Publication::query()->where('status', 'published')->count())->toBe(0);
+    $second->publication()->update(['privacy_cleared' => false]);
+    $this->post(route('admin.publications.bulk.apply'), ['receipt' => $receipt])->assertSessionHasErrors('confirm');
+    $result = $this->post(route('admin.publications.bulk.apply'), ['receipt' => $receipt, 'confirm' => 1])->assertOk()->viewData('results');
+    expect(array_column($result, 'ok'))->toBe([true, false]);
+    $result = $this->post(route('admin.publications.bulk.apply'), ['receipt' => $receipt, 'confirm' => 1])->assertOk()->viewData('results');
+    expect(array_column($result, 'ok'))->toBe([false, false]);
+    $this->post(route('admin.publications.bulk.preview'), ['asset_ids' => [$second->id], 'decision' => 'reject'])->assertSessionHasErrors('reason');
+    $receipt = $this->post(route('admin.publications.bulk.preview'), ['asset_ids' => [$second->id], 'decision' => 'reject', 'reason' => 'Needs evidence'])->assertOk()->viewData('receipt');
+    $other = publicationUser();
+    $this->actingAs($other)->post(route('admin.publications.bulk.apply'), ['receipt' => $receipt, 'confirm' => 1])->assertSessionHasErrors('receipt');
+    $this->actingAs($user)->post(route('admin.publications.bulk.apply'), ['receipt' => $receipt, 'confirm' => 1])->assertOk();
+    expect($second->publication()->sole()->status)->toBe('draft');
+    expect($second->publication()->sole()->reject_reason)->toBe('Needs evidence');
+});
+
+it('keeps staff preview private and renders the actual public template without public actions', function (): void {
+    $owner = publicationUser('volunteer');
+    $other = publicationUser('volunteer');
+    $asset = publishableAsset($owner);
+    Publication::query()->create(['asset_id' => $asset->id, 'status' => 'in_review', 'privacy_cleared' => true, 'download_policy' => 'preview_only', 'credit_line' => 'Test credit']);
+    $this->get(route('admin.publications.preview', $asset))->assertRedirect('/login');
+    $this->actingAs($other)->get(route('admin.publications.preview', $asset))->assertForbidden();
+    $this->actingAs($owner)->get(route('admin.publications.preview', $asset))->assertOk()
+        ->assertHeader('Cache-Control', 'no-store, private')->assertHeader('X-Robots-Tag', 'noindex, nofollow')
+        ->assertSee('Test credit')->assertSee('Marktplein')->assertSee('/admin/assets/', false)
+        ->assertDontSee('https://wa.me')->assertDontSee('application/ld+json')->assertDontSee('name="message"', false);
+    expect(Publication::query()->publiclyVisible()->count())->toBe(0);
+});

@@ -309,6 +309,40 @@ test('saved searches, confirmed bulk metadata and per-field conflict recovery re
   await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true })).toHaveValue('Retained browser input');
 });
 
+test('publication workbench previews private content and confirms bulk rejection', async ({ page, browser }) => {
+  await login(page);
+  await page.goto(url(`/admin/assets/${fixture.assets.review.id}`));
+  await page.locator('[name="rights_status"]').selectOption('verified');
+  await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(page.locator('[name="rights_status"]')).toHaveValue('verified');
+  await page.goto(url(`/admin/publications/${fixture.assets.review.id}`));
+  await expect(page.getByRole('heading', { name: 'Publicatiegereedheid', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Private medewerkerspreview', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Concurrent browser title', exact: true })).toBeVisible();
+  await expect(page.locator('#viewer-image')).toBeVisible();
+  expect(await page.locator('#viewer-image').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('#copy-permalink')).toHaveCount(0);
+  const anonymous = await browser.newContext();
+  try {
+    const response = await anonymous.request.get(url(`/admin/publications/${fixture.assets.review.id}/preview`), { maxRedirects: 0 });
+    expect(response.status()).toBe(302);
+  } finally { await anonymous.close(); }
+  await page.goto(url(`/admin/publications/${fixture.assets.review.id}`));
+  await page.locator('[name="privacy_cleared"]').check();
+  await page.getByRole('button', { name: 'Aanvragen', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Publiceren', exact: true })).toBeVisible();
+  await page.goto(url('/admin/publications'));
+  await page.locator(`input[name="asset_ids[]"][value="${fixture.assets.review.id}"]`).check();
+  await page.getByLabel('Publicatiebeslissing', { exact: true }).selectOption('reject');
+  await page.getByLabel('Reden (verplicht bij afwijzen)', { exact: true }).fill('Browser publication review');
+  await page.getByRole('button', { name: 'Wijzigingen vooraf bekijken', exact: true }).click();
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.locator('main')).toContainText('Beslissing vastgelegd.');
+  await page.goto(url('/admin/publications?embargo=1'));
+  await expect(page.locator('main')).toContainText('FA-BROWSER-EMBARGO');
+});
+
 test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {
   await login(page, 'volunteer');
   await page.setViewportSize({ width: 390, height: 844 });

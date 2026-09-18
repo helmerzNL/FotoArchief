@@ -11,7 +11,25 @@
         <p>Permalink: <code>/foto/{{ $publication->permalink_slug }}</code></p>
     @endif
 
-    @if(!$publication || in_array($publication->status, ['draft'], true))
+    <p><a href="{{ route('admin.publications.preview', $asset) }}">{{ __('publishwork.preview') }}</a></p>
+    @include('admin.publications.checklist')
+    <section class="card">
+        <h2>{{ __('publishwork.changes') }}</h2>
+        @if($publication?->approval_snapshot)
+            @foreach($current as $field => $value)
+                @if($value !== ($publication->approval_snapshot[$field] ?? null))
+                    <h3>{{ __('publishwork.sections')[$field] }}</h3>
+                    <p>{{ __('publishwork.approved') }}</p><pre>{{ json_encode($publication->approval_snapshot[$field] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                    <p>{{ __('daily.current') }}</p><pre>{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
+                @endif
+            @endforeach
+            @if($current === $publication->approval_snapshot)<p>{{ __('publishwork.unchanged') }}</p>@endif
+        @else
+            <p>{{ __('publishwork.no_snapshot') }}</p>
+        @endif
+    </section>
+
+    @if(!$publication || in_array($publication->status, ['draft', 'revoked'], true) || $publication->needsReReview())
         <section class="card">
             <h2>{{ __('publication.generated.t_a798dc1087062d58') }}</h2>
             <form method="post" action="{{ route('admin.publications.submit', $asset) }}">

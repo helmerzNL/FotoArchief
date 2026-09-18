@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Publication\IiifManifestController;
+use App\Http\Controllers\Publication\PublicationWorkbenchController;
 use App\Http\Controllers\Publication\PublicDiscoveryController;
 use App\Http\Controllers\Publication\PublicPhotoController;
 use App\Http\Controllers\Publication\PublicSuggestionController;
@@ -14,6 +15,9 @@ use Illuminate\Support\Facades\Route;
 // Staff publication workflow: draft/review/published/revoked (step 16).
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/publications')->name('admin.publications.')->group(function (): void {
     Route::get('/', [StaffPublicationController::class, 'index'])->name('index');
+    Route::post('/bulk/preview', [PublicationWorkbenchController::class, 'bulkPreview'])->name('bulk.preview');
+    Route::post('/bulk/apply', [PublicationWorkbenchController::class, 'bulkApply'])->name('bulk.apply');
+    Route::get('/{asset}/preview', [PublicationWorkbenchController::class, 'preview'])->name('preview');
     Route::get('/{asset}', [StaffPublicationController::class, 'show'])->name('show');
     Route::post('/{asset}/submit', [StaffPublicationController::class, 'submit'])->name('submit');
     Route::post('/{asset}/publish', [StaffPublicationController::class, 'publish'])->name('publish');

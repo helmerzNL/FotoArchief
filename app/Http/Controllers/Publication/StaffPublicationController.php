@@ -9,10 +9,10 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Publication\Models\Publication;
+use App\Modules\Publication\Services\PublicationReviewService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -35,9 +35,14 @@ class StaffPublicationController extends Controller
         if ($status = $request->string('status')->value()) {
             $query->whereHas('publication', fn ($q) => $q->where('status', $status));
         }
-        $assets = $query->limit(25)->get();
+        if ($request->boolean('embargo')) {
+            $query->whereHas('publication', fn ($q) => $q->whereNotNull('embargo_until'))
+                ->reorder()->orderBy(Publication::query()->select('embargo_until')->whereColumn('asset_id', 'assets.id')->limit(1))->orderBy('id');
+        }
+        $assets = $query->paginate(25)->withQueryString();
+        $reviews = app(PublicationReviewService::class);
 
-        return view('admin.publications.index', compact('assets'));
+        return view('admin.publications.index', compact('assets', 'reviews'));
     }
 
     public function show(Request $request, Asset $asset): View
@@ -46,8 +51,11 @@ class StaffPublicationController extends Controller
         abort_unless($user->hasPermission('assets.view') && ($asset->created_by_user_id === $user->id || $user->hasPermission('assets.publish')), 403);
         $asset->load(['files', 'rights', 'publication']);
         $events = $asset->auditEvents()->whereIn('event_type', ['publication.submitted', 'publication.published', 'publication.revoked', 'publication.rejected'])->latest('id')->limit(20)->get();
+        $reviews = app(PublicationReviewService::class);
+        $checks = $reviews->checklist($asset);
+        $current = $reviews->snapshot($asset);
 
-        return view('admin.publications.show', compact('asset', 'events'));
+        return view('admin.publications.show', compact('asset', 'events', 'checks', 'current'));
     }
 
     public function submit(Request $request, Asset $asset): RedirectResponse
@@ -60,15 +68,18 @@ class StaffPublicationController extends Controller
             'credit_line' => ['nullable', 'string', 'max:500'],
             'embargo_until' => ['nullable', 'date_format:Y-m-d'],
         ]);
-        if (! $asset->rights()->where('verification_status', 'verified')->exists()) {
-            throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_f4bbb39c49e20153')]);
-        }
-        if (! $asset->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists()) {
-            throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_60b3dfa76442d7e0')]);
-        }
         DB::transaction(function () use ($asset, $data, $user): void {
-            $publication = Publication::query()->firstOrCreate(['asset_id' => $asset->id]);
-            abort_if($publication->status === 'published', 409, __('publication.generated.t_84ce5a3fcb66b807'));
+            $asset = Asset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('update', $asset);
+            if (! $asset->rights()->where('verification_status', 'verified')->exists()) {
+                throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_f4bbb39c49e20153')]);
+            }
+            if (! $asset->files()->where('is_primary', true)->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists()) {
+                throw ValidationException::withMessages(['privacy_cleared' => __('publication.generated.t_60b3dfa76442d7e0')]);
+            }
+            $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first()
+                ?? Publication::query()->create(['asset_id' => $asset->id]);
+            abort_if($publication->status === 'published' && ! $publication->needsReReview(), 409, __('publication.generated.t_84ce5a3fcb66b807'));
             $publication->update([
                 'status' => 'in_review',
                 'requested_by_user_id' => $user->id,
@@ -89,25 +100,7 @@ class StaffPublicationController extends Controller
     {
         $user = $this->user($request);
         abort_unless($user->hasPermission('assets.publish'), 403);
-        DB::transaction(function () use ($asset, $user): void {
-            $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first();
-            abort_unless($publication !== null && $publication->status === 'in_review', 409, __('publication.generated.t_4d8f1538488bec0e'));
-            abort_unless($publication->privacy_cleared, 409, __('publication.generated.t_e7c0bd249bb1c8f3'));
-            $locked = Asset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
-            abort_unless($locked->rights()->where('verification_status', 'verified')->exists(), 409, __('publication.generated.t_65b44ea637cca0bd'));
-            abort_unless($locked->files()->where('ingest_status', 'ready_private')->where('scanner_status', 'clean')->exists(), 409, __('publication.generated.t_a3e8eaf0d5f878d8'));
-            $publication->update([
-                'permalink_slug' => $publication->permalink_slug ?? $this->uniqueSlug($locked),
-                'status' => 'published',
-                'reviewed_by_user_id' => $user->id,
-                'reviewed_at' => now(),
-                'published_at' => now(),
-                'revoked_at' => null,
-                'revoked_reason' => null,
-                'published_lock_version' => $locked->lock_version,
-            ]);
-            AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.published', 'details' => ['publication_id' => $publication->id, 'lock_version' => $locked->lock_version]]);
-        });
+        app(PublicationReviewService::class)->decide($user, $asset->id, 'publish');
 
         return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_98da200bdec7726d'));
     }
@@ -117,12 +110,7 @@ class StaffPublicationController extends Controller
         $user = $this->user($request);
         abort_unless($user->hasPermission('assets.publish'), 403);
         $data = $request->validate(['reject_reason' => ['required', 'string', 'max:2000']]);
-        DB::transaction(function () use ($asset, $user, $data): void {
-            $publication = Publication::query()->where('asset_id', $asset->id)->lockForUpdate()->first();
-            abort_unless($publication !== null && $publication->status === 'in_review', 409, __('publication.generated.t_b7de418a87e289e8'));
-            $publication->update(['status' => 'draft', 'reviewed_by_user_id' => $user->id, 'reviewed_at' => now(), 'reject_reason' => $data['reject_reason']]);
-            AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $user->id, 'event_type' => 'publication.rejected', 'details' => ['publication_id' => $publication->id, 'reason' => $data['reject_reason']]]);
-        });
+        app(PublicationReviewService::class)->decide($user, $asset->id, 'reject', $data['reject_reason']);
 
         return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_140892551fe695aa'));
     }
@@ -142,18 +130,6 @@ class StaffPublicationController extends Controller
         });
 
         return redirect()->route('admin.publications.show', $asset)->with('status', __('publication.generated.t_23fb565923a1ee70'));
-    }
-
-    private function uniqueSlug(Asset $asset): string
-    {
-        $base = Str::slug($asset->accession_number);
-        $slug = $base;
-        $suffix = 1;
-        while (Publication::query()->where('permalink_slug', $slug)->exists()) {
-            $slug = $base.'-'.(++$suffix);
-        }
-
-        return $slug;
     }
 
     private function user(Request $request): User

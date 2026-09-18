@@ -30,6 +30,7 @@ class Publication extends CatalogueModel
             'embargo_until' => 'date',
             'privacy_cleared' => 'boolean',
             'published_lock_version' => 'integer',
+            'approval_snapshot' => 'array',
         ];
     }
 
