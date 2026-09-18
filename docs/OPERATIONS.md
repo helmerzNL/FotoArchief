@@ -163,6 +163,106 @@ sh scripts/backup-copy-encrypted.sh /private/backups/latest /offsite/fotoarchief
 
 ## Operational alerts
 
+### Installatie, upgrade en herstel / Installation, upgrade and recovery
+
+**Nederlands.** Beheerders gebruiken `/admin/operations/recovery` voor expliciet
+bevestigde diagnosecontroles en blijvende verslagen. De installatiecontrole
+hergebruikt de bestaande probes (PHP 8.5+, extensies, opslag, database, limieten,
+scanner en achtergrondactiviteit); dit is geen bewezen login/uploadflow.
+De upgradevoorcontrole verlangt een hogere doelversie, een operatorinschatting
+van benodigde vrije bytes, geen lokale openstaande migraties of actieve taken
+(ook gepauzeerde taken tellen), een checksumcontrole van een backup van deze
+versie binnen 24 uur en een geslaagde gegevensherstelproef binnen 30 dagen.
+Vrije ruimte betreft het app-opslagbestandssysteem, **niet** een afzonderlijke
+database- of backupdisk. Migraties uit een nog niet geinstalleerde doelrelease,
+externe proxygrenzen, offsite-opslag en de volledige applicatiewerking moeten
+apart worden beoordeeld. De controle voert geen upgrade uit.
+
+**English.** Administrators use `/admin/operations/recovery` for explicitly
+confirmed diagnostic probes and persistent reports. Installation reuses the
+existing probes (PHP 8.5+, extensions, storage, database, limits, scanner and
+background activity); this does not prove a login/upload flow. Upgrade preflight
+requires a higher target version, operator-estimated free bytes, no pending local
+migrations or active tasks (including paused tasks), a checksum-verified backup
+of this version within 24 hours and a successful data restore within 30 days.
+Space covers the app storage filesystem, **not** a separate database/backup disk.
+Uninstalled target-release migrations, external proxy limits, offsite storage and
+full application behaviour require separate review. No upgrade is executed.
+
+```sh
+php artisan operations:register-backup /private/backup
+php artisan operations:restore-drill BACKUP_ID \
+  --database=archive_restore_drill \
+  --directory=/private/new-drill --confirm-empty-target
+```
+
+**Nederlands.** Gebruik uitsluitend vertrouwde lokale backups uit
+`scripts/backup-compose.sh` met `database.dump`, `storage-app.tar`, `VERSION`,
+`FORMAT` en `SHA256SUMS`. Registratie controleert de vier checksums en bewaart
+versie, locatie, omvang en manifesthash; dit bewijst geen authenticiteit of
+herstelbaarheid. De herstelproef vereist dezelfde appversie, PostgreSQL,
+een compatibele `pg_restore` op PATH, het bestaande extractiescript en voldoende
+ruimte. Voer de opdracht uit in een beheeromgeving met toegang tot de
+appinstallatie, database en backupbestanden; de appimage bevat PostgreSQL-client
+16. Kopieer of mount backups in die beheeromgeving en gebruik voor behouden
+proefbestanden een aparte persistente map buiten de live-opslag. Maak vooraf
+een aparte lege database op dezelfde server met
+dezelfde credentials en achtervoegsel `_restore_drill`. Kies een nieuwe absolute
+map buiten app, live-opslag en backup. De opdracht weigert bestaande objecten en
+bestanden, gebruikt geen `--clean`, start geen server/worker en vernieuwt geen
+sleutels. Elke lokale origineelrij wordt op bytes en SHA256 gecontroleerd;
+niet-lokale opslag faalt expliciet. Een blijvend verslag vermeldt geslaagd/mislukt
+en het controlebereik. Login, previews, externe opslag en een echte volledige
+installatie blijven onbewezen. Doelen blijven ook na fouten staan: inspecteer en
+verwijder alleen de expliciete proefdatabase/-map. De live-database bewaart het
+proefverslag.
+
+**English.** Only use trusted local backups from `scripts/backup-compose.sh`
+containing `database.dump`, `storage-app.tar`, `VERSION`, `FORMAT` and `SHA256SUMS`.
+Registration verifies four checksums and records version, location, size and
+manifest hash, not authenticity or recoverability. Drills require the same app
+version, PostgreSQL, a compatible `pg_restore` on PATH, the existing extraction
+script and sufficient space. Run in an administration environment with access
+to the app installation, database and backup files; the app image includes
+PostgreSQL client 16. Copy or mount backups into that administration environment
+and use a separate persistent directory outside live storage for retained trial
+files. Pre-create a separate empty database on the
+same server using the same credentials, ending `_restore_drill`, and choose a new
+absolute directory outside the app, live storage and backup. Existing objects and
+files are refused; there is no `--clean`, server/worker startup or key
+regeneration. Every local original row is checked for size and SHA256; non-local
+storage fails explicitly. A persistent report records success/failure and scope.
+Login, previews, external storage and a complete working installation remain
+unproven. Targets remain after failure: inspect and remove only the explicit test
+database/directory. The live database retains the drill report.
+
+### Incidentdeduplicatie / Incident deduplication
+
+**Nederlands.** Nieuwe, heropende en in ernst gewijzigde incidenten krijgen een
+nieuw event-ID. Ongewijzigde succesvol verzonden meldingen worden niet herhaald.
+Ontvangstbevestiging door een beheerder lost niets op en onderdrukt geen herstel.
+Wanneer een incident niet langer aan de ingestelde ernstgrens voldoet, volgt
+`state=resolved`; dat betekent niet dat alle diagnostiek perfect is.
+De webhook bevat per incident `state` (`open`/`resolved`) en `event_id`.
+Identificaties worden voor transport duurzaam opgeslagen; transportfouten blijven
+pending en worden met hetzelfde ID herhaald. De ontvanger moet zelf dedupliceren:
+een onduidelijk netwerkantwoord kan dubbele bezorging veroorzaken. Het register
+bewaart de laatste toestand per incident, geen volledige historische tijdlijn.
+Zonder webhook blijven meldingen pending en worden ze lokaal gelogd; een later
+herstel kan dan de nog niet verstuurde openmelding vervangen.
+
+**English.** New, reopened and severity-changed incidents receive a new event ID.
+Unchanged successfully delivered notifications are not resent. Administrator
+acknowledgement neither resolves an incident nor suppresses recovery. Once an
+incident no longer meets the configured severity threshold, `state=resolved` is
+sent; this does not imply perfect diagnostic health. Each webhook incident carries
+`state` (`open`/`resolved`) and `event_id`. IDs are committed before transport;
+failed deliveries remain pending and retry with the same ID. Receivers must
+deduplicate because ambiguous network responses may cause duplicate delivery.
+The register retains the latest state per incident, not a complete historical
+timeline. Without a webhook, pending alerts are logged locally; later recovery
+may replace an open notification that was never delivered.
+
 FotoArchief evaluates the same diagnostics used by the operations page through
 `php artisan operations:check-alerts`. The scheduler runs this hourly. Alerts
 are disabled by default; when incidents are found while disabled, the command

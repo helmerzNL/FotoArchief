@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use App\Modules\Ai\Services\ExternalAiProvider;
 use App\Modules\Ai\Services\LocalAiProvider;
+use App\Modules\ArchiveOperations\Models\BackupRecord;
+use App\Modules\ArchiveOperations\Services\BackupRegisterService;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
+use App\Modules\ArchiveOperations\Services\RestoreDrillService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
@@ -142,6 +145,22 @@ Artisan::command('operations:check-alerts {--dry-run : Evaluate alert payload wi
 
     return 0;
 })->purpose('Evaluate diagnostics and send configured operational alerts');
+
+Artisan::command('operations:register-backup {directory}', function (BackupRegisterService $backups): int {
+    $backup = $backups->register((string) $this->argument('directory'));
+    $this->info('Checksum-verified backup registered: '.$backup->id);
+
+    return 0;
+})->purpose('Verify a trusted local backup manifest and record evidence without claiming a restore');
+
+Artisan::command('operations:restore-drill {backup} {--database=} {--directory=} {--confirm-empty-target}', function (RestoreDrillService $drills): int {
+    $backup = BackupRecord::query()->findOrFail((string) $this->argument('backup'));
+    $drill = $drills->run($backup, (string) $this->option('database'), (string) $this->option('directory'), (bool) $this->option('confirm-empty-target'));
+    $this->info('Restore drill verified: '.$drill->getKey());
+    $this->line(json_encode($drill->report, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Restore only to a separate empty PostgreSQL database and new directory, then verify all originals');
 
 Artisan::command('ai:probe-local', function (LocalAiProvider $provider): int {
     $capabilities = $provider->probe();

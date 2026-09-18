@@ -131,7 +131,7 @@ final class OperationWorkbenchService
                 }
                 $context = $event->getAttribute('context');
                 if (! is_array($context) || ! is_string($context['asset_id'] ?? null)) {
-                    throw new \UnexpectedValueException('Item audit event has no photo reference.');
+                    throw new \UnexpectedValueException(__('recovery.errors.audit_photo_missing'));
                 }
 
                 return $context['asset_id'];

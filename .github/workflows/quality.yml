@@ -134,6 +134,7 @@ jobs:
       FOTOARCHIEF_TEST_PG_USER: fotoarchief
       FOTOARCHIEF_TEST_PG_PASSWORD: ci-disposable-database
       FOTOARCHIEF_TEST_PGVECTOR_DATABASE: release_pgvector_test
+      FOTOARCHIEF_TEST_RECOVERY_DATABASE: release_recovery_test
       FOTOARCHIEF_TEST_PGVECTOR_HOST: 127.0.0.1
       FOTOARCHIEF_TEST_PGVECTOR_PORT: "5432"
       FOTOARCHIEF_TEST_PGVECTOR_USER: fotoarchief
@@ -160,10 +161,19 @@ jobs:
           createdb -h 127.0.0.1 -U fotoarchief release_operations_final_test
           createdb -h 127.0.0.1 -U fotoarchief release_benchmark_test
           createdb -h 127.0.0.1 -U fotoarchief release_pgvector_test
+          createdb -h 127.0.0.1 -U fotoarchief release_recovery_test
       - name: Test real PostgreSQL constraints and upgrade preservation
         run: vendor/bin/pest tests/Feature/PostgresInstallationTest.php tests/Feature/PhotoUpgradeTest.php tests/Feature/PublicationActiveFilePostgresTest.php tests/Feature/Operations/OperationsPostgresAcceptanceTest.php --compact
       - name: Exercise the Laravel pgvector application adapter
         run: vendor/bin/pest tests/Feature/Operations/PgvectorApplicationAdapterTest.php --compact
+      - name: Exercise real isolated backup and restore drills
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          pg_dump --version
+          pg_restore --version
+          vendor/bin/pest tests/Feature/Operations/RecoveryPostgresTest.php --compact
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

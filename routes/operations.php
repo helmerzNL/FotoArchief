@@ -16,6 +16,7 @@ use App\Modules\ArchiveOperations\Controllers\OperationAuditController;
 use App\Modules\ArchiveOperations\Controllers\OperationRunController;
 use App\Modules\ArchiveOperations\Controllers\OperationsLandingController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
+use App\Modules\ArchiveOperations\Controllers\RecoveryWorkbenchController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+    Route::get('/recovery', [RecoveryWorkbenchController::class, 'index'])->name('recovery.index');
+    Route::post('/recovery/check', [RecoveryWorkbenchController::class, 'check'])->name('recovery.check');
+    Route::post('/recovery/incidents/{incident}/acknowledge', [RecoveryWorkbenchController::class, 'acknowledge'])->name('recovery.acknowledge');
     Route::get('/audit', OperationAuditController::class)->name('audit');
     Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');

@@ -70,6 +70,19 @@ async function privatePreview(page: Page) {
     element.complete && element.naturalWidth > 0)).toBe(true);
 }
 
+test('guided installation checks persist a report without starting a restore', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/operations'));
+  await page.getByRole('link', { name: 'Installatie en herstel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Begeleide installatiecontrole', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Backup- en herstelregister', exact: true })).toBeVisible();
+  await page.getByLabel('Ik bevestig het uitvoeren van de diagnoseproeven.', { exact: true }).first().check();
+  await page.getByRole('button', { name: 'Installatie controleren', exact: true }).click();
+  await expect(page.getByText('Controleverslag opgeslagen.', { exact: true })).toBeVisible();
+  await page.getByText('installation ·', { exact: false }).click();
+  await expect(page.getByText('"external_proxy_verified": false', { exact: false })).toBeVisible();
+});
+
 async function visibility(context: BrowserContext, name: 'revoke' | 'trash' | 'embargo', status: number) {
   for (const path of [
     `/foto/browser-${name}`,

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\ArchiveOperations\Models\SystemHeartbeat;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\SystemDiagnosticsService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -203,12 +204,12 @@ it('logs disabled operational alerts without calling the webhook', function (): 
     );
 });
 
-it('surfaces webhook failures and repeats sends while incidents remain active', function (): void {
+it('deduplicates unchanged incidents and preserves failed deliveries for retry', function (): void {
     Http::fake([
         'https://ops.example.test/fotoarchief' => Http::sequence()
             ->push(['ok' => true], 202)
-            ->push(['ok' => true], 202)
-            ->push('down', 500),
+            ->push('down', 500)
+            ->push(['ok' => true], 202),
     ]);
     config([
         'operations.alerts.enabled' => true,
@@ -218,12 +219,15 @@ it('surfaces webhook failures and repeats sends while incidents remain active', 
     ]);
 
     expect(app(OperationalAlertService::class)->evaluate()['sent'])->toBeTrue()
-        ->and(app(OperationalAlertService::class)->evaluate()['sent'])->toBeTrue();
+        ->and(app(OperationalAlertService::class)->evaluate()['reason'])->toBe('deduplicated');
 
-    Http::assertSentCount(2);
+    Http::assertSentCount(1);
+    DB::table('operational_incidents')->update(['notified_at' => null]);
 
     expect(fn () => app(OperationalAlertService::class)->evaluate())
         ->toThrow(RuntimeException::class, 'Operations alert webhook failed with status 500.');
 
+    Http::assertSentCount(2);
+    expect(app(OperationalAlertService::class)->evaluate()['sent'])->toBeTrue();
     Http::assertSentCount(3);
 });
