@@ -275,6 +275,40 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
   expect(dimensions.page).toBeLessThanOrEqual(dimensions.viewport);
 });
 
+test('saved searches, confirmed bulk metadata and per-field conflict recovery retain current edits', async ({ page, context }) => {
+  await login(page);
+  await page.goto(url('/admin/assets?q=Browser%20mobiel%20toetsenbord'));
+  await page.getByLabel('Naam zoekopdracht', { exact: true }).fill('Daily browser search');
+  await page.getByRole('button', { name: 'Huidige filters opslaan', exact: true }).click();
+  await page.getByRole('link', { name: 'Daily browser search', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Browser mobiel toetsenbord', exact: true })).toBeVisible();
+  await page.goto(url(`/admin/catalogue/bulk/confirm?asset_ids[]=${fixture.assets.review.id}`));
+  await page.locator('#tags_to_add').fill('browser-catalogue-proof');
+  await page.getByRole('button', { name: 'Wijzigingen vooraf bekijken', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Wijzigingen vooraf bekijken', exact: true })).toBeVisible();
+  await expect(page.locator('pre').last()).toContainText('browser-catalogue-proof');
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Resultaat per foto', exact: true })).toBeVisible();
+  await expect(page.locator('main')).toContainText('Opgeslagen.');
+  await page.goto(url(assetPath('review')));
+  const concurrent = await context.newPage();
+  await concurrent.goto(url(assetPath('review')));
+  await concurrent.getByRole('textbox', { name: 'Titel', exact: true }).fill('Concurrent browser title');
+  await concurrent.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(concurrent.getByRole('heading', { name: 'Concurrent browser title', exact: true })).toBeVisible();
+  await concurrent.close();
+  await page.getByRole('textbox', { name: 'Beschrijving', exact: true }).fill('Retained browser input');
+  await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Revisieconflict per veld oplossen', exact: true })).toBeVisible();
+  for (const select of await page.locator('select[name^="choices["]').all()) await select.selectOption('current');
+  await page.locator('#choice-description').selectOption('proposed');
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Titel', exact: true })).toHaveValue('Concurrent browser title');
+  await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true })).toHaveValue('Retained browser input');
+});
+
 test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {
   await login(page, 'volunteer');
   await page.setViewportSize({ width: 390, height: 844 });

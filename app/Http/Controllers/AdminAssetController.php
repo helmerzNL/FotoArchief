@@ -10,7 +10,10 @@ use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\Collection;
 use App\Modules\Catalogue\Models\Location;
 use App\Modules\Catalogue\Models\Person;
+use App\Modules\Catalogue\Models\SavedAssetSearch;
 use App\Modules\Catalogue\Models\Tag;
+use App\Modules\Catalogue\Services\AssetSearchFilters;
+use App\Modules\Catalogue\Services\ReviewReceipt;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\QuarantineUploadService;
@@ -36,19 +39,7 @@ class AdminAssetController extends Controller
     {
         $user = $this->user($request);
         abort_unless($user->hasPermission('assets.view'), 403);
-        $data = $request->validate([
-            'q' => ['nullable', 'string', 'max:200'],
-            'cursor' => ['nullable', 'ulid'],
-            'date_from' => ['nullable', 'date_format:Y-m-d'],
-            'date_to' => ['nullable', 'date_format:Y-m-d'],
-            'date_precision' => ['nullable', 'string', 'max:30'],
-            'person_id' => ['nullable', 'string'],
-            'location_id' => ['nullable', 'string'],
-            'collection_id' => ['nullable', 'string'],
-            'tag_id' => ['nullable', 'string'],
-            'rights_status' => ['nullable', 'string', 'max:30'],
-            'catalogue_status' => ['nullable', 'string', 'max:30'],
-        ]);
+        $data = $request->validate(AssetSearchFilters::rules());
 
         $query = Asset::query()->with(['files', 'uploads'])->latest('id');
 
@@ -56,6 +47,15 @@ class AdminAssetController extends Controller
             $query->where('created_by_user_id', $user->id);
         }
 
+        match ($data['missing'] ?? null) {
+            'description' => $query->where(fn ($q) => $q->whereNull('description')->orWhere('description', '')),
+            'dating' => $query->where(AssetSearchFilters::missingDating(...)),
+            'collection' => $query->doesntHave('collections'),
+            'rights' => $query->whereDoesntHave('rights', fn ($q) => $q->where('verification_status', 'verified')),
+            default => null,
+        };
+        $savedSearches = SavedAssetSearch::query()->where('user_id', $user->id)->orderBy('name')->get();
+        $searchFilters = Arr::except($data, ['cursor']);
         if ($search = $request->string('q')->trim()->value()) {
             $query->where(fn ($q) => $q->whereLike('title', '%'.$search.'%')->orWhereLike('accession_number', '%'.$search.'%')->orWhereLike('description', '%'.$search.'%'));
         }
@@ -117,7 +117,7 @@ class AdminAssetController extends Controller
             'filterTags',
             'filterPeople',
             'filterLocations'
-        ));
+        ) + compact('savedSearches', 'searchFilters'));
     }
 
     public function store(Request $request, QuarantineUploadService $uploads): RedirectResponse|JsonResponse
@@ -162,7 +162,7 @@ class AdminAssetController extends Controller
         return view('admin.assets.show', compact('asset', 'events', 'aiRuns'));
     }
 
-    public function update(Request $request, Asset $asset): RedirectResponse
+    public function update(Request $request, Asset $asset): RedirectResponse|View
     {
         $this->authorize('update', $asset);
         $data = $request->validate([
@@ -215,10 +215,16 @@ class AdminAssetController extends Controller
         if ($tagNames->count() > 20 || $tagNames->contains(fn ($name) => mb_strlen($name) > 100)) {
             throw ValidationException::withMessages(['tags' => __('catalogue.generated.t_40b8e381d73aa3d2')]);
         }
-        DB::transaction(function () use ($asset, $data, $tagNames, $request): void {
+        $conflict = DB::transaction(function () use ($asset, $data, $tagNames, $request): ?Asset {
             $locked = Asset::query()->whereKey($asset->id)->lockForUpdate()->firstOrFail();
+            $this->authorize('update', $locked);
             if ((int) $data['lock_version'] !== $locked->lock_version) {
-                throw ValidationException::withMessages(['lock_version' => __('catalogue.generated.t_dae19fcb83529b1e')]);
+                if ($request->expectsJson()) {
+                    throw ValidationException::withMessages(['lock_version' => __('catalogue.generated.t_dae19fcb83529b1e')]);
+                }
+                $locked->load(['rights' => fn ($q) => $q->latest('id'), 'tags']);
+
+                return $locked;
             }
             $right = $locked->rights()->latest('id')->first();
             $before = ['metadata' => Arr::only($locked->attributesToArray(), self::METADATA), 'tags' => $locked->tags()->pluck('name')->all(), 'rights' => $right?->only(['rights_holder', 'verification_status', 'note'])];
@@ -233,9 +239,36 @@ class AdminAssetController extends Controller
                 $right->update($rightData);
             }
             AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $this->user($request)->id, 'event_type' => 'metadata.updated', 'details' => ['revision' => $locked->lock_version, 'before' => $before, 'after' => ['metadata' => Arr::only($locked->attributesToArray(), self::METADATA), 'tags' => $tagNames->all(), 'rights' => $rightData]]]);
+
+            return null;
         });
+        if ($conflict !== null) {
+            $right = $conflict->rights->first();
+            $current = Arr::only($conflict->attributesToArray(), self::METADATA);
+            $current += ['tags' => $conflict->tags->pluck('name')->join(', '), 'rights_holder' => $right?->rights_holder, 'rights_status' => $right->verification_status ?? 'unverified', 'rights_note' => $right?->note];
+            $proposed = Arr::only($data, array_keys($current));
+            $receipt = app(ReviewReceipt::class)->issue($this->user($request), 'metadata-conflict', ['asset_id' => $asset->id, 'revision' => $conflict->lock_version, 'current' => $current, 'proposed' => $proposed]);
+
+            return view('catalogue.conflict', compact('asset', 'current', 'proposed', 'receipt', 'conflict'));
+        }
 
         return redirect()->route('admin.assets.show', $asset)->with('status', __('catalogue.generated.t_3ffcd1a97bc06c4e'));
+    }
+
+    public function resolve(Request $request, Asset $asset, ReviewReceipt $receipts): RedirectResponse|View
+    {
+        $this->authorize('update', $asset);
+        $data = $request->validate(['receipt' => ['required', 'string', 'max:100000'], 'choices' => ['required', 'array'], 'choices.*' => ['required', Rule::in(['current', 'proposed'])], 'confirm' => ['accepted']]);
+        $payload = $receipts->read($this->user($request), 'metadata-conflict', $data['receipt']);
+        abort_unless($payload['asset_id'] === $asset->id, 422);
+        $resolved = ['lock_version' => $payload['revision']];
+        foreach ($payload['current'] as $field => $value) {
+            abort_unless(isset($data['choices'][$field]), 422);
+            $resolved[$field] = $data['choices'][$field] === 'current' ? $value : ($payload['proposed'][$field] ?? null);
+        }
+        $request->replace($resolved);
+
+        return $this->update($request, $asset);
     }
 
     public function media(Request $request, Asset $asset, AssetFile $file, string $size): StreamedResponse

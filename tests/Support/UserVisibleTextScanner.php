@@ -216,6 +216,7 @@ final class UserVisibleTextScanner
             'attachment; filename="',
             'attempts + 1',
             'items as completed_items_count',
+            'items as pending_items_count',
             'status, count(*) as total',
             'stream: OK',
             '1 = 0',

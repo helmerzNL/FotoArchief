@@ -24,6 +24,7 @@ Route::middleware(['auth', 'can:assets.view'])->prefix('admin/assets')->name('ad
     Route::post('/', [AdminAssetController::class, 'store'])->name('store');
     Route::get('/{asset}', [AdminAssetController::class, 'show'])->name('show');
     Route::put('/{asset}', [AdminAssetController::class, 'update'])->name('update');
+    Route::post('/{asset}/resolve-conflict', [AdminAssetController::class, 'resolve'])->name('resolve');
     Route::get('/{asset}/files/{file}/media/{size}', [AdminAssetController::class, 'media'])->whereIn('size', ['preview300', 'preview1200', 'preview2000'])->name('media');
     Route::post('/{asset}/uploads/{upload}/retry', [AdminAssetController::class, 'retry'])->name('retry');
 });

@@ -23,9 +23,70 @@ en revisiehistorie. Dit document beschrijft die keten. Zie daarnaast de
 
 Opslaan verhoogt de revisie en bewaart voor/na-waarden van metadata, tags en
 rechten. Een formulier van een oudere revisie kan een nieuwe wijziging niet
-overschrijven: laad de actuele foto en vergelijk voordat je opnieuw opslaat.
+overschrijven: de app toont de actuele waarden naast je bewaarde invoer en vraagt
+per veld welke waarde je wilt behouden. Een nieuwe wijziging tijdens vergelijken
+vereist opnieuw vergelijken; datumvelden worden samen gevalideerd.
 De detailpagina toont de laatste 50 gebeurtenissen; oudere gebeurtenissen
 blijven bewaard in PostgreSQL.
+
+### Dagelijks catalogiseren / Daily cataloguing
+
+**Nederlands.** Het foto-overzicht heeft een werkvoorraad voor ontbrekende
+beschrijving, datering, collectie en geverifieerde rechten. De normale filters
+blijven combineerbaar. Bewaar maximaal **50 persoonlijke zoekopdrachten**;
+deze bewaren alleen toegestane filters, geen resultaten, paginacursor of
+providergegevens. Elke uitvoering gebruikt de actuele fototoegang.
+
+Selecteer maximaal **25 foto's** voor bulkmetadata. Eerst zie je de voor/na-
+waarden, daarna bevestig je expliciet. De versleutelde voorvertoning is aan
+jouw account gebonden en verloopt na **3600 seconden**. Elke foto krijgt
+afzonderlijk een nieuwe autorisatie- en revisiecontrole en een resultaat.
+Een conflict bij de ene foto houdt andere geldige foto's niet tegen. Herhalen
+overschrijft geen nieuwere revisies. Datering gebruikt de bestaande
+importvalidatie; jaar/decennium worden genormaliseerd. Rechten veranderen niet
+automatisch: de bestaande uitdrukkelijke rechtenkeuze blijft vereist.
+De bulk-POST vereist voortaan een receipt uit de preview en `confirm=1`.
+
+Werklijsten blijven bestaande taken met voortgang; toewijzen/overdragen vereist
+een actieve ontvanger die iedere foto al mag bewerken. Eigendom verandert niet.
+Alleen maker, toegewezene of publicatiebevoegde medewerkers zien de lijst;
+schrijven vereist bovendien bewerkrechten, itemvoortgang ook toegang tot de
+foto. Overdracht en voortgang krijgen een blijvend gebeurtenislog. Een heropend
+item heropent ook een afgeronde lijst. Een lijst bevat maximaal **500 foto's**.
+
+Revisieconflicten tonen jouw volledige invoer naast een consistent opgeslagen
+actuele revisie, inclusief tags en rechten. Kies elk veld opnieuw; de
+bevestiging geldt uitsluitend voor die vergeleken revisie en verloopt na
+**3600 seconden**. Dit is een vergelijking van ingediende en huidige waarden,
+niet een verzonnen reconstructie van een oudere basisrevisie.
+JSON-clients behouden de bestaande 422-validatiefout bij een revisieconflict.
+
+**English.** The photo list includes queues for missing descriptions, dating,
+collections and verified rights, combinable with normal filters. Save up to
+**50 personal searches** containing only allowed filters, not results, cursors
+or provider information. Every execution applies current photo access.
+
+Select up to **25 photos** for bulk metadata. Review before/after values, then
+confirm explicitly. The encrypted preview belongs to your account and expires
+after **3600 seconds**. Each photo is independently reauthorized and
+revision-checked, with a separate result. One conflict does not stop other valid
+photos. Replaying cannot overwrite newer revisions. Dating reuses import
+validation and normalizes years/decades. Rights never change automatically;
+the existing explicit rights option is required. Bulk POST now requires a
+preview receipt and `confirm=1`.
+
+Existing worklists support progress and handovers. Recipients must be active
+and already able to edit every photo; assignment never changes ownership.
+Only creators, assignees or publication-authorized staff can see a list.
+Writing also requires edit permission, and item progress requires photo access.
+Handovers and progress have durable events. Reopening an item reopens a
+completed list. Worklists contain at most **500 photos**.
+
+Revision conflicts retain submitted values alongside a consistent current
+revision, including tags and rights. Choose each field again; confirmation is
+bound to that compared revision and expires after **3600 seconds**. This compares
+submitted and current values, not an invented historical base revision.
+JSON clients retain the existing 422 revision-validation response.
 
 ### Hervatbare uploadbatches / Resumable upload batches
 
