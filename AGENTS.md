@@ -74,6 +74,15 @@ changing application structure or domain boundaries.
   first and equivalent English second. Keep technical identifiers, tags,
   digests, filenames, commands, limits, and operator actions identical between
   both language sections.
+- Every release includes version-specific Dutch-first/English-second notes
+  published in GitHub Releases, not just a git tag or generic installation text.
+  Before tagging, commit `docs/releases/vX.Y.Z.md` with changes since the previous
+  published tag, operator actions, validation evidence and known limitations.
+  Follow [the release-note contract](docs/RELEASE_ACCEPTANCE.md#version-specific-release-notes).
+  The release workflow validates this file before publishing an image and uses
+  it as the release body; `tests/Smoke/release-notes.sh` guards that contract.
+  After publication, verify the body is visible on the non-draft GitHub Release.
+  Updating historical notes preserves tags, assets and prerelease status.
 - Do not modify deployment or CI files owned by another agent unless the task
   explicitly assigns that work.
 - Prefer conventional Laravel structure and names over custom framework
