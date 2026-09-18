@@ -266,6 +266,31 @@ verkeerde-rankingcontrole faalt aantoonbaar met **0,0** en exitcode 1.
 De eerdere rode gates zijn opgelost zonder hun grenzen te wijzigen.
 Dit is gecontroleerde fixtureacceptatie, geen algemene productiecapaciteitsgarantie.
 
+### Exacte zoekquery bij de release-noteborging
+
+In PR #22 overschreed gelijktijdig publiek semantisch zoeken opnieuw de
+ongewijzigde **700 ms**-grens: p95 **756.11 ms**, vervolgens **823.19 ms**.
+Het SQL-plan herhaalde publicatiecontroles doordat de planner de combinatie
+van bronchecksum en revisie verkeerd inschatte.
+
+De adapter sorteert nu de volledige generatie op exacte cosine-afstand en
+asset-ID. Een `LATERAL`-grens houdt de bestaande bronvalidatie bij
+geindexeerde lookups; de oorspronkelijke eligibility-subquery blijft intact.
+Alle bron- en autorisatiecontroles blijven voor de enige resultaatlimiet.
+Er is geen beperkte shortlist, ANN-benadering of autorisatiecache.
+
+Op dezelfde lokale 50k-fixture daalde de warme querytijd van ongeveer
+**250-272 ms** naar **91-117 ms**, met identieke resultaten. Dit is
+SQL-microbenchmarkbewijs, geen geslaagde concurrente HTTP-acceptatie.
+Een volgende proef met de daadwerkelijke applicatieadapter bevestigde exact
+dezelfde output in **40 metingen**, met p95 **234.63 ms**.
+Gerichte regressies: **39 tests, 162 assertions**, inclusief echte pgvector,
+meer dan 500 hoger gerangschikte uitgesloten kandidaten, gelijke scores,
+begrensde eligibility en bron-/generatie-invalidatie.
+De Linux-CI op de gewijzigde code blijft het vereiste HTTP-acceptatiebewijs.
+Geen migratie, herindexering, Compose-/omgevingswijziging of limietverhoging
+nodig; bestaande vectoren blijven bruikbaar.
+
 ## English
 
 ### Delivery
@@ -512,3 +537,28 @@ relevance queries achieve precision@5/recall@5 **1.0**, and the wrong-ranking
 control demonstrably fails with **0.0** and exit code 1. The earlier red
 gates were resolved without changing their limits. This is controlled fixture
 acceptance, not a general production-capacity guarantee.
+
+### Exact search query during release-note enforcement
+
+In PR #22 concurrent public semantic search again exceeded the unchanged
+**700 ms** limit: p95 **756.11 ms**, then **823.19 ms**.
+The SQL plan repeated publication checks because the planner misestimated
+the combination of source checksum and revision.
+
+The adapter now sorts the complete generation by exact cosine distance and
+asset ID. A `LATERAL` boundary keeps existing source validation as indexed
+lookups; the original eligibility subquery remains intact.
+All source and authorization checks still precede the only result limit.
+There is no bounded shortlist, ANN approximation or authorization cache.
+
+On the same local 50k fixture, warm query time dropped from approximately
+**250-272 ms** to **91-117 ms**, with identical results. This is SQL
+microbenchmark evidence, not successful concurrent HTTP acceptance.
+Another run using the actual application adapter confirmed exactly the same
+output across **40 measurements**, with p95 **234.63 ms**.
+Targeted regressions: **39 tests, 162 assertions**, including actual pgvector,
+more than 500 higher-ranked excluded candidates, tied scores, bounded
+eligibility and source/generation invalidation.
+Linux CI on the changed code remains the required HTTP acceptance evidence.
+No migration, reindexing, Compose/environment change or increased limit is
+needed; existing vectors remain usable.

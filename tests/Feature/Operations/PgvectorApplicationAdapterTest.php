@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Mockery\MockInterface;
 use Symfony\Component\Process\Process;
@@ -122,6 +123,71 @@ it('persists and searches application embeddings through pgvector without JSON f
         ->toBe([['asset_id' => $asset->id, 'accession_number' => 'PGVECTOR-001', 'title' => null, 'score' => 1.0, 'model_space' => 'test-clip:3:cosine']])
         ->and($store->currentCandidates($generation, $eligible)->toSql())->toContain('"eligible_assets" offset 0')
         ->and($eligible->toSql())->toBe($scopeSql);
+
+    foreach ([
+        [$asset, 'lock_version', 2],
+        [$asset, 'deleted_at', now()],
+        [$embedding, 'source_file_sha256', str_repeat('b', 64)],
+        [$file, 'is_primary', false],
+        [$file, 'scanner_status', 'infected'],
+        [$file, 'ingest_status', 'quarantined'],
+        [$embedding, 'stale_at', now()],
+        [$generation, 'status', AiEmbeddingGeneration::STATUS_RETIRED],
+    ] as [$model, $column, $invalid]) {
+        $original = $model->getAttribute($column);
+        $model->update([$column => $invalid]);
+        expect($store->nearest($generation, [1.0, 0.0, 0.0], 1))->toBeEmpty($column);
+        $model->update([$column => $original]);
+    }
+});
+
+it('ranks the complete generation without truncating denied candidates and preserves eligibility windows', function (): void {
+    [$user, $assets] = pgvectorWorkflow(3);
+    $run = vectorRun($user, $assets);
+    (new ProcessAiIndexJob($run->id))->handle();
+    $generation = AiEmbeddingGeneration::query()->sole();
+    $store = app(PgvectorEmbeddingStore::class);
+    foreach ([$assets[1], $assets[2]] as $asset) {
+        $store->persist(AiEmbedding::query()->where('asset_id', $asset->id)->sole(), [0.8, 0.6, 0]);
+    }
+
+    $sourceAsset = $assets[0]->fresh()->getAttributes();
+    $sourceFile = $assets[0]->files()->sole()->getAttributes();
+    $sourceEmbedding = AiEmbedding::query()->where('asset_id', $assets[0]->id)->sole()->getAttributes();
+    $assetRows = $fileRows = $embeddingRows = [];
+    for ($i = 0; $i < 501; $i++) {
+        $assetId = (string) Str::ulid();
+        $fileId = (string) Str::ulid();
+        $checksum = hash('sha256', 'denied-'.$i);
+        $assetRows[] = array_replace($sourceAsset, ['id' => $assetId, 'accession_number' => 'DENIED-'.$i]);
+        $fileRows[] = array_replace($sourceFile, [
+            'id' => $fileId, 'asset_id' => $assetId, 'storage_key' => 'denied/'.$i.'.jpg', 'sha256' => $checksum,
+        ]);
+        $embeddingRows[] = array_replace($sourceEmbedding, [
+            'id' => (string) Str::ulid(), 'asset_id' => $assetId, 'asset_file_id' => $fileId,
+            'source_file_sha256' => $checksum,
+        ]);
+    }
+    DB::table('assets')->insert($assetRows);
+    DB::table('asset_files')->insert($fileRows);
+    DB::table('ai_embeddings')->insert($embeddingRows);
+    $allowed = [$assets[1]->id, $assets[2]->id];
+    sort($allowed, SORT_STRING);
+    $eligible = Asset::query()->select('assets.id')->whereIn('assets.id', $allowed)->toBase();
+
+    $matches = $store->nearest($generation, [1, 0, 0], 2, $eligible);
+    expect(array_column($matches, 'asset_id'))->toBe($allowed)
+        ->and(array_column($matches, 'score'))->toBe([0.8, 0.8])
+        ->and($store->nearest($generation, [1, 0, 0], 900))->toHaveCount(500)
+        ->and($store->nearest($generation, [1, 0, 0], 0, $eligible))->toHaveCount(1);
+    $eligible->orderBy('assets.id')->offset(1)->limit(1);
+    $sql = $eligible->toSql();
+    $bindings = $eligible->getBindings();
+    expect(array_column($store->nearest($generation, [1, 0, 0], 2, $eligible), 'asset_id'))->toBe([$allowed[1]])
+        ->and($eligible->toSql())->toBe($sql)
+        ->and($eligible->getBindings())->toBe($bindings);
+    $eligible->whereRaw('1 = 0');
+    expect($store->nearest($generation, [1, 0, 0], 2, $eligible))->toBeEmpty();
 });
 
 function pgvectorWorkflow(int $count = 2, bool $fakeProvider = true): array
