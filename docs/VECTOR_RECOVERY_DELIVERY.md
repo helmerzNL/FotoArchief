@@ -287,7 +287,16 @@ dezelfde output in **40 metingen**, met p95 **234.63 ms**.
 Gerichte regressies: **39 tests, 162 assertions**, inclusief echte pgvector,
 meer dan 500 hoger gerangschikte uitgesloten kandidaten, gelijke scores,
 begrensde eligibility en bron-/generatie-invalidatie.
-De Linux-CI op de gewijzigde code blijft het vereiste HTTP-acceptatiebewijs.
+[Linux-run 35358967955](https://github.com/helmerzNL/FotoArchief/actions/runs/35358967955)
+op `d8e3f9e` bevestigt de volledige 50k-HTTP/vector/relevantiepoort:
+adapter-p95 **70.65 ms**, gelijktijdig publiek semantisch zoeken
+**363.36 ms**, beide onder **700 ms**. Alle zes concurrente routes slagen;
+relevantie is **1.0**, de verkeerde-rankingcontrole faalt terecht met **0.0**.
+De afzonderlijke PHP-job meldde nog een SQL-expressie als onvertaalde
+gebruikerstekst. Die exacte technische expressie is toegevoegd aan de
+bestaande scanneruitsluitingen; beide inventaristests slagen lokaal
+(**2 tests, 9 assertions**). De volledige CI moet ook op deze vervolgcommit
+groen zijn voor merge.
 Geen migratie, herindexering, Compose-/omgevingswijziging of limietverhoging
 nodig; bestaande vectoren blijven bruikbaar.
 
@@ -559,6 +568,15 @@ output across **40 measurements**, with p95 **234.63 ms**.
 Targeted regressions: **39 tests, 162 assertions**, including actual pgvector,
 more than 500 higher-ranked excluded candidates, tied scores, bounded
 eligibility and source/generation invalidation.
-Linux CI on the changed code remains the required HTTP acceptance evidence.
+[Linux run 35358967955](https://github.com/helmerzNL/FotoArchief/actions/runs/35358967955)
+on `d8e3f9e` confirms the complete 50k HTTP/vector/relevance gate:
+adapter p95 **70.65 ms**, concurrent public semantic search
+**363.36 ms**, both below **700 ms**. All six concurrent routes pass;
+relevance is **1.0**, and the wrong-ranking control correctly fails at **0.0**.
+The separate PHP job still classified a SQL expression as untranslated
+user-facing text. That exact technical expression was added to the existing
+scanner exclusions; both inventory tests pass locally
+(**2 tests, 9 assertions**). Full CI must also be green on this follow-up
+commit before merging.
 No migration, reindexing, Compose/environment change or increased limit is
 needed; existing vectors remain usable.

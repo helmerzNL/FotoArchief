@@ -203,6 +203,7 @@ final class UserVisibleTextScanner
             'no-store, private',
             'private, no-store',
             'coverage_status, COUNT(*) AS total',
+            '1 - ranked.distance as score',
             "CASE WHEN eligible_count = 0 THEN 'excluded' WHEN current_count > 0 THEN 'current' WHEN last_event = 'ai.index.item_failed' THEN 'failed' WHEN historical_count > 0 THEN 'stale' ELSE 'missing' END AS coverage_status",
             'NULL AS operation_run_id',
             'operation_run_audit_events AS events',
