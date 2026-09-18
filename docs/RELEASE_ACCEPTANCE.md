@@ -3,6 +3,42 @@
 A feature commit is not by itself a production-readiness claim. The same final
 revision must pass the checks below before its packages are offered for testing.
 
+## Acceptatiebewijsregister / Acceptance evidence register
+
+### Nederlands
+
+Beheerders registreren onder `Acceptatiebewijs en support` versie, omgeving
+(test/staging/productie), proef, resultaat en een bewijsreferentie van maximaal
+500 tekens. Alle regels zijn append-only; corrigeer met een nieuwe regel die naar
+de eerdere verwijst. Het formulier vereist expliciete bevestiging en registreert
+altijd **menselijke verklaring**, ook als iemand `source=ci` meestuurt.
+
+De optionele HTTP-herstelproef schrijft zelf regels met bron **geautomatiseerde
+testinstallatie**, inclusief mislukte pogingen. Een menselijke verklaring kan
+naar een CI-run verwijzen maar wordt daarmee geen CI-bewijs. De bronwaarde `ci`
+is gereserveerd in het opslagcontract; deze versie importeert geen CI-resultaten
+automatisch. GitHub Actions blijft de gezaghebbende bron voor checks op een
+exacte commit. Het register geeft geen productiecertificering en vervangt geen
+CI, echte browserproef of release-gates. Referenties zijn zichtbaar voor
+beheerders: neem geen geheimen of persoonsgegevens op.
+
+### English
+
+Under `Acceptance evidence and support`, administrators record version,
+environment (test/staging/production), check, result and an evidence reference
+of at most 500 characters. Entries are append-only; correct them with a new
+entry referencing the previous one. The form requires explicit confirmation
+and always records a **human declaration**, even if someone submits `source=ci`.
+
+The optional HTTP restore check records its own **automated test installation**
+entries, including failed attempts. A human declaration can reference a CI run
+without becoming CI evidence. The `ci` source is reserved in the storage
+contract; this version does not automatically import CI results. GitHub Actions
+remains authoritative for checks on an exact commit. The register is not
+production certification and does not replace CI, real browser checks or
+release gates. References are administrator-visible: omit secrets and personal
+data.
+
 ## Verified test-release baseline
 
 Linux run [35052140685](https://github.com/helmerzNL/FotoArchief/actions/runs/35052140685)

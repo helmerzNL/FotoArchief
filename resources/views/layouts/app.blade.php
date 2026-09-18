@@ -19,6 +19,7 @@
             <a href="{{ route('admin.publications.index') }}">{{ __('shell.nav.publication') }}</a>
             <a href="{{ route('admin.suggestions.index') }}">{{ __('shell.nav.suggestions') }}</a>
             <a href="{{ route('identity.security.show') }}">{{ __('shell.nav.security') }}</a>
+            @can('assets.view')<a href="{{ route('admin.operations.notifications') }}">{{ __('evidence.notifications') }}</a>@endcan
             @can('users.manage')
                 <a href="{{ route('identity.users.index') }}">{{ __('shell.nav.identity') }}</a>
             @endcan

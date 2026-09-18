@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Publication\Models\Publication;
+use App\Modules\Publication\Services\PublicationReviewService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -128,6 +129,9 @@ it('retains real approval evidence and permits explicit re-review without changi
     $publication = $asset->publication()->sole();
     $slug = $publication->permalink_slug;
     expect($publication->approval_snapshot['metadata']['title'])->toBe('Marktplein');
+    $reordered = array_reverse($publication->approval_snapshot, true);
+    $reordered['metadata'] = array_reverse($reordered['metadata'], true);
+    $publication->update(['approval_snapshot' => $reordered]);
     $this->get(route('admin.publications.show', $asset))->assertSee(__('publishwork.unchanged'));
     $asset->update(['title' => 'New title', 'lock_version' => 2]);
     $this->get(route('admin.publications.show', $asset))->assertSee('Marktplein')->assertSee('New title');
@@ -139,6 +143,14 @@ it('retains real approval evidence and permits explicit re-review without changi
     $this->get(route('admin.publications.index', ['embargo' => 1]))->assertOk()->assertSee('New title')->assertSee(__('publishwork.checks')['embargo']);
     $this->travel(2)->days();
     expect(Publication::query()->publiclyVisible()->count())->toBe(1);
+});
+
+it('compares approval object keys independently of order without coercing types or list positions', function (): void {
+    $reviews = app(PublicationReviewService::class);
+    expect($reviews->snapshotMatches(['a' => 1, 'b' => false], ['b' => false, 'a' => 1]))->toBeTrue()
+        ->and($reviews->snapshotMatches(['a' => 1], ['a' => '1']))->toBeFalse()
+        ->and($reviews->snapshotMatches(['a' => null], ['b' => null]))->toBeFalse()
+        ->and($reviews->snapshotMatches(['a', 'b'], ['b', 'a']))->toBeFalse();
 });
 
 it('rejects approval and submission when only a superseded file is clean', function (): void {

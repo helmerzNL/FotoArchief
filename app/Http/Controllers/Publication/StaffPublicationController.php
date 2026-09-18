@@ -55,7 +55,7 @@ class StaffPublicationController extends Controller
         $checks = $reviews->checklist($asset);
         $current = $reviews->snapshot($asset);
 
-        return view('admin.publications.show', compact('asset', 'events', 'checks', 'current'));
+        return view('admin.publications.show', compact('asset', 'events', 'checks', 'current', 'reviews'));
     }
 
     public function submit(Request $request, Asset $asset): RedirectResponse

@@ -59,6 +59,7 @@
         <p>{{ __('recovery.incident_notice') }}</p>
         @foreach($incidents as $incident)
             <article><h3>{{ $incident->title }} · {{ $incident->status }} · {{ $incident->severity }}</h3>
+                <p><a href="{{ route('admin.operations.recovery.timeline', $incident->id) }}">{{ __('evidence.timeline') }}</a></p>
                 <p>{{ $incident->detail }} · {{ $incident->last_seen_at }} · {{ $incident->observations }}</p>
                 @if($incident->delivery_error)<p role="alert">{{ $incident->delivery_error }}</p>@endif
                 @if($incident->acknowledged_at)<p>{{ __('recovery.acknowledged') }} {{ $incident->acknowledged_at }}</p>

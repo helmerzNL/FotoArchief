@@ -53,6 +53,24 @@ class PublicationReviewService
         return hash('sha256', json_encode([$asset->lock_version, $asset->publication?->only(['id', 'status', 'updated_at']), $this->snapshot($asset)], JSON_THROW_ON_ERROR));
     }
 
+    public function snapshotMatches(mixed $current, mixed $approved): bool
+    {
+        if (! is_array($current) || ! is_array($approved)) {
+            return $current === $approved;
+        }
+        if (count($current) !== count($approved)) {
+            return false;
+        }
+        // PostgreSQL jsonb reorders object keys, but scalar types and list positions still matter.
+        foreach ($current as $key => $value) {
+            if (! array_key_exists($key, $approved) || ! $this->snapshotMatches($value, $approved[$key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function decide(User $user, string $assetId, string $decision, ?string $reason = null, ?string $fingerprint = null): Asset
     {
         return DB::transaction(function () use ($user, $assetId, $decision, $reason, $fingerprint): Asset {

@@ -52,6 +52,83 @@ in a new empty target. Verify account login, original checksums and previews
 before serving traffic. An existing installation must never be used as a test
 restore destination.
 
+## Optionele HTTP-herstelacceptatie / Optional HTTP restore acceptance
+
+### Nederlands
+
+Na een geverifieerde `operations:restore-drill` kan dezelfde applicatieversie
+een echte inlogproef uitvoeren tegen uitsluitend de teruggezette testinstallatie:
+
+```sh
+php artisan operations:accept-restored DRILL_ID --asset=ASSET_ULID --confirm-isolated-target
+```
+
+Gebruik een bestaand account uit de backup dat de geselecteerde foto mag zien.
+De opdracht vraagt het e-mailadres en een verborgen wachtwoord. Voor beveiligde
+automatisering accepteert `--credentials-stdin` een JSON-object met `email` en
+`password` via standaardinvoer. Zet wachtwoorden nooit in commandoregels,
+shellgeschiedenis of bewijsreferenties.
+
+De proef vereist een voltooide herstelde installatiestatus, dezelfde versie,
+een afzonderlijke PostgreSQL-database met suffix `_restore_drill` en de eerder
+geverifieerde lokale opslag buiten app, live opslag en backup. De bestaande
+herstelde appkey blijft behouden; opgeslagen live database-/opslaginstellingen
+worden niet toegepast. Alleen de testdatabase en lokale testopslag worden
+geconfigureerd. Een tijdelijke PHP-server luistert uitsluitend op loopback en
+accepteert alleen login, de installer-lockcontrole en de gekozen fotodetailroute.
+E-mail, externe opslag en achtergrondwerkers worden niet gestart.
+
+De controles zijn echte HTTP-login, anonieme weigering, geautoriseerde
+fotodetailtoegang en gesloten installatie. Het is **geen browser-, Apache-,
+S3- of previewweergavebewijs**; de voorafgaande restore-drill controleert de
+originele bytes. De subprocessen en tijdelijke sessie-/cachebestanden worden
+opgeruimd, terwijl database en herstelde opslag voor inspectie blijven bestaan.
+Succes en mislukking krijgen afzonderlijke append-only bewijsregels in de
+broninstallatie. Het drillrapport vermeldt de laatste acceptatiepoging; een
+latere mislukking behoudt geen oude succesvlaggen. Fouten tonen uitsluitend
+een vaste fase en eventueel HTTP-status, nooit responsinhoud of credentials.
+Een onderbroken proef kan `running` achterlaten; start bewust een nieuwe proef.
+
+Geen nieuwe Compose-mapping of permanente omgevingsvariabele is nodig. Start
+deze opdracht nooit als vervanging voor de volledige releaseacceptatie.
+
+### English
+
+After a verified `operations:restore-drill`, the same application version can
+perform a real login check against only the restored test installation:
+
+```sh
+php artisan operations:accept-restored DRILL_ID --asset=ASSET_ULID --confirm-isolated-target
+```
+
+Use an existing account from the backup authorized to view the selected photo.
+The command prompts for email and a hidden password. Secure automation can
+provide a JSON object containing `email` and `password` through standard input
+with `--credentials-stdin`. Never put passwords in command arguments, shell
+history or evidence references.
+
+The check requires completed restored installation state, the same version,
+a separate PostgreSQL database ending `_restore_drill`, and previously verified
+local storage outside the app, live storage and backup. It preserves the
+restored application key without applying saved live database/storage settings.
+Only the test database and local test storage are configured. A temporary PHP
+server listens only on loopback and accepts only login, installer-lock checking
+and the selected photo-detail route. No mail, external storage or workers start.
+
+Checks cover real HTTP login, anonymous denial, authorized photo-detail access
+and a locked installer. This is **not browser, Apache, S3 or rendered-preview
+evidence**; the preceding restore drill verifies original bytes. Subprocesses
+and temporary session/cache files are cleaned up while the restored database
+and storage remain available for inspection. Success and failure append separate
+evidence entries in the source installation. The drill report describes the
+latest acceptance attempt; a later failure does not retain old success flags.
+Errors expose only a fixed phase and possibly HTTP status, never response bodies
+or credentials. An interrupted check can remain `running`; deliberately start
+another check.
+
+No new Compose mapping or permanent environment variable is required. This
+command does not replace full release acceptance.
+
 ## Backup contents
 
 - PostgreSQL database: authoritative metadata, workflow state, audit events and

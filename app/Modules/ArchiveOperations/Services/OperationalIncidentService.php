@@ -38,16 +38,23 @@ final class OperationalIncidentService
                         'acknowledged_by_user_id' => null, 'notification_id' => (string) Str::ulid(), 'notified_at' => null, 'delivery_error' => null];
                 }
                 if ($existing === null) {
-                    DB::table('operational_incidents')->insert(['id' => (string) Str::ulid(), 'incident_key' => $key, 'created_at' => now(), ...$values]);
+                    $id = (string) Str::ulid();
+                    DB::table('operational_incidents')->insert(['id' => $id, 'incident_key' => $key, 'created_at' => now(), ...$values]);
+                    $this->event($id, 'opened', $incident['severity'], $values['notification_id'] ?? null);
                 } else {
                     DB::table('operational_incidents')->where('id', $existing->id)->update($values);
+                    if (isset($values['notification_id'])) {
+                        $this->event($existing->id, $existing->status === 'open' ? 'severity_changed' : 'reopened', $incident['severity'], $values['notification_id']);
+                    }
                 }
             }
             foreach (DB::table('operational_incidents')->where('status', 'open')->whereNotIn('incident_key', $keys)->get() as $resolved) {
+                $notification = (string) Str::ulid();
                 DB::table('operational_incidents')->where('id', $resolved->id)->update([
-                    'status' => 'resolved', 'resolved_at' => now(), 'notification_id' => (string) Str::ulid(),
+                    'status' => 'resolved', 'resolved_at' => now(), 'notification_id' => $notification,
                     'notified_at' => null, 'delivery_error' => null, 'updated_at' => now(),
                 ]);
+                $this->event($resolved->id, 'resolved', $resolved->severity, $notification);
             }
         });
         // Persist event identifiers before transport, including an ambiguous delivery/commit outcome.
@@ -88,6 +95,9 @@ final class OperationalIncidentService
                         Log::error($error);
                         $reason = 'delivery-failed';
                     }
+                    foreach ($pending as $incident) {
+                        $this->event($incident->id, $sent ? 'delivered' : 'delivery_failed', $incident->severity, $incident->notification_id);
+                    }
                 }
             } elseif ($payload['incidents'] !== []) {
                 $reason = 'deduplicated';
@@ -113,8 +123,17 @@ final class OperationalIncidentService
             }
             if ($incident->acknowledged_at === null) {
                 DB::table('operational_incidents')->where('id', $id)->update(['acknowledged_at' => now(), 'acknowledged_by_user_id' => $user->id, 'updated_at' => now()]);
+                $this->event($id, 'acknowledged', $incident->severity, $incident->notification_id, $user->id);
                 Log::info(__('recovery.incident_acknowledged'), ['incident_id' => $id, 'actor_user_id' => $user->id]);
             }
         });
+    }
+
+    private function event(string $id, string $type, string $severity, ?string $notification, ?string $actor = null): void
+    {
+        DB::table('operational_incident_events')->insert([
+            'id' => (string) Str::ulid(), 'incident_id' => $id, 'event_type' => $type,
+            'severity' => $severity, 'notification_id' => $notification, 'actor_user_id' => $actor, 'created_at' => now(),
+        ]);
     }
 }

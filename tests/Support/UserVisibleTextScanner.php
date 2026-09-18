@@ -214,6 +214,7 @@ final class UserVisibleTextScanner
             'php artisan operations:register-backup /private/backup',
             'php artisan operations:restore-drill BACKUP_ID --database=archive_restore_drill --directory=/private/new-drill --confirm-empty-target',
             'attachment; filename="',
+            'attachment; filename="fotoarchief-support.json"',
             'attempts + 1',
             'items as completed_items_count',
             'items as pending_items_count',

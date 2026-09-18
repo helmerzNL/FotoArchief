@@ -17,13 +17,13 @@
         <h2>{{ __('publishwork.changes') }}</h2>
         @if($publication?->approval_snapshot)
             @foreach($current as $field => $value)
-                @if($value !== ($publication->approval_snapshot[$field] ?? null))
+                @if(! $reviews->snapshotMatches($value, $publication->approval_snapshot[$field] ?? null))
                     <h3>{{ __('publishwork.sections')[$field] }}</h3>
                     <p>{{ __('publishwork.approved') }}</p><pre>{{ json_encode($publication->approval_snapshot[$field] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                     <p>{{ __('daily.current') }}</p><pre>{{ json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) }}</pre>
                 @endif
             @endforeach
-            @if($current === $publication->approval_snapshot)<p>{{ __('publishwork.unchanged') }}</p>@endif
+            @if($reviews->snapshotMatches($current, $publication->approval_snapshot))<p>{{ __('publishwork.unchanged') }}</p>@endif
         @else
             <p>{{ __('publishwork.no_snapshot') }}</p>
         @endif

@@ -343,6 +343,39 @@ test('publication workbench previews private content and confirms bulk rejection
   await expect(page.locator('main')).toContainText('FA-BROWSER-EMBARGO');
 });
 
+test('personal notifications and explicit human evidence support a bounded diagnostics download', async ({ page }) => {
+  await login(page);
+  await page.getByRole('link', { name: 'Mijn meldingen', exact: true }).click();
+  const notification = page.locator('article').filter({ hasText: fixture.operation_id });
+  await expect(notification).toContainText('Ongelezen');
+  await notification.getByRole('button', { name: 'Markeer als gelezen', exact: true }).click();
+  await expect(notification).toContainText('Gelezen');
+  await expect(notification.getByRole('button')).toHaveCount(0);
+  await page.reload();
+  await expect(notification.getByRole('button')).toHaveCount(0);
+  await page.goto(url('/admin/operations/evidence'));
+  await page.getByLabel('Proef', { exact: true }).selectOption('browser');
+  await page.getByLabel('Bewijsreferentie of correctie', { exact: true }).fill('Disposable browser evidence');
+  await page.getByLabel('Ik registreer een menselijke verklaring, geen automatisch testresultaat.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bewijs registreren', exact: true }).click();
+  const entry = page.locator('article').filter({ hasText: 'Disposable browser evidence' });
+  await expect(entry).toContainText('Menselijke verklaring');
+  await expect(entry).toContainText('Browser');
+  await page.locator(`input[name="runs[]"][value="${fixture.operation_id}"]`).check();
+  await page.getByLabel('Ik wil de geselecteerde samenvatting downloaden.', { exact: true }).check();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download support-JSON', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('fotoarchief-support.json');
+  const path = await download.path();
+  if (!path) throw new Error('Support download is missing.');
+  const content = readFileSync(path, 'utf8');
+  const diagnostic = JSON.parse(content);
+  expect(diagnostic.runs.map((run: { id: string }) => run.id)).toEqual([fixture.operation_id]);
+  expect(diagnostic.incidents).toEqual([]);
+  expect(content).not.toContain('not-for-export');
+});
+
 test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {
   await login(page, 'volunteer');
   await page.setViewportSize({ width: 390, height: 844 });
