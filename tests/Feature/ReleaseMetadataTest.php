@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
+
 it('keeps package and release metadata bilingual with Dutch first', function (): void {
     $composer = json_decode(
         (string) file_get_contents(base_path('composer.json')),
@@ -20,9 +22,23 @@ it('keeps package and release metadata bilingual with Dutch first', function ():
         ->toContain('Historische beeldbank')
         ->toContain('Historical image archive')
         ->and($releaseWorkflow)
-        ->toContain('## Nederlands')
-        ->toContain('## English')
         ->toContain('Testrelease / Test release')
-        ->and(strpos($releaseWorkflow, '## Nederlands'))
-        ->toBeLessThan(strpos($releaseWorkflow, '## English'));
+        ->toContain('run: sh scripts/check-release-notes.sh "$GITHUB_REF_NAME"')
+        ->toContain('--notes-file "docs/releases/$GITHUB_REF_NAME.md" dist/*');
+});
+
+it('keeps the version-specific release documents bilingual with Dutch first', function (): void {
+    $files = File::files(base_path('docs/releases'));
+
+    expect($files)->not->toBeEmpty();
+
+    foreach ($files as $file) {
+        $notes = $file->getContents();
+
+        expect($notes)
+            ->toContain('## Nederlands')
+            ->toContain('## English')
+            ->and(strpos($notes, '## Nederlands'))
+            ->toBeLessThan(strpos($notes, '## English'));
+    }
 });

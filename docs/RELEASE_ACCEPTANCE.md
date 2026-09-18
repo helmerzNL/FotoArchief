@@ -3,6 +3,79 @@
 A feature commit is not by itself a production-readiness claim. The same final
 revision must pass the checks below before its packages are offered for testing.
 
+## Version-specific release notes
+
+### Nederlands
+
+Iedere release krijgt inhoudelijke release notes in **GitHub Releases**, eerst
+Nederlands en daarna equivalent Engels. Alleen een tag, PR-beschrijving of
+algemene installatie-informatie is niet voldoende. Bereid voor het taggen
+`docs/releases/vX.Y.Z.md` voor en commit dit op de te taggen revisie:
+
+- Begin met `# FotoArchief vX.Y.Z`.
+- Gebruik `## Nederlands`, met de niet-lege secties
+  `### Wijzigingen in deze versie`, `### Operatoracties` en
+  `### Bewijs en grenzen`.
+- Gebruik daarna `## English`, met de equivalente niet-lege secties
+  `### Changes in this version`, `### Operator actions` en
+  `### Evidence and limitations`.
+- Beschrijf alle veranderingen sinds de vorige gepubliceerde tag, ook als
+  meerdere ongetagde versiebumps zijn samengevoegd. Link naar PR's en vergelijking.
+- Vermeld installatiepakketten, migraties, exacte configuratiewijzigingen,
+  back-upadvies en bekende beperkingen. Onderscheid gemeten testbewijs van nog
+  open acceptatie; neem geen secrets of ongefundeerde productieclaims op.
+
+`scripts/check-release-notes.sh` controleert versie, taalvolgorde en gevulde
+secties. De releaseworkflow voert dit uit **vóór** imagepublicatie en geeft het
+bestand rechtstreeks aan `gh release create --notes-file`. Ontbrekende notes
+blokkeren publicatie; er is geen terugval naar algemene tekst. De Quality-job
+test deze guard met `tests/Smoke/release-notes.sh`. De inhoudelijke juistheid en
+gelijkwaardigheid van beide talen blijven onderdeel van review.
+
+Controleer na publicatie met `gh release view vX.Y.Z --json body,isDraft,url`
+dat de tekst daadwerkelijk in de gepubliceerde release staat. Een tag of
+versiebump alleen is geen afgeronde release. Deze wijziging maakt zelf geen
+nieuwe tag, package of release aan. Historische aanvullingen behouden de
+oorspronkelijke installatie-informatie, tags, assets en prerelease-status;
+historische tests worden niet achteraf als opnieuw uitgevoerd gepresenteerd.
+De bestaande uitgebreide notes van v0.9.50 en v0.9.53 zijn ongewijzigd bewaard
+en hoeven niet aan de nieuwe sectienamen te worden aangepast.
+
+### English
+
+Every release receives substantive notes in **GitHub Releases**, Dutch first
+and equivalent English second. A tag, PR description or generic installation
+text is insufficient. Before tagging, prepare and commit
+`docs/releases/vX.Y.Z.md` on the revision to be tagged:
+
+- Start with `# FotoArchief vX.Y.Z`.
+- Use `## Nederlands`, with nonempty sections
+  `### Wijzigingen in deze versie`, `### Operatoracties` and
+  `### Bewijs en grenzen`.
+- Follow with `## English`, with equivalent nonempty sections
+  `### Changes in this version`, `### Operator actions` and
+  `### Evidence and limitations`.
+- Describe all changes since the previous published tag, including intermediate
+  untagged version bumps. Link PRs and the comparison.
+- Include installation packages, migrations, exact configuration changes,
+  backup advice and known limitations. Distinguish measured evidence from
+  pending acceptance; omit secrets and unsupported production claims.
+
+`scripts/check-release-notes.sh` checks the version, language order and populated
+sections. The release workflow runs it **before** image publication and passes
+the file directly to `gh release create --notes-file`. Missing notes block
+publication; no generic-text fallback exists. The Quality job tests this guard
+with `tests/Smoke/release-notes.sh`. Factual correctness and language equivalence
+remain review responsibilities.
+
+After publication, use `gh release view vX.Y.Z --json body,isDraft,url` to verify
+the text appears on the published release. A tag or version bump alone is not a
+completed release. This change itself creates no new tag, package or release.
+Historical updates preserve original installation information, tags, assets and
+prerelease status; they do not claim historical tests have been rerun. Existing
+substantive notes for v0.9.50 and v0.9.53 are preserved unchanged and need not
+adopt the new section names.
+
 ## Acceptatiebewijsregister / Acceptance evidence register
 
 ### Nederlands

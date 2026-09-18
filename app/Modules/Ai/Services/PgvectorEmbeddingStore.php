@@ -94,17 +94,28 @@ class PgvectorEmbeddingStore
         $this->validateSpace($generation, $queryEmbedding);
 
         $literal = $this->literal(array_values($queryEmbedding));
-        $rows = $this->currentCandidates($generation, $eligibleAssets)
-            ->whereNotNull('ai_embeddings.embedding_vector')
-            ->select([
-                'ai_embeddings.asset_id',
-                'assets.accession_number',
-                'assets.title',
-                'ai_embedding_generations.model_space',
-            ])
-            ->selectRaw('1 - (ai_embeddings.embedding_vector <=> ?::vector) as score', [$literal])
-            ->orderByRaw('ai_embeddings.embedding_vector <=> ?::vector', [$literal])
-            ->orderBy('ai_embeddings.asset_id')
+        // Sort the complete generation, never a limited/approximate shortlist.
+        // The lateral boundary keeps source checks as indexed lookups instead
+        // of letting correlated checksum estimates distort the ranking plan.
+        $ranked = DB::table('ai_embeddings')
+            ->where('ai_embedding_generation_id', $generation->id)
+            ->whereNull('stale_at')
+            ->whereNotNull('embedding_vector')
+            ->select('id', 'asset_id')
+            ->selectRaw('embedding_vector <=> ?::vector as distance', [$literal])
+            ->orderBy('distance')->orderBy('asset_id')->offset(0);
+        $current = $this->currentCandidates($generation)
+            ->whereColumn('ai_embeddings.id', 'ranked.id')
+            ->select('assets.accession_number', 'assets.title', 'ai_embedding_generations.model_space')
+            ->offset(0);
+        $query = DB::query()->fromSub($ranked, 'ranked')->joinLateral($current, 'current');
+        if ($eligibleAssets !== null) {
+            $query->whereIn('ranked.asset_id', $eligibleAssets);
+        }
+        $rows = $query
+            ->select('ranked.asset_id', 'current.accession_number', 'current.title', 'current.model_space')
+            ->selectRaw('1 - ranked.distance as score')
+            ->orderBy('ranked.distance')->orderBy('ranked.asset_id')
             ->limit(max(1, min($limit, 500)))
             ->get();
 
