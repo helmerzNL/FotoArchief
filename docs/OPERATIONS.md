@@ -301,6 +301,63 @@ CDN if present, PHP/web server, Laravel validation, temporary storage and worker
 runtime. Do not describe the requirement as one proxy-specific directive; state
 the numeric limit the deployment must accept.
 
+## Dagelijkse meldingen, incidenttijdlijn en support / Daily operational evidence
+
+### Nederlands
+
+`Mijn meldingen` toont uitsluitend eigen afgeronde, mislukte, geannuleerde en
+gepauzeerde taken, met 25 resultaten per pagina. Gelezen-status wordt per account
+en taakversie bewaard. Een nieuwe poging of gewijzigde status wordt weer
+ongelezen; een verouderde leesbevestiging wordt geweigerd. Dit is een inbox in de
+app, geen e-mail- of pushabonnement, en verleent geen extra rechten.
+
+Beheerders openen vanuit de herstelpagina de incidenttijdlijn: openen,
+heropenen, ernstwijziging, erkenning, herstel en echte afleverpogingen. Gewone
+herhaalde waarnemingen en dubbele erkenningen maken geen kunstmatige events.
+Aflevering en retry behouden het notificatie-ID voor ontdubbeling. De tijdlijn
+begint bij deze migratie; ontbrekende historische events worden niet verzonnen.
+
+Onder `Acceptatiebewijs en support` selecteert de beheerder maximaal 25 taken,
+25 incidenten en 10 controles voor een expliciet bevestigde JSON-download.
+De pagina biedt de recentste 25/25/10 records. De export bevat alleen versie,
+IDs, toegestane vaste statussen en tellers; geen foto-inhoud, namen, bestandspaden,
+vrije foutdetails, providerconfiguratie of geheimen. Onbekende statussen worden
+geweigerd, onbekende controletypes niet opgenomen. Er wordt niets automatisch
+naar een supportdienst gestuurd. Bewaar en deel de download bewust.
+
+Voer de normale forward-migraties uit. Er zijn geen nieuwe omgevingsvariabelen
+of Compose-mappings. Bestaande deployments vereisen geen handmatige configuratie.
+Zie [herstelacceptatie](BACKUP_RESTORE.md#optionele-http-herstelacceptatie--optional-http-restore-acceptance)
+en het [bewijsregister](RELEASE_ACCEPTANCE.md#acceptatiebewijsregister--acceptance-evidence-register).
+
+### English
+
+`My notifications` shows only your own completed, failed, cancelled and paused
+tasks, with 25 results per page. Read receipts are stored per account and task
+version. A new attempt or changed status becomes unread again; stale read
+acknowledgements are refused. This is an in-app inbox, not an email/push
+subscription, and grants no additional permissions.
+
+Administrators open the incident timeline from recovery: opening, reopening,
+severity changes, acknowledgement, recovery and actual delivery attempts.
+Repeated observations and acknowledgements do not invent additional events.
+Delivery and retry retain their notification ID for receiver deduplication.
+The timeline starts with this migration; missing historical events are not
+fabricated.
+
+Under `Acceptance evidence and support`, administrators select at most 25 tasks,
+25 incidents and 10 checks for an explicitly confirmed JSON download. The page
+offers the latest 25/25/10 records. Export contains only version, IDs, allowlisted
+fixed statuses and counters, never photo content, names, paths, free-form errors,
+provider configuration or secrets. Unknown statuses are refused and unknown
+check types omitted. Nothing is automatically sent to a support service.
+Store and share the download deliberately.
+
+Apply the normal forward migrations. No new environment variables or Compose
+mappings are needed; existing deployments need no manual configuration edits.
+See [restore acceptance](BACKUP_RESTORE.md#optionele-http-herstelacceptatie--optional-http-restore-acceptance)
+and the [evidence register](RELEASE_ACCEPTANCE.md#acceptatiebewijsregister--acceptance-evidence-register).
+
 ## Background archive operations
 
 Every expensive archive operation runs on the dedicated database `ingest` queue,

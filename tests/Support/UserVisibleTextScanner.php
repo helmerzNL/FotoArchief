@@ -194,6 +194,10 @@ final class UserVisibleTextScanner
     private function isTechnicalPhpString(string $text): bool
     {
         return in_array($text, [
+            'Unknown upload state:',
+            'Upload state translation must be a string.',
+            'Unknown upload error code.',
+            'Upload error translation must be a string.',
             'Controleer vertaalsleutels en locale-pariteit / check translation keys and locale parity',
             'Verify that the configured Tesseract binary really extracts text',
             'no-store, private',
@@ -210,8 +214,11 @@ final class UserVisibleTextScanner
             'php artisan operations:register-backup /private/backup',
             'php artisan operations:restore-drill BACKUP_ID --database=archive_restore_drill --directory=/private/new-drill --confirm-empty-target',
             'attachment; filename="',
+            'attachment; filename="fotoarchief-support.json"',
             'attempts + 1',
             'items as completed_items_count',
+            'items as pending_items_count',
+            'noindex, nofollow',
             'status, count(*) as total',
             'stream: OK',
             '1 = 0',

@@ -8,6 +8,7 @@ use App\Modules\Catalogue\Controllers\CollectionController;
 use App\Modules\Catalogue\Controllers\ContributorController;
 use App\Modules\Catalogue\Controllers\LocationController;
 use App\Modules\Catalogue\Controllers\PersonController;
+use App\Modules\Catalogue\Controllers\SavedAssetSearchController;
 use App\Modules\Catalogue\Controllers\SourceController;
 use App\Modules\Catalogue\Controllers\TagController;
 use App\Modules\Catalogue\Controllers\WorklistController;
@@ -15,10 +16,14 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/catalogue')->name('catalogue.')->group(function (): void {
     Route::get('/', [CatalogueDashboardController::class, 'index'])->name('index');
+    Route::post('/searches', [SavedAssetSearchController::class, 'store'])->name('searches.store');
+    Route::get('/searches/{search}', [SavedAssetSearchController::class, 'run'])->name('searches.run');
+    Route::delete('/searches/{search}', [SavedAssetSearchController::class, 'destroy'])->name('searches.destroy');
 
     // Bulk Operations
     Route::prefix('bulk')->name('bulk.')->group(function (): void {
         Route::get('/confirm', [BulkAssetController::class, 'create'])->name('confirm');
+        Route::post('/preview', [BulkAssetController::class, 'preview'])->name('preview');
         Route::post('/apply', [BulkAssetController::class, 'store'])->name('apply');
     });
 

@@ -21,6 +21,42 @@ if (new URL(fixture.url).hostname !== '127.0.0.1') throw new Error('Only disposa
 const url = (path: string) => fixture.url + path;
 const assetPath = (name: AssetName) => `/admin/assets/${fixture.assets[name].id}`;
 
+test('upload resumes a committed chunk after a lost response and refresh without duplicate ingest', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/uploads'));
+  const bytes = Buffer.concat([readFileSync(join(root, 'browser-upload.png')), Buffer.alloc(4_194_304, 7)]);
+  const file = { name: 'resumable-proof.png', mimeType: 'image/png', buffer: bytes };
+  await page.getByLabel('Selecteer bestanden', { exact: true }).setInputFiles(file);
+  await page.route('**/items/*/chunk', async route => {
+    const response = await route.fetch();
+    expect(response.status(), await response.text()).toBe(200);
+    await route.abort('failed');
+  });
+  await page.getByRole('button', { name: 'Selectie controleren en batch aanmaken', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Geen bevestiging ontvangen');
+  expect(page.url()).toMatch(/\/admin\/uploads\/[a-z0-9]+$/i);
+  const batchUrl = page.url();
+  const receipt = await page.request.get(batchUrl, { headers: { Accept: 'application/json' } });
+  expect((await receipt.json()).items[0].received).toEqual([0]);
+  await page.unroute('**/items/*/chunk');
+  await page.reload();
+  await expect(page.getByRole('cell', { name: 'resumable-proof.png', exact: true })).toBeVisible();
+  let remainingRequests = 0;
+  page.on('request', request => { if (request.url().endsWith('/chunk')) remainingRequests++; });
+  await page.getByLabel('Selecteer bestanden', { exact: true }).setInputFiles(file);
+  await page.getByRole('button', { name: 'Controleer opnieuw geselecteerde bestanden en hervat', exact: true }).click();
+  await expect.poll(async () => {
+    const response = await page.request.get(batchUrl, { headers: { Accept: 'application/json' } });
+    return (await response.json()).items[0].status;
+  }, { timeout: 60_000 }).toBe('completed');
+  expect(remainingRequests).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Bekijk foto en verwerking', exact: true })).toHaveCount(1);
+  await page.getByLabel('Ik bevestig deze actie', { exact: true }).check();
+  await page.getByRole('button', { name: 'Batch afsluiten', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Batch afgesloten');
+});
+
 test('task detail and filtered audit export work against PostgreSQL', async ({ page }) => {
   await login(page);
   await page.goto(url(`/admin/operations/runs/${fixture.operation_id}`));
@@ -237,6 +273,107 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
     viewport: innerWidth, page: document.documentElement.scrollWidth,
   }));
   expect(dimensions.page).toBeLessThanOrEqual(dimensions.viewport);
+});
+
+test('saved searches, confirmed bulk metadata and per-field conflict recovery retain current edits', async ({ page, context }) => {
+  await login(page);
+  await page.goto(url('/admin/assets?q=Browser%20mobiel%20toetsenbord'));
+  await page.getByLabel('Naam zoekopdracht', { exact: true }).fill('Daily browser search');
+  await page.getByRole('button', { name: 'Huidige filters opslaan', exact: true }).click();
+  await page.getByRole('link', { name: 'Daily browser search', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Browser mobiel toetsenbord', exact: true })).toBeVisible();
+  await page.goto(url(`/admin/catalogue/bulk/confirm?asset_ids[]=${fixture.assets.review.id}`));
+  await page.locator('#tags_to_add').fill('browser-catalogue-proof');
+  await page.getByRole('button', { name: 'Wijzigingen vooraf bekijken', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Wijzigingen vooraf bekijken', exact: true })).toBeVisible();
+  await expect(page.locator('pre').last()).toContainText('browser-catalogue-proof');
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Resultaat per foto', exact: true })).toBeVisible();
+  await expect(page.locator('main')).toContainText('Opgeslagen.');
+  await page.goto(url(assetPath('review')));
+  const concurrent = await context.newPage();
+  await concurrent.goto(url(assetPath('review')));
+  await concurrent.getByRole('textbox', { name: 'Titel', exact: true }).fill('Concurrent browser title');
+  await concurrent.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(concurrent.getByRole('heading', { name: 'Concurrent browser title', exact: true })).toBeVisible();
+  await concurrent.close();
+  await page.getByRole('textbox', { name: 'Beschrijving', exact: true }).fill('Retained browser input');
+  await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Revisieconflict per veld oplossen', exact: true })).toBeVisible();
+  for (const select of await page.locator('select[name^="choices["]').all()) await select.selectOption('current');
+  await page.locator('#choice-description').selectOption('proposed');
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Titel', exact: true })).toHaveValue('Concurrent browser title');
+  await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true })).toHaveValue('Retained browser input');
+});
+
+test('publication workbench previews private content and confirms bulk rejection', async ({ page, browser }) => {
+  await login(page);
+  await page.goto(url(`/admin/assets/${fixture.assets.review.id}`));
+  await page.locator('[name="rights_status"]').selectOption('verified');
+  await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
+  await expect(page.locator('[name="rights_status"]')).toHaveValue('verified');
+  await page.goto(url(`/admin/publications/${fixture.assets.review.id}`));
+  await expect(page.getByRole('heading', { name: 'Publicatiegereedheid', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Private medewerkerspreview', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Concurrent browser title', exact: true })).toBeVisible();
+  await expect(page.locator('#viewer-image')).toBeVisible();
+  expect(await page.locator('#viewer-image').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+  await expect(page.locator('#copy-permalink')).toHaveCount(0);
+  const anonymous = await browser.newContext();
+  try {
+    const response = await anonymous.request.get(url(`/admin/publications/${fixture.assets.review.id}/preview`), { maxRedirects: 0 });
+    expect(response.status()).toBe(302);
+  } finally { await anonymous.close(); }
+  await page.goto(url(`/admin/publications/${fixture.assets.review.id}`));
+  await page.locator('[name="privacy_cleared"]').check();
+  await page.getByRole('button', { name: 'Aanvragen', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Publiceren', exact: true })).toBeVisible();
+  await page.goto(url('/admin/publications'));
+  await page.locator(`input[name="asset_ids[]"][value="${fixture.assets.review.id}"]`).check();
+  await page.getByLabel('Publicatiebeslissing', { exact: true }).selectOption('reject');
+  await page.getByLabel('Reden (verplicht bij afwijzen)', { exact: true }).fill('Browser publication review');
+  await page.getByRole('button', { name: 'Wijzigingen vooraf bekijken', exact: true }).click();
+  await page.getByLabel('Ik bevestig deze wijziging.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bevestigde wijzigingen toepassen', exact: true }).click();
+  await expect(page.locator('main')).toContainText('Beslissing vastgelegd.');
+  await page.goto(url('/admin/publications?embargo=1'));
+  await expect(page.locator('main')).toContainText('FA-BROWSER-EMBARGO');
+});
+
+test('personal notifications and explicit human evidence support a bounded diagnostics download', async ({ page }) => {
+  await login(page);
+  await page.getByRole('link', { name: 'Mijn meldingen', exact: true }).click();
+  const notification = page.locator('article').filter({ hasText: fixture.operation_id });
+  await expect(notification).toContainText('Ongelezen');
+  await notification.getByRole('button', { name: 'Markeer als gelezen', exact: true }).click();
+  await expect(notification).toContainText('Gelezen');
+  await expect(notification.getByRole('button')).toHaveCount(0);
+  await page.reload();
+  await expect(notification.getByRole('button')).toHaveCount(0);
+  await page.goto(url('/admin/operations/evidence'));
+  await page.getByLabel('Proef', { exact: true }).selectOption('browser');
+  await page.getByLabel('Bewijsreferentie of correctie', { exact: true }).fill('Disposable browser evidence');
+  await page.getByLabel('Ik registreer een menselijke verklaring, geen automatisch testresultaat.', { exact: true }).check();
+  await page.getByRole('button', { name: 'Bewijs registreren', exact: true }).click();
+  const entry = page.locator('article').filter({ hasText: 'Disposable browser evidence' });
+  await expect(entry).toContainText('Menselijke verklaring');
+  await expect(entry).toContainText('Browser');
+  await page.locator(`input[name="runs[]"][value="${fixture.operation_id}"]`).check();
+  await page.getByLabel('Ik wil de geselecteerde samenvatting downloaden.', { exact: true }).check();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download support-JSON', exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('fotoarchief-support.json');
+  const path = await download.path();
+  if (!path) throw new Error('Support download is missing.');
+  const content = readFileSync(path, 'utf8');
+  const diagnostic = JSON.parse(content);
+  expect(diagnostic.runs.map((run: { id: string }) => run.id)).toEqual([fixture.operation_id]);
+  expect(diagnostic.incidents).toEqual([]);
+  expect(content).not.toContain('not-for-export');
 });
 
 test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {

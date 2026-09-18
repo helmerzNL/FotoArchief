@@ -71,7 +71,7 @@ it('keeps Dutch default and matching English catalogs for the new workflows', fu
     $locales = array_map('basename', File::directories(base_path('lang')));
     sort($locales);
     expect($locales)->toBe(['en', 'nl']);
-    foreach (['review', 'workbench', 'indexwork', 'recovery'] as $catalogue) {
+    foreach (['review', 'workbench', 'indexwork', 'recovery', 'uploads', 'daily', 'publishwork', 'evidence'] as $catalogue) {
         $dutch = require base_path('lang/nl/'.$catalogue.'.php');
         $english = require base_path('lang/en/'.$catalogue.'.php');
         expect(array_keys(Arr::dot($english)))->toBe(array_keys(Arr::dot($dutch)));

@@ -18,11 +18,13 @@ Route::post('/logout', [SessionController::class, 'destroy'])->middleware('auth'
 Route::view('/admin', 'admin.dashboard')->middleware(['auth', 'can:users.manage']);
 require __DIR__.'/identity.php';
 require __DIR__.'/exchange.php';
+require __DIR__.'/uploads.php';
 Route::middleware(['auth', 'can:assets.view'])->prefix('admin/assets')->name('admin.assets.')->group(function (): void {
     Route::get('/', [AdminAssetController::class, 'index'])->name('index');
     Route::post('/', [AdminAssetController::class, 'store'])->name('store');
     Route::get('/{asset}', [AdminAssetController::class, 'show'])->name('show');
     Route::put('/{asset}', [AdminAssetController::class, 'update'])->name('update');
+    Route::post('/{asset}/resolve-conflict', [AdminAssetController::class, 'resolve'])->name('resolve');
     Route::get('/{asset}/files/{file}/media/{size}', [AdminAssetController::class, 'media'])->whereIn('size', ['preview300', 'preview1200', 'preview2000'])->name('media');
     Route::post('/{asset}/uploads/{upload}/retry', [AdminAssetController::class, 'retry'])->name('retry');
 });

@@ -15,7 +15,8 @@
     </div>
 @endif
 
-<form method="post" action="{{ route('catalogue.bulk.apply') }}">
+<p>{{ __('daily.bulk_hint') }}</p>
+<form method="post" action="{{ route('catalogue.bulk.preview') }}">
     @csrf
 
     <section class="card">
@@ -154,7 +155,7 @@
     </section>
 
     <div class="actions">
-        <button type="submit">{{ __('catalogue.generated.t_2d362fbef1dd2e49') }}</button>
+        <button type="submit">{{ __('daily.preview') }}</button>
         <a href="{{ route('admin.assets.index') }}" class="button secondary">Annuleren</a>
     </div>
 </form>

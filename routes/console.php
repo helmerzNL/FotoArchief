@@ -5,17 +5,41 @@ declare(strict_types=1);
 use App\Modules\Ai\Services\ExternalAiProvider;
 use App\Modules\Ai\Services\LocalAiProvider;
 use App\Modules\ArchiveOperations\Models\BackupRecord;
+use App\Modules\ArchiveOperations\Models\RestoreDrill;
 use App\Modules\ArchiveOperations\Services\BackupRegisterService;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
+use App\Modules\ArchiveOperations\Services\RestoreAcceptanceService;
 use App\Modules\ArchiveOperations\Services\RestoreDrillService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\Ingest\Services\UploadSessionService;
 use App\Modules\Installation\DeploymentMigrationCoordinator;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('uploads:prune', function (UploadSessionService $sessions): void {
+    $this->line((string) $sessions->prune());
+})->purpose('Remove chunks from at most 100 closed or expired upload sessions; retain receipts');
+Schedule::command('uploads:prune')->hourly()->withoutOverlapping();
+
+Artisan::command('operations:accept-restored {drill} {--asset=} {--confirm-isolated-target} {--credentials-stdin}', function (RestoreAcceptanceService $acceptance): int {
+    $credentials = $this->option('credentials-stdin')
+        ? json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR)
+        : ['email' => $this->ask('Existing test account email'), 'password' => $this->secret('Existing test account password')];
+    if (! is_array($credentials)) {
+        $this->error(__('evidence.restore_credentials'));
+
+        return 1;
+    }
+    $drill = RestoreDrill::query()->whereKey($this->argument('drill'))->firstOrFail();
+    $report = $acceptance->run($drill, (string) $this->option('asset'), $credentials, (bool) $this->option('confirm-isolated-target'));
+    $this->line(json_encode($report, JSON_THROW_ON_ERROR));
+
+    return 0;
+})->purpose('Opt-in loopback HTTP acceptance against a verified restored test installation; never supply passwords as arguments');
 
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());

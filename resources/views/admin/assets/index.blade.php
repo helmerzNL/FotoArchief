@@ -2,8 +2,10 @@
 @section('title', 'Foto’s beheren - FotoArchief')
 @section('content')
 <p class="eyebrow">{{ __('catalogue.generated.t_49964d7d8c8ecabc') }}</p><h1>{{ __('catalogue.generated.t_437769185346f168') }}</h1>
+@include('catalogue.saved-searches')
 @can('assets.create')
 <section class="card">
+    <p><a href="{{ route('admin.uploads.index') }}">{{ __('uploads.title') }}</a> — {{ __('uploads.intro') }}</p>
     <h2>{{ __('catalogue.generated.t_edebc0aa311251a7') }}</h2>
     <p>{{ __('catalogue.generated.t_2d586a3aa8412d1b') }} {{ number_format(config('ingest.max_upload_bytes') / 1048576) }} {{ __('catalogue.generated.t_15192451ab66121d') }}</p>
     <p>{{ __('catalogue.generated.t_1103b3a10a5b15af') }} {{ min((int) ini_get('max_file_uploads'), (int) config('ingest.max_batch_upload_files')) }} {{ __('catalogue.generated.t_6f714621064d450b') }}</p>
@@ -30,6 +32,14 @@
 <section class="card">
     <h2>{{ __('catalogue.generated.t_aa0bc3a4a310e7e0') }}</h2>
     <form method="get" action="{{ route('admin.assets.index') }}">
+        <label for="missing">{{ __('daily.quality') }}</label>
+        <select id="missing" name="missing">
+            <option value="">{{ __('daily.all') }}</option>
+            <option value="description" @selected(request('missing') === 'description')>{{ __('daily.description_missing') }}</option>
+            <option value="dating" @selected(request('missing') === 'dating')>{{ __('daily.dating_missing') }}</option>
+            <option value="collection" @selected(request('missing') === 'collection')>{{ __('daily.collection_missing') }}</option>
+            <option value="rights" @selected(request('missing') === 'rights')>{{ __('daily.rights_missing') }}</option>
+        </select>
         <div class="grid">
             <div>
                 <label for="q">{{ __('catalogue.generated.t_e2341cb511de39f0') }}</label>

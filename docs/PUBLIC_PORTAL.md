@@ -182,3 +182,55 @@ from visitor input straight into archive metadata.
   binding used by the human-facing viewer.
 
 
+# Publicatiewerkbank / Publication workbench
+
+## Nederlands
+
+Medewerkers zien per foto de primaire scan, rechten, privacy, embargo, goedkeuring,
+revisie en actuele openbare zichtbaarheid. De laatste controle gebruikt dezelfde
+predicate als alle publieke routes. Een schone historische scan is onvoldoende:
+alleen het primaire bestand telt. Het embargo-overzicht is gepagineerd (25 per
+pagina), op datum gesorteerd en toont ook de overige blokkades.
+
+Elke nieuwe goedkeuring bewaart een echte inhoudelijke snapshot. Herbeoordeling
+vergelijkt daarmee metadata, tags, rechten, primair bestand en publicatievoorwaarden.
+Oude publicaties zonder snapshot krijgen uitdrukkelijk geen verzonnen historie.
+Een gewijzigde publicatie kan opnieuw worden ingediend; de permalink blijft gelijk.
+
+Bulk publiceren/afwijzen vereist een voorvertoning en bevestiging, met maximaal
+25 foto's. De versleutelde, accountgebonden voorvertoning is 1 uur geldig.
+Bij bevestiging worden toegang, revisie, publicatievoorwaarden en primaire scan
+opnieuw gecontroleerd onder locks. Iedere foto heeft een eigen transactie en
+zichtbaar resultaat; afwijzen vereist een reden. Herhalen publiceert niet opnieuw.
+Goedkeuren onder embargo blijft toegestaan; datumverloop verleent geen goedkeuring.
+
+De private medewerkerspreview hergebruikt het publieke fotosjabloon, maar haalt
+beelden uitsluitend via geautoriseerde private routes. Delen, bezoekersreacties,
+zoekmachinegegevens en downloads zijn uitgeschakeld; downloadmogelijkheden worden
+wel aangegeven. De pagina is `no-store, private` en `noindex, nofollow`.
+Geen nieuwe configuratievariabelen of Compose-mappings; voer de normale migraties uit.
+
+## English
+
+Staff see primary scan, rights, privacy, embargo, approval, revision and live public
+visibility for every photo. The final check uses the same predicate as all public
+routes. A clean historical scan is insufficient: only the primary file counts.
+The date-ordered embargo overview is paginated (25 per page) and includes other blockers.
+
+Each new approval retains a genuine content snapshot. Re-review compares metadata,
+tags, rights, primary file and publication conditions with that evidence. Legacy
+publications without snapshots explicitly have no reconstructed history. Changed
+publications may be resubmitted without changing their permalink.
+
+Bulk publish/reject requires preview and confirmation for at most 25 photos.
+The encrypted account-bound preview expires after 1 hour. Access, revision,
+publication conditions and primary scan are rechecked under locks at confirmation.
+Each photo has its own transaction and visible result; rejection requires a reason.
+Replay does not republish. Approval under embargo remains supported; expiry never
+grants approval by itself.
+
+Private staff preview reuses the public photo template but loads images only through
+authorized private routes. Sharing, visitor suggestions, search-engine metadata and
+downloads are disabled; download availability is still indicated. Responses are
+`no-store, private` and `noindex, nofollow`. No new configuration variables or Compose
+mappings; run the normal migrations.

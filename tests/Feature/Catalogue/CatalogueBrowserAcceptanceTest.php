@@ -173,8 +173,8 @@ it('executes complete HTTP browser flow for catalogue CRUD, bulk operations, and
         ->assertSee('FA-BROWSER-01')
         ->assertSee('FA-BROWSER-02');
 
-    $this->actingAs($user)
-        ->post(route('catalogue.bulk.apply'), [
+    $preview = $this->actingAs($user)
+        ->post(route('catalogue.bulk.preview'), [
             'asset_ids' => [$asset1->id, $asset2->id],
             'lock_versions' => [
                 $asset1->id => 1,
@@ -187,7 +187,8 @@ it('executes complete HTTP browser flow for catalogue CRUD, bulk operations, and
             'update_status' => 1,
             'catalogue_status' => 'catalogued',
         ])
-        ->assertRedirect(route('admin.assets.index'));
+        ->assertOk();
+    $this->post(route('catalogue.bulk.apply'), ['receipt' => $preview->viewData('receipt'), 'confirm' => 1])->assertOk();
 
     $asset1->refresh();
     $asset2->refresh();

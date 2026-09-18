@@ -1,16 +1,20 @@
 @extends('layouts.app')
 @section('title', ($asset->title ?: $asset->accession_number).__('publication.application_suffix'))
 @section('content')
+    @if($staffPreview ?? false)
+        <p class="notice">{{ __('publishwork.preview_hint') }}</p>
+    @else
     <link rel="canonical" href="{{ $canonicalUrl }}">
     <link rel="alternate" type="application/ld+json" href="{{ route('iiif.manifest', $publication) }}" title="IIIF-manifest">
     <script type="application/ld+json">{!! json_encode($structuredData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) !!}</script>
+    @endif
     <p class="eyebrow">Foto</p>
     <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
     @if($file)
         <figure class="viewer" data-viewer>
             <img class="preview" id="viewer-image" tabindex="0" role="button"
                  aria-pressed="false" aria-label="{{ __('publication.generated.t_ce26a2644085865e') }}"
-                 src="{{ route('public.photo.media', [$publication, 'preview1200']) }}" alt="">
+                 src="{{ ($staffPreview ?? false) ? route('admin.assets.media', [$asset, $file, 'preview1200']) : route('public.photo.media', [$publication, 'preview1200']) }}" alt="">
             <figcaption>
                 <button type="button" id="viewer-zoom" aria-controls="viewer-image">{{ __('publication.generated.t_d452d1d286679966') }}</button>
             </figcaption>
@@ -25,11 +29,16 @@
     </dl>
 
     @if($publication->download_policy === 'preview_only' && $file)
+        @if($staffPreview ?? false)
+        <p>{{ __('publication.generated.t_f8888469800ffc38') }} &middot; {{ __('publishwork.preview_only') }}</p>
+        @else
         <a class="button" href="{{ route('public.photo.media', [$publication, 'preview2000', 'download' => 1]) }}">{{ __('publication.generated.t_f8888469800ffc38') }}</a>
+        @endif
     @else
         <p><em>{{ __('publication.generated.t_e66bbc698b9b4c8e') }}</em></p>
     @endif
 
+    @unless($staffPreview ?? false)
     <section class="card">
         <h2>{{ __('publication.generated.t_7ab43b6be6480d7f') }}</h2>
         <p><code id="permalink">{{ $canonicalUrl }}</code> <button type="button" id="copy-permalink" data-url="{{ $canonicalUrl }}">{{ __('publication.generated.t_0bb71606274bca18') }}</button></p>
@@ -62,5 +71,6 @@
         </form>
     </section>
 
+    @endunless
     <script src="/viewer.js" defer></script>
 @endsection

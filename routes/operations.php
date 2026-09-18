@@ -12,6 +12,7 @@ use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
 use App\Modules\ArchiveOperations\Controllers\IntegrityCheckController;
 use App\Modules\ArchiveOperations\Controllers\OcrController;
+use App\Modules\ArchiveOperations\Controllers\OperationalEvidenceController;
 use App\Modules\ArchiveOperations\Controllers\OperationAuditController;
 use App\Modules\ArchiveOperations\Controllers\OperationRunController;
 use App\Modules\ArchiveOperations\Controllers\OperationsLandingController;
@@ -23,6 +24,12 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
     Route::get('/', [OperationsLandingController::class, 'index'])->name('index');
+    Route::get('/notifications', [OperationalEvidenceController::class, 'notifications'])->name('notifications');
+    Route::post('/notifications/{run}/read', [OperationalEvidenceController::class, 'read'])->name('notifications.read');
+    Route::get('/evidence', [OperationalEvidenceController::class, 'index'])->name('evidence');
+    Route::post('/evidence', [OperationalEvidenceController::class, 'store'])->name('evidence.store');
+    Route::post('/support', [OperationalEvidenceController::class, 'support'])->name('support');
+    Route::get('/recovery/incidents/{incident}', [OperationalEvidenceController::class, 'timeline'])->name('recovery.timeline');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
     Route::get('/recovery', [RecoveryWorkbenchController::class, 'index'])->name('recovery.index');
     Route::post('/recovery/check', [RecoveryWorkbenchController::class, 'check'])->name('recovery.check');

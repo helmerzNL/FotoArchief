@@ -217,7 +217,7 @@ it('audits metadata rights and tags atomically and prevents stale overwrites', f
     $event = AssetAuditEvent::query()->where('event_type', 'metadata.updated')->sole();
     expect($event->details['before']['metadata']['title'])->toBe('Original title')
         ->and($event->details['after']['metadata']['title'])->toBe('Straatbeeld');
-    $this->from($path)->put($path, photoMetadata(['title' => 'Overwrite']))->assertSessionHasErrors('lock_version');
+    $this->from($path)->put($path, photoMetadata(['title' => 'Overwrite']))->assertOk()->assertViewIs('catalogue.conflict')->assertSee('Overwrite');
     expect($asset->fresh()->title)->toBe('Straatbeeld')->and(AssetAuditEvent::query()->where('event_type', 'metadata.updated')->count())->toBe(1);
     $this->get($path)->assertOk()->assertSee('Revisie 2')->assertSee('Straatbeeld')->assertSee('metadata.updated');
 });

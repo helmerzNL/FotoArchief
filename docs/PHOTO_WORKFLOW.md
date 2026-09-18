@@ -23,11 +23,147 @@ en revisiehistorie. Dit document beschrijft die keten. Zie daarnaast de
 
 Opslaan verhoogt de revisie en bewaart voor/na-waarden van metadata, tags en
 rechten. Een formulier van een oudere revisie kan een nieuwe wijziging niet
-overschrijven: laad de actuele foto en vergelijk voordat je opnieuw opslaat.
+overschrijven: de app toont de actuele waarden naast je bewaarde invoer en vraagt
+per veld welke waarde je wilt behouden. Een nieuwe wijziging tijdens vergelijken
+vereist opnieuw vergelijken; datumvelden worden samen gevalideerd.
 De detailpagina toont de laatste 50 gebeurtenissen; oudere gebeurtenissen
 blijven bewaard in PostgreSQL.
 
-### Toegang
+### Dagelijks catalogiseren / Daily cataloguing
+
+**Nederlands.** Het foto-overzicht heeft een werkvoorraad voor ontbrekende
+beschrijving, datering, collectie en geverifieerde rechten. De normale filters
+blijven combineerbaar. Bewaar maximaal **50 persoonlijke zoekopdrachten**;
+deze bewaren alleen toegestane filters, geen resultaten, paginacursor of
+providergegevens. Elke uitvoering gebruikt de actuele fototoegang.
+
+Selecteer maximaal **25 foto's** voor bulkmetadata. Eerst zie je de voor/na-
+waarden, daarna bevestig je expliciet. De versleutelde voorvertoning is aan
+jouw account gebonden en verloopt na **3600 seconden**. Elke foto krijgt
+afzonderlijk een nieuwe autorisatie- en revisiecontrole en een resultaat.
+Een conflict bij de ene foto houdt andere geldige foto's niet tegen. Herhalen
+overschrijft geen nieuwere revisies. Datering gebruikt de bestaande
+importvalidatie; jaar/decennium worden genormaliseerd. Rechten veranderen niet
+automatisch: de bestaande uitdrukkelijke rechtenkeuze blijft vereist.
+De bulk-POST vereist voortaan een receipt uit de preview en `confirm=1`.
+
+Werklijsten blijven bestaande taken met voortgang; toewijzen/overdragen vereist
+een actieve ontvanger die iedere foto al mag bewerken. Eigendom verandert niet.
+Alleen maker, toegewezene of publicatiebevoegde medewerkers zien de lijst;
+schrijven vereist bovendien bewerkrechten, itemvoortgang ook toegang tot de
+foto. Overdracht en voortgang krijgen een blijvend gebeurtenislog. Een heropend
+item heropent ook een afgeronde lijst. Een lijst bevat maximaal **500 foto's**.
+
+Revisieconflicten tonen jouw volledige invoer naast een consistent opgeslagen
+actuele revisie, inclusief tags en rechten. Kies elk veld opnieuw; de
+bevestiging geldt uitsluitend voor die vergeleken revisie en verloopt na
+**3600 seconden**. Dit is een vergelijking van ingediende en huidige waarden,
+niet een verzonnen reconstructie van een oudere basisrevisie.
+JSON-clients behouden de bestaande 422-validatiefout bij een revisieconflict.
+
+**English.** The photo list includes queues for missing descriptions, dating,
+collections and verified rights, combinable with normal filters. Save up to
+**50 personal searches** containing only allowed filters, not results, cursors
+or provider information. Every execution applies current photo access.
+
+Select up to **25 photos** for bulk metadata. Review before/after values, then
+confirm explicitly. The encrypted preview belongs to your account and expires
+after **3600 seconds**. Each photo is independently reauthorized and
+revision-checked, with a separate result. One conflict does not stop other valid
+photos. Replaying cannot overwrite newer revisions. Dating reuses import
+validation and normalizes years/decades. Rights never change automatically;
+the existing explicit rights option is required. Bulk POST now requires a
+preview receipt and `confirm=1`.
+
+Existing worklists support progress and handovers. Recipients must be active
+and already able to edit every photo; assignment never changes ownership.
+Only creators, assignees or publication-authorized staff can see a list.
+Writing also requires edit permission, and item progress requires photo access.
+Handovers and progress have durable events. Reopening an item reopens a
+completed list. Worklists contain at most **500 photos**.
+
+Revision conflicts retain submitted values alongside a consistent current
+revision, including tags and rights. Choose each field again; confirmation is
+bound to that compared revision and expires after **3600 seconds**. This compares
+submitted and current values, not an invented historical base revision.
+JSON clients retain the existing 422 revision-validation response.
+
+### Hervatbare uploadbatches / Resumable upload batches
+
+**Nederlands.** Open **Foto's → Hervatbare uploadbatches**. De selectie wordt
+voor verzending gecontroleerd op extensie, browser-MIME, omvang en dubbele
+SHA-256-inhoud. Dit vervangt nooit de servervalidatie of ClamAV. Ontvangstbewijzen
+zijn alleen zichtbaar voor de uploader met actuele upload- en leesrechten.
+Een willekeurige, lokaal bewaarde batchsleutel maakt opnieuw aanbieden na een
+verloren antwoord idempotent; dezelfde sleutel met andere inhoud wordt geweigerd.
+Na refresh/login selecteer je dezelfde lokale bestanden opnieuw. Er worden
+alleen ontbrekende delen verstuurd; reeds ontvangen posities mogen uitsluitend
+met dezelfde inhoud herhaald worden.
+
+De nieuwe route heeft vaste bovengrenzen: **250 bestanden**, **104857600 bytes
+per bestand**, **1073741824 bytes per batch**, **4194304 bytes per deel**,
+**vier niet-opgeruimde batches per gebruiker**, **zeven dagen hervatbaarheid**.
+Lagere ingestlimieten blijven gelden. Proxies voor deze route moeten minstens
+**5242880 bytes per multipart-request** toelaten (deel plus overhead); dit
+verlaagt de bestaande limieten voor de gewone upload niet.
+PHP moet voor deze route minstens **4194304 bytes per bestand** toelaten.
+Er geldt een limiet van **600 deelrequests per minuut per gebruiker**.
+De browser wacht
+**60 seconden per request**; bij een onbekende uitkomst hervat je via de
+ontvangstbewijzen, niet via een nieuwe gewone upload.
+
+Samenvoegen, volledige SHA-256-controle en formaatvalidatie draaien op de
+bestaande `ingest`-worker, gevolgd door de normale scan/derivatenketen.
+Een ontvangstreferentie is geen bewijs van geslaagde verwerking of scan.
+De batch toont ontvangen, wachtend, verwerkt, afgewezen en herstelbare fouten
+per bestand. Alleen technische fouten mogen opnieuw; geweigerde inhoud niet.
+Afsluiten kan pas nadat ieder bestand ontvangen of definitief afgewezen is.
+De afzonderlijke fotoketen kan daarna nog lopen.
+
+Delen staan privaat op de **local**-disk, ook bij S3-originelen: web en worker
+moeten dezelfde persistente lokale opslag delen. Reken maximaal **4 GiB
+tijdelijke delen per gebruiker**, plus **100 MiB assemblageruimte per worker**
+en de bestaande quarantine/original/derivatenruimte. Deze quota gelden niet
+als globaal archiefquotum. `php artisan uploads:prune` verwijdert per uitvoering
+maximaal **100** afgesloten/verlopen deelmappen; ontvangstbewijzen blijven.
+De scheduler voert dit ieder uur uit. Zonder scheduler moet de operator dit
+inplannen; ongepurgeerde verlopen batches blijven meetellen zodat vergeten
+opruiming geen onbegrensde tijdelijke opslag toestaat. Er zijn geen nieuwe
+environmentvariabelen of Compose-mappings.
+
+**English.** Open **Photos → Resumable upload batches**. Before transmission,
+the browser checks extension, browser MIME, size and duplicate SHA-256 content;
+server validation and ClamAV remain authoritative. Receipts are private to
+their uploader with current upload/read permissions. A locally retained random
+batch key makes retry after a lost response idempotent; different content with
+the same key is rejected. Reselect the same local files after refresh/login.
+Only missing chunks are sent; repeated positions must have identical content.
+
+Limits are **250 files**, **104857600 bytes per file**, **1073741824 bytes per
+batch**, **4194304 bytes per chunk**, **four unpurged batches per user** and
+**seven days to resume**. Lower ingest limits still apply. Front proxies must
+allow at least **5242880 bytes per multipart request**; existing ordinary-upload
+limits are unchanged. PHP must accept at least **4194304 bytes per file**.
+Chunk requests are limited to **600 per minute per user**.
+Each browser request has a **60-second** timeout; recover
+unknown outcomes using receipts rather than a new ordinary upload.
+
+The existing `ingest` worker assembles and verifies the full hash/format before
+normal scanning and derivatives. Receipt is not proof of processing or scan
+success. Per-file states distinguish waiting, received, processed, rejected and
+recoverable failures. Only technical failures may retry. Closing requires all
+files received or permanently rejected; photo processing may still continue.
+
+Chunks use private **local** storage even with S3 originals. Web and worker must
+share that persistent disk. Budget **4 GiB of chunks per user**, **100 MiB of
+assembly space per worker**, plus existing quarantine/original/derivative space.
+This is not a global archive quota. The hourly scheduler runs
+`php artisan uploads:prune`, removing at most **100** closed/expired chunk
+directories per invocation while retaining receipts. Without a scheduler,
+schedule that command yourself. Expired unpurged batches still consume quota.
+No new environment variables or Compose mappings are required.
+
+### Autorisatie
 
 Beheerders, archivarissen en redacteuren kunnen alle foto's zien en bewerken.
 Vrijwilligers zien/bewerken alleen hun eigen foto's. Een viewer kan uitsluitend

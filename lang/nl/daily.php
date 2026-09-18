@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'receipt_invalid' => 'Deze voorvertoning is verlopen of ongeldig. Maak een nieuwe voorvertoning.',
+    'search_limit' => 'Er zijn maximaal 50 eigen zoekopdrachten toegestaan. Verwijder eerst een zoekopdracht.',
+    'worklist_limit' => 'Een werklijst bevat maximaal 500 foto\'s.',
+    'saved' => 'Opgeslagen.',
+    'quality' => 'Werkvoorraad ontbrekende metadata',
+    'description_missing' => 'Beschrijving ontbreekt',
+    'dating_missing' => 'Datering ontbreekt',
+    'collection_missing' => 'Collectie ontbreekt',
+    'rights_missing' => 'Geverifieerde rechten ontbreken',
+    'searches' => 'Mijn opgeslagen zoekopdrachten',
+    'search_name' => 'Naam zoekopdracht',
+    'save_search' => 'Huidige filters opslaan',
+    'confirm' => 'Ik bevestig deze wijziging.',
+    'delete' => 'Verwijderen',
+    'preview' => 'Wijzigingen vooraf bekijken',
+    'apply' => 'Bevestigde wijzigingen toepassen',
+    'results' => 'Resultaat per foto',
+    'back' => 'Terug naar foto\'s',
+    'all' => 'Alle',
+    'conflict' => 'Niet gewijzigd: de foto of collectie ontbreekt, je toegang is gewijzigd, of er bestaat een nieuwere revisie. Open de foto opnieuw.',
+    'bulk_hint' => 'Maximaal 25 foto\'s. De voorvertoning geldt een uur. Bij bevestigen worden toegang en revisie per foto opnieuw gecontroleerd; andere geldige foto\'s kunnen wel slagen. Rechten worden uitsluitend gewijzigd als je dat uitdrukkelijk aanvinkt.',
+    'compare' => 'Revisieconflict per veld oplossen',
+    'conflict_hint' => 'Je invoer is niet opgeslagen en staat hieronder naast de huidige revisie :revision. Kies voor elk veld welke waarde je wilt behouden. Een volgende wijziging vereist opnieuw vergelijken. Datumvelden worden samen opnieuw gevalideerd.',
+    'field' => 'Veld',
+    'current' => 'Huidige waarde',
+    'proposed' => 'Jouw invoer',
+    'choose' => 'Kies een waarde',
+    'assignment_denied' => 'De ontvanger moet actief zijn en iedere foto al mogen bewerken. Toewijzen geeft geen extra toegang.',
+    'assignment_hint' => 'Toewijzing verandert geen eigendom of toegangsrechten. Voortgang en overdrachten worden vastgelegd.',
+    'history' => 'Voortgang en overdrachten (laatste 50)',
+    'events' => ['created' => 'Aangemaakt', 'transferred' => 'Werklijst of toewijzing gewijzigd', 'progress' => 'Voortgang gewijzigd', 'added' => 'Foto toegevoegd'],
+    'fields' => ['title' => 'Titel', 'description' => 'Beschrijving', 'date_precision' => 'Datumprecisie', 'date_earliest' => 'Vroegste datum', 'date_latest' => 'Laatste datum', 'date_display' => 'Datumweergave', 'tags' => 'Tags', 'rights_holder' => 'Rechthebbende', 'rights_status' => 'Rechtenstatus', 'rights_note' => 'Rechtennotitie'],
+];

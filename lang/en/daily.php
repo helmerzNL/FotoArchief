@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'receipt_invalid' => 'This preview is expired or invalid. Create a new preview.',
+    'search_limit' => 'You can save up to 50 personal searches. Delete a search first.',
+    'worklist_limit' => 'A worklist contains at most 500 photos.',
+    'saved' => 'Saved.',
+    'quality' => 'Missing metadata work queue',
+    'description_missing' => 'Missing description',
+    'dating_missing' => 'Missing dating',
+    'collection_missing' => 'Missing collection',
+    'rights_missing' => 'Missing verified rights',
+    'searches' => 'My saved searches',
+    'search_name' => 'Search name',
+    'save_search' => 'Save current filters',
+    'confirm' => 'I confirm this change.',
+    'delete' => 'Delete',
+    'preview' => 'Preview changes',
+    'apply' => 'Apply confirmed changes',
+    'results' => 'Results per photo',
+    'back' => 'Back to photos',
+    'all' => 'All',
+    'conflict' => 'Not changed: the photo or collection is missing, access changed, or a newer revision exists. Open the photo again.',
+    'bulk_hint' => 'Up to 25 photos. The preview is valid for one hour. Confirmation rechecks access and revision for each photo; other valid photos can still succeed. Rights change only when explicitly selected.',
+    'compare' => 'Resolve revision conflict by field',
+    'conflict_hint' => 'Your input was not saved and appears beside current revision :revision. Choose which value to keep for each field. Another edit requires another comparison. Date fields are validated together again.',
+    'field' => 'Field',
+    'current' => 'Current value',
+    'proposed' => 'Your input',
+    'choose' => 'Choose a value',
+    'assignment_denied' => 'The recipient must be active and already allowed to edit every photo. Assignment does not grant access.',
+    'assignment_hint' => 'Assignment changes neither ownership nor access. Progress and handovers are recorded.',
+    'history' => 'Progress and handovers (latest 50)',
+    'events' => ['created' => 'Created', 'transferred' => 'Worklist or assignment changed', 'progress' => 'Progress changed', 'added' => 'Photo added'],
+    'fields' => ['title' => 'Title', 'description' => 'Description', 'date_precision' => 'Date precision', 'date_earliest' => 'Earliest date', 'date_latest' => 'Latest date', 'date_display' => 'Display date', 'tags' => 'Tags', 'rights_holder' => 'Rights holder', 'rights_status' => 'Rights status', 'rights_note' => 'Rights note'],
+];

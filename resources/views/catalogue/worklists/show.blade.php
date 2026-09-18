@@ -3,6 +3,7 @@
 @section('content')
 <p class="eyebrow"><a href="{{ route('catalogue.worklists.index') }}">{{ __('catalogue.generated.t_447d96f374d0c971') }}</a></p>
 <h1>Werklijst: {{ $worklist->title }}</h1>
+<p>{{ __('daily.assignment_hint') }}</p>
 
 @if(session('status'))
     <div class="card" style="border-color: #16a34a; background-color: #f0fdf4;">
@@ -70,6 +71,15 @@
         @empty
             <li>{{ __('catalogue.generated.t_98b0b39c09ccdbe5') }}</li>
         @endforelse
+    </ul>
+</section>
+<section class="card">
+    <h2>{{ __('daily.history') }}</h2>
+    @php($eventLabels = __('daily.events'))
+    <ul>
+        @foreach($events as $event)
+            <li>{{ $event->created_at }}: {{ $eventLabels[$event->event_type] }} <pre>{{ $event->details }}</pre></li>
+        @endforeach
     </ul>
 </section>
 @endsection

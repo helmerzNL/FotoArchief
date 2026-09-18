@@ -50,7 +50,7 @@ it('allows previewing bulk selection and denies unauthorized assets', function (
         ->assertForbidden();
 });
 
-it('applies bulk updates atomically, increments lock versions, and creates audit events', function (): void {
+it('previews without writes and applies confirmed bulk updates per photo with revision audits', function (): void {
     $admin = createBulkTestUser('admin', ['assets.view', 'assets.update', 'assets.publish']);
 
     $asset1 = Asset::query()->create([
@@ -68,7 +68,7 @@ it('applies bulk updates atomically, increments lock versions, and creates audit
 
     $collection = Collection::query()->create(['title' => 'Bulk Collectie', 'slug' => 'bulk-collectie']);
 
-    $response = $this->actingAs($admin)->post(route('catalogue.bulk.apply'), [
+    $preview = $this->actingAs($admin)->post(route('catalogue.bulk.preview'), [
         'asset_ids' => [$asset1->id, $asset2->id],
         'lock_versions' => [
             $asset1->id => 1,
@@ -89,7 +89,11 @@ it('applies bulk updates atomically, increments lock versions, and creates audit
         'catalogue_status' => 'catalogued',
     ]);
 
-    $response->assertRedirect(route('admin.assets.index'));
+    $preview->assertOk();
+    expect($asset1->fresh()->lock_version)->toBe(1);
+    expect($asset1->tags()->count())->toBe(0);
+    $response = $this->post(route('catalogue.bulk.apply'), ['receipt' => $preview->viewData('receipt'), 'confirm' => 1]);
+    $response->assertOk();
 
     $asset1->refresh();
     $asset2->refresh();
@@ -129,7 +133,7 @@ it('prevents bulk updates on optimistic lock version mismatch', function (): voi
         'created_by_user_id' => $admin->id,
     ]);
 
-    $response = $this->actingAs($admin)->post(route('catalogue.bulk.apply'), [
+    $response = $this->actingAs($admin)->post(route('catalogue.bulk.preview'), [
         'asset_ids' => [$asset->id],
         'lock_versions' => [
             $asset->id => 1, // Stale version 1 submitted
