@@ -69,6 +69,15 @@ reject v1.2.3 "empty English evidence"
 awk '{ printf "%s\r\n", $0 }' valid.md > "$notes"
 sh "$guard" v1.2.3
 
+cp valid.md "$notes"
+printf '\nAdditional evidence paragraph.\n\n' >> "$notes"
+sh "$guard" v1.2.3
+printf '### Unexpected section\nNot part of the contract.\n' >> "$notes"
+reject v1.2.3 "unexpected section after English evidence"
+sed '/^Targeted tests passed/d' valid.md > "$notes"
+printf '\n\n' >> "$notes"
+reject v1.2.3 "empty English evidence with trailing blank lines"
+
 workflow="$repo/.github/workflows/release.yml"
 grep -Fq 'run: sh scripts/check-release-notes.sh "$GITHUB_REF_NAME"' "$workflow"
 grep -Fq -- '--notes-file "docs/releases/$GITHUB_REF_NAME.md" dist/*' "$workflow"
