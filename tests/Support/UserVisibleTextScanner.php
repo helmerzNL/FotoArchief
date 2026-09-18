@@ -194,6 +194,10 @@ final class UserVisibleTextScanner
     private function isTechnicalPhpString(string $text): bool
     {
         return in_array($text, [
+            'Unknown upload state:',
+            'Upload state translation must be a string.',
+            'Unknown upload error code.',
+            'Upload error translation must be a string.',
             'Controleer vertaalsleutels en locale-pariteit / check translation keys and locale parity',
             'Verify that the configured Tesseract binary really extracts text',
             'no-store, private',

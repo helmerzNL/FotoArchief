@@ -65,7 +65,7 @@ function startReleaseServer(string $installed, array $environment, ?string $rout
 {
     $address = parse_url($environment['SMOKE_URL'], PHP_URL_HOST).':'.parse_url($environment['SMOKE_URL'], PHP_URL_PORT);
     $arguments = ['-t', 'public', ...($router === null ? [] : [$router])];
-    $process = new Process([PHP_BINARY, '-S', $address, ...$arguments], $installed, $environment, timeout: null);
+    $process = new Process([PHP_BINARY, '-d', 'upload_max_filesize=100M', '-d', 'post_max_size=110M', '-S', $address, ...$arguments], $installed, $environment, timeout: null);
     $process->start();
     for ($attempt = 0; $attempt < 100; $attempt++) {
         $curl = curl_init($environment['SMOKE_URL'].'/up');

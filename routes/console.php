@@ -11,11 +11,17 @@ use App\Modules\ArchiveOperations\Services\RestoreDrillService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\Ingest\Services\UploadSessionService;
 use App\Modules\Installation\DeploymentMigrationCoordinator;
 use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+
+Artisan::command('uploads:prune', function (UploadSessionService $sessions): void {
+    $this->line((string) $sessions->prune());
+})->purpose('Remove chunks from at most 100 closed or expired upload sessions; retain receipts');
+Schedule::command('uploads:prune')->hourly()->withoutOverlapping();
 
 Artisan::command('inspire', function (): void {
     $this->comment(Inspiring::quote());

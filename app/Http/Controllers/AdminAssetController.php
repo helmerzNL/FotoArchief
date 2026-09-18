@@ -11,17 +11,16 @@ use App\Modules\Catalogue\Models\Collection;
 use App\Modules\Catalogue\Models\Location;
 use App\Modules\Catalogue\Models\Person;
 use App\Modules\Catalogue\Models\Tag;
-use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Services\UploadRetryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -257,18 +256,11 @@ class AdminAssetController extends Controller
         }, 200, ['Content-Type' => 'image/jpeg', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-store, private']);
     }
 
-    public function retry(Request $request, Asset $asset, QuarantineUpload $upload): RedirectResponse
+    public function retry(Request $request, Asset $asset, QuarantineUpload $upload, UploadRetryService $retry): RedirectResponse
     {
         $this->authorize('update', $asset);
         abort_unless($upload->asset_id === $asset->id, 404);
-        DB::transaction(function () use ($upload, $asset, $request): void {
-            $locked = QuarantineUpload::query()->whereKey($upload->id)->lockForUpdate()->firstOrFail();
-            $stale = $locked->status === 'running' && $locked->started_at?->lt(now()->subMinutes(4));
-            abort_unless($locked->status === 'failed' || $stale, 409, __('catalogue.generated.t_29c9a7a2008777d8'));
-            $locked->update(['status' => 'queued', 'failure_reason' => null, 'claim_token' => null]);
-            Queue::connection('ingest')->push(new ProcessUpload($locked->id));
-            AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $this->user($request)->id, 'event_type' => 'upload.retried', 'details' => ['upload_id' => $upload->id]]);
-        });
+        $retry->retry($this->user($request), $upload);
 
         return redirect()->route('admin.assets.show', $asset)->with('status', __('catalogue.generated.t_85746463158a4b56'));
     }

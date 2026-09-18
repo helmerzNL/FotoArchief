@@ -21,6 +21,42 @@ if (new URL(fixture.url).hostname !== '127.0.0.1') throw new Error('Only disposa
 const url = (path: string) => fixture.url + path;
 const assetPath = (name: AssetName) => `/admin/assets/${fixture.assets[name].id}`;
 
+test('upload resumes a committed chunk after a lost response and refresh without duplicate ingest', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/uploads'));
+  const bytes = Buffer.concat([readFileSync(join(root, 'browser-upload.png')), Buffer.alloc(4_194_304, 7)]);
+  const file = { name: 'resumable-proof.png', mimeType: 'image/png', buffer: bytes };
+  await page.getByLabel('Selecteer bestanden', { exact: true }).setInputFiles(file);
+  await page.route('**/items/*/chunk', async route => {
+    const response = await route.fetch();
+    expect(response.status(), await response.text()).toBe(200);
+    await route.abort('failed');
+  });
+  await page.getByRole('button', { name: 'Selectie controleren en batch aanmaken', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Geen bevestiging ontvangen');
+  expect(page.url()).toMatch(/\/admin\/uploads\/[a-z0-9]+$/i);
+  const batchUrl = page.url();
+  const receipt = await page.request.get(batchUrl, { headers: { Accept: 'application/json' } });
+  expect((await receipt.json()).items[0].received).toEqual([0]);
+  await page.unroute('**/items/*/chunk');
+  await page.reload();
+  await expect(page.getByRole('cell', { name: 'resumable-proof.png', exact: true })).toBeVisible();
+  let remainingRequests = 0;
+  page.on('request', request => { if (request.url().endsWith('/chunk')) remainingRequests++; });
+  await page.getByLabel('Selecteer bestanden', { exact: true }).setInputFiles(file);
+  await page.getByRole('button', { name: 'Controleer opnieuw geselecteerde bestanden en hervat', exact: true }).click();
+  await expect.poll(async () => {
+    const response = await page.request.get(batchUrl, { headers: { Accept: 'application/json' } });
+    return (await response.json()).items[0].status;
+  }, { timeout: 60_000 }).toBe('completed');
+  expect(remainingRequests).toBe(1);
+  await page.reload();
+  await expect(page.getByRole('link', { name: 'Bekijk foto en verwerking', exact: true })).toHaveCount(1);
+  await page.getByLabel('Ik bevestig deze actie', { exact: true }).check();
+  await page.getByRole('button', { name: 'Batch afsluiten', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Batch afgesloten');
+});
+
 test('task detail and filtered audit export work against PostgreSQL', async ({ page }) => {
   await login(page);
   await page.goto(url(`/admin/operations/runs/${fixture.operation_id}`));
