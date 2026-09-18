@@ -54,6 +54,9 @@ class ProcessAiIndexJob extends OperationJob
         $vectors->requireAvailable();
 
         foreach ($slice as $assetId) {
+            if ($this->shouldPause($run)) {
+                break;
+            }
             if (! $configuration->cancelQueuedRunIfUnavailable($run, 'embeddings', $provider)) {
                 return ['processed' => $processed, 'processed_total' => $run->processed_items, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
             }

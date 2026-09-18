@@ -124,6 +124,33 @@ it('processes AI analysis in the worker and stores only pending suggestions', fu
             && max($dimensions[0], $dimensions[1]) === 512;
     });
 
+    it('pauses between actual AI items and resumes without calling the first item again', function (): void {
+        $second = $this->asset->replicate();
+        $second->accession_number = 'AI-SECOND-'.(string) str()->ulid();
+        $second->save();
+        $file = $this->file->replicate();
+        $file->asset_id = $second->id;
+        $file->save();
+        $run = OperationRun::query()->create([
+            'operation_type' => ProcessAiAnalysisJob::TYPE, 'status' => 'queued', 'requested_by_user_id' => $this->user->id,
+            'payload' => ['asset_ids' => [$this->asset->id, $second->id], 'provider' => 'local', 'cursor' => 0], 'total_items' => 2,
+        ]);
+        Http::fake(function () use ($run) {
+            $this->actingAs($this->user)->post("/admin/operations/runs/{$run->id}/control", ['action' => 'pause'])->assertRedirect();
+            expect($run->fresh()->status)->toBe('running')->and($run->fresh()->claim_token)->not->toBeNull();
+
+            return Http::response(['description' => 'Pause fixture', 'tags' => [], 'model_id' => 'local-caption-proof', 'confidence' => 0.75]);
+        });
+        (new ProcessAiAnalysisJob($run->id))->handle();
+        expect($run->fresh()->status)->toBe('paused')->and($run->fresh()->payload['cursor'])->toBe(1)->and($run->fresh()->processed_items)->toBe(1);
+        Http::assertSentCount(1);
+        $this->post("/admin/operations/runs/{$run->id}/control", ['action' => 'resume'])->assertRedirect();
+        Http::fake(['*' => Http::response(['description' => 'Second fixture', 'tags' => [], 'model_id' => 'local-caption-proof', 'confidence' => 0.75])]);
+        (new ProcessAiAnalysisJob($run->id))->handle();
+        expect($run->fresh()->status)->toBe('completed')->and($run->fresh()->processed_items)->toBe(2);
+        expect(AiSuggestion::query()->where('asset_id', $this->asset->id)->count())->toBe(1);
+    });
+
     $run->refresh();
     expect($run->status)->toBe(OperationRun::STATUS_COMPLETED)
         ->and($run->processed_items)->toBe(1)

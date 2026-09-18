@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 type AssetName = 'review' | 'stale' | 'revoke' | 'embargo' | 'trash' | 'volunteer';
 interface Fixture {
   url: string;
+  operation_id: string;
   assets: Record<AssetName, { id: string; file_id: string; title: string }>;
 }
 const manifest = process.env.FOTOARCHIEF_BROWSER_MANIFEST;
@@ -20,6 +21,24 @@ if (new URL(fixture.url).hostname !== '127.0.0.1') throw new Error('Only disposa
 const url = (path: string) => fixture.url + path;
 const assetPath = (name: AssetName) => `/admin/assets/${fixture.assets[name].id}`;
 
+test('task detail and filtered audit export work against PostgreSQL', async ({ page }) => {
+  await login(page);
+  await page.goto(url(`/admin/operations/runs/${fixture.operation_id}`));
+  await expect(page.getByRole('heading', { name: `Taakdetails ${fixture.operation_id}` })).toBeVisible();
+  await expect(page.getByLabel('Dit mislukte item selecteren')).toBeVisible();
+  await page.getByRole('link', { name: 'Doorzoekbaar auditlog', exact: true }).click();
+  await page.getByLabel('Taak-ID', { exact: true }).fill(fixture.operation_id);
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  await expect(page.getByText('ai.analysis.item_failed', { exact: false })).toBeVisible();
+  const response = await page.request.get(url(`/admin/operations/audit?run=${fixture.operation_id}&export=jsonl`));
+  expect(response.status()).toBe(200);
+  const text = await response.text();
+  expect(text).not.toContain('not-for-export');
+  const rows = text.trim().split('\n').map(line => JSON.parse(line));
+  expect(rows).toHaveLength(1);
+  expect(rows[0].operation_run_id).toBe(fixture.operation_id);
+});
+
 async function login(page: Page, role = 'administrator') {
   await page.goto(url('/login'));
   await page.getByRole('textbox', { name: 'E-mailadres', exact: true }).first().fill(
@@ -30,12 +49,39 @@ async function login(page: Page, role = 'administrator') {
   await expect(page).toHaveURL(url(role === 'administrator' ? '/admin' : '/admin/assets'));
 }
 
+test('index coverage and explicit text search work without an AI provider', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/operations/ai/index-workbench'));
+  await expect(page.getByRole('heading', { name: 'Indexdekking', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Generaties en omschakeling', exact: true })).toBeVisible();
+  await page.goto(url('/admin/operations/ai/search'));
+  await expect(page.getByText('Vul een zoekopdracht in om te zoeken.', { exact: true })).toBeVisible();
+  await page.getByLabel('Zoekmethode', { exact: true }).selectOption('text');
+  await page.locator('input[name="q"]').fill(fixture.assets.review.title);
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/admin\/assets\?q=/);
+  await expect(page.getByRole('link', { name: fixture.assets.review.title, exact: true })).toBeVisible();
+});
+
 async function privatePreview(page: Page) {
   const image = page.getByRole('img').first();
   await expect(image).toBeVisible();
   await expect.poll(() => image.evaluate((element: HTMLImageElement) =>
     element.complete && element.naturalWidth > 0)).toBe(true);
 }
+
+test('guided installation checks persist a report without starting a restore', async ({ page }) => {
+  await login(page);
+  await page.goto(url('/admin/operations'));
+  await page.getByRole('link', { name: 'Installatie en herstel', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Begeleide installatiecontrole', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Backup- en herstelregister', exact: true })).toBeVisible();
+  await page.getByLabel('Ik bevestig het uitvoeren van de diagnoseproeven.', { exact: true }).first().check();
+  await page.getByRole('button', { name: 'Installatie controleren', exact: true }).click();
+  await expect(page.getByText('Controleverslag opgeslagen.', { exact: true })).toBeVisible();
+  await page.getByText('installation ·', { exact: false }).click();
+  await expect(page.getByText('"external_proxy_verified": false', { exact: false })).toBeVisible();
+});
 
 async function visibility(context: BrowserContext, name: 'revoke' | 'trash' | 'embargo', status: number) {
   for (const path of [
@@ -66,9 +112,14 @@ test('11 - review preserves metadata revisions, rejects changed source and recor
   await page.getByRole('textbox', { name: 'Titel', exact: true }).fill('Browser review aangepast');
   await page.getByRole('button', { name: 'Opslaan', exact: true }).click();
   await expect(page.getByText('Bronrevisie 1 · huidige revisie 2', { exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Te accepteren beschrijving (vervangt de huidige beschrijving)', exact: true })
+    .fill('Menselijk gecorrigeerd marktplein.');
   await page.getByRole('button', { name: 'Voorstel accepteren', exact: true }).first().click();
   await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true }))
-    .toHaveValue('Gecontroleerd marktplein uit de browserproef.');
+    .toHaveValue('Menselijk gecorrigeerd marktplein.');
+  await expect(page.getByText('Gecontroleerd marktplein uit de browserproef.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mijn acceptatie terugdraaien', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Beschrijving', exact: true })).toHaveValue('');
   await page.getByRole('button', { name: 'Voorstel accepteren', exact: true }).first().click();
   await expect(page.getByRole('textbox', { name: 'Tags (komma-gescheiden, maximaal 20)', exact: true }))
     .toHaveValue('browser-marktplein');
@@ -186,4 +237,24 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
     viewport: innerWidth, page: document.documentElement.scrollWidth,
   }));
   expect(dimensions.page).toBeLessThanOrEqual(dimensions.viewport);
+});
+
+test('review queue confirms selected proposals and displays individual results on mobile', async ({ page }) => {
+  await login(page, 'volunteer');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url('/admin/operations/ai/suggestions'));
+  await page.getByRole('combobox', { name: 'Beoordelingsstatus', exact: true }).selectOption('pending');
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  const selections = page.getByRole('checkbox', { name: /^Voorstel .* selecteren$/ });
+  const count = await selections.count();
+  expect(count).toBe(3);
+  await selections.first().check();
+  await page.getByRole('combobox', { name: 'Beslissing', exact: true }).selectOption('reject');
+  await page.getByRole('checkbox', { name: 'Ik bevestig de geselecteerde voorstellen en beslissing.', exact: true }).check();
+  await page.getByRole('button', { name: 'Toepassen op geselecteerde voorstellen', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Resultaten per voorstel' })).toBeVisible();
+  await expect(selections).toHaveCount(count - 1);
+  await page.getByRole('combobox', { name: 'Beoordelingsstatus', exact: true }).selectOption('rejected');
+  await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
+  await expect(page.locator('article')).toHaveCount(1);
 });

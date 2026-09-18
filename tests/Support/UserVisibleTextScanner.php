@@ -113,7 +113,7 @@ final class UserVisibleTextScanner
             $parts = preg_split('/<[^>]+>/', $withoutBlade) ?: [];
             foreach ($parts as $part) {
                 $text = $this->normalize($part);
-                if ($this->isCandidate($text) && ! $this->isBladeSyntaxArtifact($text)) {
+                if ($this->isCandidate($text) && ! $this->isBladeSyntaxArtifact($text) && ! $this->isTechnicalPhpString($text)) {
                     $entries[] = $this->entry($relative, $lineNumber, 'blade_text', $text);
                 }
             }
@@ -197,6 +197,18 @@ final class UserVisibleTextScanner
             'Controleer vertaalsleutels en locale-pariteit / check translation keys and locale parity',
             'Verify that the configured Tesseract binary really extracts text',
             'no-store, private',
+            'private, no-store',
+            'coverage_status, COUNT(*) AS total',
+            "CASE WHEN eligible_count = 0 THEN 'excluded' WHEN current_count > 0 THEN 'current' WHEN last_event = 'ai.index.item_failed' THEN 'failed' WHEN historical_count > 0 THEN 'stale' ELSE 'missing' END AS coverage_status",
+            'NULL AS operation_run_id',
+            'operation_run_audit_events AS events',
+            'operation_runs AS runs',
+            "COALESCE(events.context->>'actor_user_id', runs.requested_by_user_id) AS actor_user_id",
+            'as object',
+            'pg_catalog.pg_namespace as namespace',
+            'not like',
+            'php artisan operations:register-backup /private/backup',
+            'php artisan operations:restore-drill BACKUP_ID --database=archive_restore_drill --directory=/private/new-drill --confirm-empty-target',
             'attachment; filename="',
             'attempts + 1',
             'items as completed_items_count',

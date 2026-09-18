@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Tests\Support\UserVisibleTextScanner;
@@ -65,6 +66,14 @@ it('keeps extracted shared shell, auth, onboarding and AI blades free of raw ren
     expect($scanner->scanExtractedBladeFiles($bladeFiles))->toBe([]);
 });
 
-it('only adds the Dutch locale for this extraction batch', function (): void {
-    expect(array_map('basename', File::directories(base_path('lang'))))->toBe(['nl']);
+it('keeps Dutch default and matching English catalogs for the new workflows', function (): void {
+    expect(config('app.locale'))->toBe('nl');
+    $locales = array_map('basename', File::directories(base_path('lang')));
+    sort($locales);
+    expect($locales)->toBe(['en', 'nl']);
+    foreach (['review', 'workbench', 'indexwork', 'recovery'] as $catalogue) {
+        $dutch = require base_path('lang/nl/'.$catalogue.'.php');
+        $english = require base_path('lang/en/'.$catalogue.'.php');
+        expect(array_keys(Arr::dot($english)))->toBe(array_keys(Arr::dot($dutch)));
+    }
 });

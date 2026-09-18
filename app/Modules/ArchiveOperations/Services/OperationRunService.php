@@ -63,6 +63,7 @@ class OperationRunService
             'status' => OperationRun::STATUS_QUEUED,
             'error_message' => null,
             'claim_token' => null,
+            'pause_requested' => false,
             'finished_at' => null,
         ];
         $normalization = null;

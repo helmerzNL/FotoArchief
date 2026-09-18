@@ -279,7 +279,7 @@ return [
         't_d232ff7977274d7e' => 'Afgewezen (',
         't_d298519cf95a214b' => 'Mislukt (',
         't_d2a7db130266278c' => 'Malware Scanner',
-        't_d44e23e421712b91' => 'PHP 8.3 of hoger wordt aanbevolen voor optimale prestaties en beveiliging.',
+        't_d44e23e421712b91' => 'PHP 8.5 of hoger is vereist voor deze applicatie.',
         't_d4cdd72bedd54eee' => 'Geüpload door:',
         't_d63af613217e18c2' => 'Selecteer afbeeldingsbestand (JPEG, PNG, WebP):',
         't_d9221de7754afb07' => 'Gedetecteerde Checksum',

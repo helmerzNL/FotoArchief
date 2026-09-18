@@ -33,8 +33,13 @@ class VerifyIntegrityJob extends OperationJob
         $processed = 0;
         $failed = 0;
         $lastId = $cursor;
+        $paused = false;
 
         foreach ($files as $file) {
+            if ($this->shouldPause($run)) {
+                $paused = true;
+                break;
+            }
             $lastId = $file->id;
             $result = $service->verifyFile($file);
             $processed++;
@@ -48,7 +53,7 @@ class VerifyIntegrityJob extends OperationJob
         return [
             'processed' => $processed,
             'failed' => $failed,
-            'finished' => $files->count() < self::CHUNK_SIZE,
+            'finished' => ! $paused && $files->count() < self::CHUNK_SIZE,
             'result' => ['issues' => $run->failed_items + $failed],
         ];
     }

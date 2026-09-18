@@ -119,6 +119,11 @@ abstract class OperationJob implements ShouldQueue
         }
 
         try {
+            if ($this->shouldPause($run)) {
+                $this->releaseForPause($run, $token);
+
+                return;
+            }
             $outcome = $this->executeChunk($run);
 
             if ($run->status === OperationRun::STATUS_CANCELLED) {
@@ -167,6 +172,12 @@ abstract class OperationJob implements ShouldQueue
                         'truncated' => false,
                     ]),
                 ])->save();
+
+                return;
+            }
+
+            if ($this->shouldPause($run)) {
+                $this->releaseForPause($run, $token);
 
                 return;
             }
@@ -220,7 +231,7 @@ abstract class OperationJob implements ShouldQueue
     public function failed(?Throwable $exception): void
     {
         $run = OperationRun::query()->find($this->runId);
-        if (! $run instanceof OperationRun || $run->isFinished()) {
+        if (! $run instanceof OperationRun || $run->isFinished() || $run->status === OperationRun::STATUS_PAUSED) {
             return;
         }
 
@@ -248,7 +259,7 @@ abstract class OperationJob implements ShouldQueue
     {
         $run = OperationRun::query()->find($this->runId);
 
-        if (! $run instanceof OperationRun || $run->isFinished()) {
+        if (! $run instanceof OperationRun || $run->isFinished() || $run->status === OperationRun::STATUS_PAUSED) {
             return;
         }
 
@@ -260,5 +271,17 @@ abstract class OperationJob implements ShouldQueue
     private function describe(Throwable $exception): string
     {
         return Str::limit($exception->getMessage(), 950);
+    }
+
+    protected function shouldPause(OperationRun $run): bool
+    {
+        return (bool) OperationRun::query()->whereKey($run->id)->value('pause_requested');
+    }
+
+    private function releaseForPause(OperationRun $run, string $token): void
+    {
+        OperationRun::query()->whereKey($run->id)->where('claim_token', $token)
+            ->where('status', OperationRun::STATUS_RUNNING)
+            ->update(['status' => OperationRun::STATUS_PAUSED, 'claim_token' => null]);
     }
 }

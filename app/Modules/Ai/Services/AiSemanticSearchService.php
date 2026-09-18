@@ -22,10 +22,13 @@ class AiSemanticSearchService
     /**
      * @return list<array{asset_id: string, accession_number: string|null, title: string|null, score: float, model_space: string}>
      */
-    public function searchAdmin(string $query, string $provider, User $user, int $limit = 10): array
+    public function searchAdmin(string $query, string $provider, User $user, int $limit = 10, ?string $collectionId = null): array
     {
         $limit = max(1, min($limit, 25));
         $eligibleAssets = Asset::query()->select('assets.id');
+        if ($collectionId !== null) {
+            $eligibleAssets->whereHas('collections', fn ($q) => $q->where('collections.id', $collectionId));
+        }
         if (! $user->hasPermission('assets.view')) {
             $eligibleAssets->whereRaw('1 = 0');
         } elseif (! $user->hasPermission('assets.publish')) {

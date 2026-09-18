@@ -23,7 +23,7 @@
             <tbody>
                 @foreach($runs as $run)
                     <tr style="border-bottom: 1px solid #e5e7eb;">
-                        <td style="padding: 0.75rem;"><code>{{ substr($run->id, 0, 12) }}</code></td>
+                        <td style="padding: 0.75rem;"><a href="{{ route('admin.operations.runs.show', $run) }}"><code>{{ substr($run->id, 0, 12) }}</code></a></td>
                         <td style="padding: 0.75rem;">{{ $run->operation_type }}</td>
                         <td style="padding: 0.75rem;">
                             @if($run->status === 'completed')
@@ -32,6 +32,8 @@
                                 <span style="color: #dc2626; font-weight: bold;">Mislukt</span>
                             @elseif($run->status === 'running')
                                 <span style="color: #2563eb; font-weight: bold;">Bezig</span>
+                            @elseif($run->status === 'paused')
+                                <span>{{ __('workbench.paused') }}</span>
                             @elseif($run->status === 'cancelled')
                                 <span style="color: #6b7280; font-weight: bold;">Geannuleerd</span>
                             @else

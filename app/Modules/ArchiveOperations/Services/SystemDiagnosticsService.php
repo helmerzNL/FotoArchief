@@ -71,7 +71,7 @@ class SystemDiagnosticsService
     {
         $version = PHP_VERSION;
         $majorMinor = PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;
-        $isSupported = version_compare($version, '8.3.0', '>=');
+        $isSupported = version_compare($version, '8.5.0', '>=');
         $opcacheEnabled = function_exists('opcache_get_status') && is_array(@opcache_get_status());
 
         return [

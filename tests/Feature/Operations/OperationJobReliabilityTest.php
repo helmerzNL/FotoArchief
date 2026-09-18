@@ -127,6 +127,32 @@ it('covers a fifty thousand file maintenance run within the chunk bound', functi
     expect(OperationJob::MAX_CHUNKS * OperationJob::CHUNK_SIZE)->toBeGreaterThanOrEqual(50000);
 });
 
+it('honours a pause requested during a chunk without treating its boundary as a stall', function (): void {
+    $run = reliabilityRun();
+    ReliabilityProbeJob::$handler = function (OperationRun $claimed): array {
+        OperationRun::query()->whereKey($claimed->id)->update(['pause_requested' => true]);
+        $claimed->update(['payload' => ['cursor' => 1]]);
+
+        return ['processed' => 1, 'failed' => 0, 'finished' => false];
+    };
+    (new ReliabilityProbeJob($run->id))->handle();
+    expect($run->fresh()->status)->toBe('paused')
+        ->and($run->fresh()->processed_items)->toBe(1)
+        ->and($run->fresh()->payload['cursor'])->toBe(1)
+        ->and($run->fresh()->claim_token)->toBeNull();
+});
+
+it('finishes instead of pausing when the last item has already completed', function (): void {
+    $run = reliabilityRun();
+    ReliabilityProbeJob::$handler = function (OperationRun $claimed): array {
+        OperationRun::query()->whereKey($claimed->id)->update(['pause_requested' => true]);
+
+        return ['processed' => 1, 'failed' => 0, 'finished' => true];
+    };
+    (new ReliabilityProbeJob($run->id))->handle();
+    expect($run->fresh()->status)->toBe('completed');
+});
+
 it('fails loudly with a resume cursor instead of reporting success when the chunk bound is reached', function (): void {
     $run = reliabilityRun(['payload' => ['cursor' => '01HXCURSOR']]);
     ReliabilityProbeJob::$handler = fn (): array => ['processed' => 5, 'failed' => 0, 'finished' => false];

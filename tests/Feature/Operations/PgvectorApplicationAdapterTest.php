@@ -11,12 +11,15 @@ use App\Modules\Ai\Models\AiRun;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiDispatchService;
 use App\Modules\Ai\Services\AiIndexGenerationService;
+use App\Modules\Ai\Services\AiIndexWorkbench;
 use App\Modules\Ai\Services\AiSemanticSearchService;
 use App\Modules\Ai\Services\PgvectorEmbeddingStore;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
+use App\Modules\ArchiveOperations\Services\OperationWorkbenchService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
+use App\Modules\Catalogue\Models\Collection;
 use App\Modules\Publication\Models\Publication;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\Artisan;
@@ -212,6 +215,45 @@ it('rebuilds the same space into a new generation while preserving untouched cur
         ->and($new->embeddings()->count())->toBe(2)
         ->and(app(PgvectorEmbeddingStore::class)->nearest($new, [1, 0, 0], 10))->toHaveCount(2);
     Http::assertSentCount(3);
+});
+
+it('reports real current coverage repairs only a stale collection item and filters before ranking', function (): void {
+    [$user, $assets] = pgvectorWorkflow();
+    $run = vectorRun($user, $assets);
+    (new ProcessAiIndexJob($run->id))->handle();
+    $collection = Collection::query()->create(['title' => 'Target collection', 'slug' => 'target']);
+    $collection->assets()->attach($assets[1]);
+    $workbench = app(AiIndexWorkbench::class);
+    expect($workbench->coverage($user, null)->get()->pluck('coverage_status')->all())->toBe(['current', 'current']);
+    expect(array_column(app(AiSemanticSearchService::class)->searchAdmin('photo', 'local', $user, 1, $collection->id), 'asset_id'))->toBe([$assets[1]->id]);
+    $this->actingAs($user)->get('/admin/operations/ai/index-workbench?collection='.$collection->id)->assertOk()->assertSee('Actueel: 1');
+    $assets[1]->increment('lock_version');
+    expect($workbench->coverage($user, $collection->id)->first()->coverage_status)->toBe('stale');
+    $head = app(AiIndexGenerationService::class)->activeForProvider('local');
+    $child = $workbench->repair($user, $collection->id, [$assets[1]->id], $head->id, $workbench->configurationFingerprint());
+    expect($child->payload['asset_ids'])->toBe([$assets[1]->id]);
+    (new ProcessAiIndexJob($child->id))->handle();
+    expect($workbench->coverage($user, null)->get()->pluck('coverage_status')->all())->toBe(['current', 'current']);
+    Http::assertSentCount(4);
+});
+
+it('pauses real index generation between items and resumes before activation', function (): void {
+    [$user, $assets] = pgvectorWorkflow(fakeProvider: false);
+    $run = vectorRun($user, $assets);
+    Http::fake(['http://127.0.0.1:8088/v1/embed-image' => function () use ($user, $run) {
+        app(OperationWorkbenchService::class)->control($run, $user, 'pause');
+
+        return Http::response(vectorResponse());
+    }]);
+    (new ProcessAiIndexJob($run->id))->handle();
+    expect($run->fresh()->status)->toBe('paused')->and($run->fresh()->payload['cursor'])->toBe(1)
+        ->and(AiEmbeddingGeneration::query()->sole()->status)->toBe('building');
+    Http::assertSentCount(1);
+    Http::fake(['http://127.0.0.1:8088/v1/embed-image' => Http::response(vectorResponse())]);
+    app(OperationWorkbenchService::class)->control($run, $user, 'resume');
+    (new ProcessAiIndexJob($run->id))->handle();
+    expect($run->fresh()->status)->toBe('completed')->and($run->fresh()->processed_items)->toBe(2)
+        ->and(AiEmbeddingGeneration::query()->sole()->status)->toBe('active');
 });
 
 it('resumes a failed second item without repeating the committed first provider call or its audit', function (): void {

@@ -26,6 +26,8 @@ class AiSuggestion extends CatalogueModel
 
     public const string REVIEW_SUPERSEDED = 'superseded';
 
+    public const string REVIEW_REVERTED = 'reverted';
+
     /** @var array<string, string> */
     protected $attributes = [
         'language' => 'nl',
@@ -39,6 +41,8 @@ class AiSuggestion extends CatalogueModel
             'confidence' => 'float',
             'evidence' => 'array',
             'reviewed_at' => 'immutable_datetime',
+            'reverted_at' => 'immutable_datetime',
+            'acceptance_receipt' => 'array',
         ];
     }
 

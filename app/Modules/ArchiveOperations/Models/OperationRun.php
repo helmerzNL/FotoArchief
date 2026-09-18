@@ -37,6 +37,8 @@ class OperationRun extends CatalogueModel
 
     public const string STATUS_RUNNING = 'running';
 
+    public const string STATUS_PAUSED = 'paused';
+
     public const string STATUS_COMPLETED = 'completed';
 
     public const string STATUS_FAILED = 'failed';
@@ -56,6 +58,7 @@ class OperationRun extends CatalogueModel
 
     /** @var array<string, string> */
     protected $casts = [
+        'pause_requested' => 'boolean',
         'payload' => 'array',
         'result' => 'array',
         'total_items' => 'integer',

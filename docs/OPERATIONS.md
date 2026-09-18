@@ -40,6 +40,114 @@ process is healthy.
 
 ## Routine commands
 
+### Zoekindex en relevantie (Nederlands)
+
+**Zoekindex beheren** toont per collectie de zichtbare foto's als actueel,
+verouderd, ontbrekend, uitgesloten of mislukt. Actueel gebruikt dezelfde bron-,
+revisie-, checksum- en pgvectorcontroles als semantisch zoeken. Ontbrekende
+vectorondersteuning is een zichtbare fout, geen JSON- of externe fallback.
+Selecteer maximaal 25 ontbrekende/verouderde foto's in een expliciete collectie
+en bevestig een herstelopdracht. Provider, gevraagd model, modelruimte en actieve
+generatie worden opnieuw gecontroleerd; bestaande dispatcher-, rechten- en
+budgetcontroles blijven gelden. Mislukte items worden via hun taak herhaald.
+Alleen eigen generatietaken zijn zichtbaar voor niet-beheerders. Een beheerder
+kan een mislukte omschakeling opnieuw bevestigen: een oudere generatie kan een
+nieuwere head niet overschrijven en veranderde bronnen verhinderen activatie.
+
+Kies expliciet tekstzoeken (catalogusmetadata, geen providerverzoek) of semantisch
+zoeken (ingestelde provider). Een collectiefilter wordt vóór vectorranking en
+resultaatlimiet toegepast. Bevoegde beheerders/catalogusbeheerders kunnen een
+getoond resultaat gedurende één uur als 0, 1 of 2 beoordelen. De ondertekende,
+versleutelde resultaatreferentie bindt gebruiker, zoektekst, foto en modelruimte.
+Opslaan start niet ongemerkt een nieuwe betaalde zoekopdracht. Herhaald beoordelen
+wijzigt hetzelfde label en legt een nieuwe auditgebeurtenis vast. De JSONL-export
+bevat maximaal 10000 eigen, nog toegankelijke labels inclusief zoekteksten:
+behandel dit als interne data. Menselijke labels zijn geen automatische claim
+van representatieve zoekkwaliteit.
+
+### Search index and relevance (English)
+
+**Manage search index** reports visible photos per collection as current, stale,
+missing, excluded or failed. Currency reuses semantic search's source, revision,
+checksum and pgvector checks. Missing vector support is an explicit error, not
+a JSON or external fallback. Select at most 25 missing/stale photos within an
+explicit collection and confirm repair. Provider, requested model, model space
+and active generation are rechecked; existing dispatch, permission and budget
+checks still apply. Retry failed items through their task. Non-administrators
+see only their own generation tasks. An administrator can confirm another switch
+attempt: an older generation cannot replace a newer head, and changed sources
+prevent activation.
+
+Choose text search explicitly (catalogue metadata, no provider request) or
+semantic search (configured provider). Collection eligibility is applied before
+vector ranking and result limits. Authorized administrators/catalogue managers
+can grade a displayed result 0, 1 or 2 for one hour. An authenticated encrypted
+result receipt binds user, query, photo and model space. Saving does not silently
+repeat a paid search. Regrading updates the same label and records a new audit
+event. JSONL export contains at most 10000 own, still-accessible labels including
+queries: treat it as internal data. Human labels do not automatically establish
+representative search quality.
+
+### Taakwerkbank en auditlog (Nederlands)
+
+Open een taak via het taaknummer: de detailpagina toont de opgeslagen,
+expliciet toegestane instellingen, tijdstippen, workerclaims (niet uitsluitend
+providerpogingen), gepagineerde AI-fotoselectie en gebeurtenissen. De laatste
+itemgebeurtenis bepaalt de uitkomst; een latere geslaagde poging vervangt een
+eerdere fout. Geannuleerde, nog niet verwerkte items zijn overgeslagen.
+Onderhoudstaken zonder opgeslagen fotoselectie tonen hun instellingen en
+gebeurtenissen, niet een verzonnen lijst van fotoresultaten.
+
+Beheerders kunnen maximaal 25 geselecteerde, laatst mislukte AI-items uit een
+afgeronde taak bevestigen en opnieuw starten. Dit maakt een nieuwe taak met
+een verwijzing naar de oorspronkelijke taak; successen en niet-geselecteerde
+items worden niet herhaald. Dezelfde items kunnen niet opnieuw vanuit de
+oudertaak worden gestart: gebruik bij een volgende fout de vervolgtaak.
+Een indexvervolgtaak krijgt geen kopie van de generatie van de oudertaak.
+Normale bron-, toestemmings-, provider- en budgetcontroles blijven gelden.
+
+Pauzeren houdt een lopende workerclaim vast totdat veilig kan worden gestopt:
+AI en integriteitscontrole tussen items, opslagkopie tussen batches van
+maximaal 25 bestanden. Een extern verzoek wordt niet afgebroken. Hervatten
+behoudt cursor en tellers; volledig afgerond werk blijft voltooid. Andere
+opruimtaken bieden bewust geen pauzeknop zonder veilig checkpoint.
+
+Het auditlog vereist `audit.view` en doorzoekt foto- en taakgebeurtenissen op
+foto-ID/archiefnummer, taak, gebruiker (actor of taakaanvrager), exact eventtype
+en datumbereik. JSONL-export is begrensd op 10000 gebeurtenissen en bevat
+uitsluitend ID's, eventtype en tijdstip; vrije tekst, technische context en
+foto-inhoud zijn uitgesloten. Beperk de filters bij een te grote export.
+De migratie voegt een pauzevlag toe; geen Compose- of omgevingswijziging nodig.
+
+### Task workbench and audit log (English)
+
+Open a task by its number: the detail page shows explicitly allowlisted saved
+settings, timestamps, worker claims (not exclusively provider attempts),
+paginated AI photo selection and events. The latest item event determines its
+outcome; a later success supersedes an earlier failure. Unprocessed items in a
+cancelled task are skipped. Maintenance tasks without a saved photo selection
+show their settings and events, not a fabricated list of photo outcomes.
+
+Administrators can confirm and retry at most 25 selected, latest-failed AI
+items from a finished task. This creates a new task referencing the original;
+successes and unselected items are not repeated. The same items cannot be
+started again from the parent: use the follow-up task after another failure.
+An index follow-up does not inherit the parent's generation.
+Normal source, authorization, provider and budget checks still apply.
+
+Pause retains an in-flight worker claim until a safe checkpoint: between items
+for AI/integrity, between batches of at most 25 files for storage copy. It does
+not abort an external request. Resume preserves cursor and counters; fully
+finished work remains completed. Other cleanup tasks deliberately have no
+pause control without a safe checkpoint.
+
+The audit log requires `audit.view` and searches photo/task events by photo
+ID/accession, task, user (actor or requester), exact event type and date range.
+JSONL export is limited to 10000 events and contains only identifiers, event
+type and timestamp; free text, technical context and photo content are excluded.
+Narrow filters if the export is too large. The migration adds a pause flag;
+no Compose or environment changes are required.
+
 ```powershell
 docker compose ps
 docker compose logs --tail=100 app
@@ -54,6 +162,106 @@ sh scripts/backup-copy-encrypted.sh /private/backups/latest /offsite/fotoarchief
 ```
 
 ## Operational alerts
+
+### Installatie, upgrade en herstel / Installation, upgrade and recovery
+
+**Nederlands.** Beheerders gebruiken `/admin/operations/recovery` voor expliciet
+bevestigde diagnosecontroles en blijvende verslagen. De installatiecontrole
+hergebruikt de bestaande probes (PHP 8.5+, extensies, opslag, database, limieten,
+scanner en achtergrondactiviteit); dit is geen bewezen login/uploadflow.
+De upgradevoorcontrole verlangt een hogere doelversie, een operatorinschatting
+van benodigde vrije bytes, geen lokale openstaande migraties of actieve taken
+(ook gepauzeerde taken tellen), een checksumcontrole van een backup van deze
+versie binnen 24 uur en een geslaagde gegevensherstelproef binnen 30 dagen.
+Vrije ruimte betreft het app-opslagbestandssysteem, **niet** een afzonderlijke
+database- of backupdisk. Migraties uit een nog niet geinstalleerde doelrelease,
+externe proxygrenzen, offsite-opslag en de volledige applicatiewerking moeten
+apart worden beoordeeld. De controle voert geen upgrade uit.
+
+**English.** Administrators use `/admin/operations/recovery` for explicitly
+confirmed diagnostic probes and persistent reports. Installation reuses the
+existing probes (PHP 8.5+, extensions, storage, database, limits, scanner and
+background activity); this does not prove a login/upload flow. Upgrade preflight
+requires a higher target version, operator-estimated free bytes, no pending local
+migrations or active tasks (including paused tasks), a checksum-verified backup
+of this version within 24 hours and a successful data restore within 30 days.
+Space covers the app storage filesystem, **not** a separate database/backup disk.
+Uninstalled target-release migrations, external proxy limits, offsite storage and
+full application behaviour require separate review. No upgrade is executed.
+
+```sh
+php artisan operations:register-backup /private/backup
+php artisan operations:restore-drill BACKUP_ID \
+  --database=archive_restore_drill \
+  --directory=/private/new-drill --confirm-empty-target
+```
+
+**Nederlands.** Gebruik uitsluitend vertrouwde lokale backups uit
+`scripts/backup-compose.sh` met `database.dump`, `storage-app.tar`, `VERSION`,
+`FORMAT` en `SHA256SUMS`. Registratie controleert de vier checksums en bewaart
+versie, locatie, omvang en manifesthash; dit bewijst geen authenticiteit of
+herstelbaarheid. De herstelproef vereist dezelfde appversie, PostgreSQL,
+een compatibele `pg_restore` op PATH, het bestaande extractiescript en voldoende
+ruimte. Voer de opdracht uit in een beheeromgeving met toegang tot de
+appinstallatie, database en backupbestanden; de appimage bevat PostgreSQL-client
+16. Kopieer of mount backups in die beheeromgeving en gebruik voor behouden
+proefbestanden een aparte persistente map buiten de live-opslag. Maak vooraf
+een aparte lege database op dezelfde server met
+dezelfde credentials en achtervoegsel `_restore_drill`. Kies een nieuwe absolute
+map buiten app, live-opslag en backup. De opdracht weigert bestaande objecten en
+bestanden, gebruikt geen `--clean`, start geen server/worker en vernieuwt geen
+sleutels. Elke lokale origineelrij wordt op bytes en SHA256 gecontroleerd;
+niet-lokale opslag faalt expliciet. Een blijvend verslag vermeldt geslaagd/mislukt
+en het controlebereik. Login, previews, externe opslag en een echte volledige
+installatie blijven onbewezen. Doelen blijven ook na fouten staan: inspecteer en
+verwijder alleen de expliciete proefdatabase/-map. De live-database bewaart het
+proefverslag.
+
+**English.** Only use trusted local backups from `scripts/backup-compose.sh`
+containing `database.dump`, `storage-app.tar`, `VERSION`, `FORMAT` and `SHA256SUMS`.
+Registration verifies four checksums and records version, location, size and
+manifest hash, not authenticity or recoverability. Drills require the same app
+version, PostgreSQL, a compatible `pg_restore` on PATH, the existing extraction
+script and sufficient space. Run in an administration environment with access
+to the app installation, database and backup files; the app image includes
+PostgreSQL client 16. Copy or mount backups into that administration environment
+and use a separate persistent directory outside live storage for retained trial
+files. Pre-create a separate empty database on the
+same server using the same credentials, ending `_restore_drill`, and choose a new
+absolute directory outside the app, live storage and backup. Existing objects and
+files are refused; there is no `--clean`, server/worker startup or key
+regeneration. Every local original row is checked for size and SHA256; non-local
+storage fails explicitly. A persistent report records success/failure and scope.
+Login, previews, external storage and a complete working installation remain
+unproven. Targets remain after failure: inspect and remove only the explicit test
+database/directory. The live database retains the drill report.
+
+### Incidentdeduplicatie / Incident deduplication
+
+**Nederlands.** Nieuwe, heropende en in ernst gewijzigde incidenten krijgen een
+nieuw event-ID. Ongewijzigde succesvol verzonden meldingen worden niet herhaald.
+Ontvangstbevestiging door een beheerder lost niets op en onderdrukt geen herstel.
+Wanneer een incident niet langer aan de ingestelde ernstgrens voldoet, volgt
+`state=resolved`; dat betekent niet dat alle diagnostiek perfect is.
+De webhook bevat per incident `state` (`open`/`resolved`) en `event_id`.
+Identificaties worden voor transport duurzaam opgeslagen; transportfouten blijven
+pending en worden met hetzelfde ID herhaald. De ontvanger moet zelf dedupliceren:
+een onduidelijk netwerkantwoord kan dubbele bezorging veroorzaken. Het register
+bewaart de laatste toestand per incident, geen volledige historische tijdlijn.
+Zonder webhook blijven meldingen pending en worden ze lokaal gelogd; een later
+herstel kan dan de nog niet verstuurde openmelding vervangen.
+
+**English.** New, reopened and severity-changed incidents receive a new event ID.
+Unchanged successfully delivered notifications are not resent. Administrator
+acknowledgement neither resolves an incident nor suppresses recovery. Once an
+incident no longer meets the configured severity threshold, `state=resolved` is
+sent; this does not imply perfect diagnostic health. Each webhook incident carries
+`state` (`open`/`resolved`) and `event_id`. IDs are committed before transport;
+failed deliveries remain pending and retry with the same ID. Receivers must
+deduplicate because ambiguous network responses may cause duplicate delivery.
+The register retains the latest state per incident, not a complete historical
+timeline. Without a webhook, pending alerts are logged locally; later recovery
+may replace an open notification that was never delivered.
 
 FotoArchief evaluates the same diagnostics used by the operations page through
 `php artisan operations:check-alerts`. The scheduler runs this hourly. Alerts

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\ArchiveOperations\Services;
 
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use RuntimeException;
-
 class OperationalAlertService
 {
     private const SEVERITY_RANK = [
@@ -35,49 +31,7 @@ class OperationalAlertService
             'incidents' => $incidents,
         ];
 
-        if ($dryRun || $incidents === []) {
-            return [
-                'sent' => false,
-                'dry_run' => $dryRun,
-                'reason' => $dryRun ? 'dry-run' : 'no-incidents',
-                'payload' => $payload,
-            ];
-        }
-
-        if (! (bool) config('operations.alerts.enabled', false)) {
-            Log::warning(__('operations.generated.t_cd2bd43263428fdd'), $payload);
-
-            return [
-                'sent' => false,
-                'dry_run' => false,
-                'reason' => 'disabled',
-                'payload' => $payload,
-            ];
-        }
-
-        $webhookUrl = (string) config('operations.alerts.webhook_url', '');
-        if ($webhookUrl === '') {
-            Log::warning(__('operations.generated.t_21f7679e1b5a75e1'), $payload);
-
-            return [
-                'sent' => false,
-                'dry_run' => false,
-                'reason' => 'log-only',
-                'payload' => $payload,
-            ];
-        }
-
-        $response = Http::timeout(5)->acceptJson()->asJson()->post($webhookUrl, $payload);
-        if (! $response->successful()) {
-            throw new RuntimeException(__('operations.generated.t_dc8bae9b0e84c0b8').$response->status().'.');
-        }
-
-        return [
-            'sent' => true,
-            'dry_run' => false,
-            'reason' => 'webhook',
-            'payload' => $payload,
-        ];
+        return app(OperationalIncidentService::class)->evaluate($payload, $dryRun);
     }
 
     /**
