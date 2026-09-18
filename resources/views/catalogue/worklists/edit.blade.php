@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Werklijst bewerken: ' . $worklist->title . ' - FotoArchief')
+@section('title', 'Werklijst bewerken: ' . $worklist->title . ' - Vistora')
 @section('content')
 <p class="eyebrow"><a href="{{ route('catalogue.worklists.show', $worklist) }}">{{ __('catalogue.generated.t_98543cab14630d77') }}</a></p>
 <h1>{{ __('catalogue.generated.t_06faef7436924547') }} {{ $worklist->title }}</h1>

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Nieuwe schenker / bijdrager — FotoArchief')
+@section('title', 'Nieuwe schenker / bijdrager — Vistora')
 @section('content')
 <div class="card narrow">
     <div class="eyebrow"><a href="{{ route('catalogue.contributors.index') }}">{{ __('catalogue.generated.t_0929a94eafb121fd') }}</a></div>

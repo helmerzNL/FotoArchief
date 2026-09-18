@@ -18,7 +18,7 @@ it('exposes the HTTP liveness endpoint', function (): void {
 it('renders the Laravel foundation landing page', function (): void {
     $this->get('/')
         ->assertOk()
-        ->assertSee('FotoArchief');
+        ->assertSee('Vistora');
 });
 
 it('exposes a minimal API status endpoint', function (): void {

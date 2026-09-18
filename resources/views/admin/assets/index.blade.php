@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Foto’s beheren - FotoArchief')
+@section('title', 'Foto’s beheren - Vistora')
 @section('content')
 <p class="eyebrow">{{ __('catalogue.generated.t_49964d7d8c8ecabc') }}</p><h1>{{ __('catalogue.generated.t_437769185346f168') }}</h1>
 @include('catalogue.saved-searches')

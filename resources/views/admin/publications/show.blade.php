@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Publicatie - FotoArchief')
+@section('title', 'Publicatie - Vistora')
 @section('content')
     @php($publication = $asset->publication)
     <p class="eyebrow">Publicatie</p>

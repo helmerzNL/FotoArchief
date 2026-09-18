@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Collecties - FotoArchief')
+@section('title', 'Collecties - Vistora')
 @section('content')
     <p class="eyebrow">{{ __('publication.generated.t_05722e41037c766f') }}</p>
     <h1>Collecties</h1>

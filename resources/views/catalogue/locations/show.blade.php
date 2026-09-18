@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $location->name.' — FotoArchief')
+@section('title', $location->name.' — Vistora')
 @section('content')
 <div class="card">
     <div class="eyebrow">

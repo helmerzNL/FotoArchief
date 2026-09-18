@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Suggestie - FotoArchief')
+@section('title', 'Suggestie - Vistora')
 @section('content')
     <p class="eyebrow">Suggestie</p>
     <h1>{{ $suggestion->asset?->title ?? $suggestion->asset?->accession_number }}</h1>

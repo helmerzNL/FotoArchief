@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 return [
     'brand' => [
-        'name' => 'FotoArchief',
-        'tagline' => 'Jouw geschiedenis, zorgvuldig bewaard',
+        'name' => 'Vistora',
+        'tagline' => 'Historische beelden. Dichtbij gebracht.',
     ],
     'title' => [
-        'default' => 'FotoArchief',
+        'default' => 'Vistora',
     ],
     'nav' => [
+        'skip' => 'Ga naar de inhoud',
+        'public' => 'Collectie ontdekken',
+        'staff' => 'Beheer',
         'discover' => 'Ontdekken',
         'collections' => 'Collecties',
         'photos' => 'Foto’s',
@@ -24,10 +27,24 @@ return [
         'login' => 'Inloggen',
         'logout' => 'Uitloggen',
     ],
+    'theme' => [
+        'label' => 'Weergave',
+        'system' => 'Systeem',
+        'light' => 'Licht',
+        'dark' => 'Donker',
+        'storage_error' => 'Je weergavekeuze werkt op deze pagina, maar kan in deze browser niet worden bewaard.',
+    ],
+    'discovery' => [
+        'title' => 'Ontdek de collectie - Vistora',
+        'keyword' => 'Trefwoord',
+        'filter' => 'Filteren',
+        'semantic' => 'Zoeken op betekenis met AI',
+        'results' => 'Zoekresultaten',
+    ],
     'notices' => [
         'invitation_link' => [
             'title' => 'Eenmalige uitnodigingslink',
-            'body' => 'Kopieer deze link nu en deel hem via een kanaal dat je vertrouwt. FotoArchief toont hem niet opnieuw.',
+            'body' => 'Kopieer deze link nu en deel hem via een kanaal dat je vertrouwt. Vistora toont hem niet opnieuw.',
         ],
         'recovery_codes' => [
             'title' => 'Eenmalige herstelcodes',
@@ -37,5 +54,5 @@ return [
     'errors' => [
         'check_input' => 'Controleer je invoer',
     ],
-    'footer' => 'FotoArchief &middot; Ontwikkelversie &middot; Bewaar altijd een onafhankelijke backup',
+    'footer' => 'Vistora &middot; Ontwikkelversie &middot; Bewaar altijd een onafhankelijke backup',
 ];

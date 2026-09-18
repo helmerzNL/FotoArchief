@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Nieuwe Tag - FotoArchief')
+@section('title', 'Nieuwe Tag - Vistora')
 @section('content')
 <p class="eyebrow"><a href="{{ route('catalogue.tags.index') }}">{{ __('catalogue.generated.t_cdedd3d79f8fd443') }}</a></p>
 <h1>{{ __('catalogue.generated.t_8bc07be057f85631') }}</h1>

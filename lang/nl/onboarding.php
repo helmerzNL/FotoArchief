@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'setup' => [
-        'title' => 'FotoArchief installeren',
+        'title' => 'Vistora installeren',
         'eyebrow' => 'Eerste installatie',
         'heading' => 'Een thuis voor je fotoarchief',
         'intro' => 'Verbind een lege PostgreSQL-database, kies private opslag en maak je beheerdersaccount. De wizard wordt na installatie afgesloten.',
@@ -121,7 +121,7 @@ return [
         ],
     ],
     'dashboard' => [
-        'title' => 'Beheer - FotoArchief',
+        'title' => 'Beheer - Vistora',
         'eyebrow' => 'Installatie gereed',
         'heading' => 'Welkom, :name',
         'intro' => 'Je beheeromgeving staat klaar. Database, opslag en het eerste account zijn geconfigureerd.',

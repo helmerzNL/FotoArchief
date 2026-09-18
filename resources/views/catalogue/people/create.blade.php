@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Nieuwe identiteit toevoegen — FotoArchief')
+@section('title', 'Nieuwe identiteit toevoegen — Vistora')
 @section('content')
 <div class="card narrow">
     <div class="eyebrow"><a href="{{ route('catalogue.people.index') }}">{{ __('catalogue.generated.t_0929a94eafb121fd') }}</a></div>

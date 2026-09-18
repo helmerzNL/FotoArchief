@@ -199,7 +199,7 @@ it('logs disabled operational alerts without calling the webhook', function (): 
         ->and($result['payload']['incidents'])->not->toBeEmpty();
     Http::assertNothingSent();
     Log::shouldHaveReceived('warning')->once()->withArgs(
-        fn (string $message, array $context): bool => $message === 'Operationele FotoArchief melding gedetecteerd, verzending staat uit.'
+        fn (string $message, array $context): bool => $message === 'Operationele Vistora melding gedetecteerd, verzending staat uit.'
             && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'secret12345')
     );
 });

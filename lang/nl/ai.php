@@ -163,7 +163,7 @@ return [
         'empty_analysis_success' => 'Geen beschrijving of tags teruggegeven voor deze analyse.',
         'empty_analysis_pending' => 'Nog geen opgeslagen voorstellen voor deze analyse.',
         'empty_photo' => 'Nog geen opgeslagen AI-resultaten voor deze foto. Wacht bij een lopende taak op de worker en vernieuw de pagina.',
-        'operation_title' => 'Foto’s en AI-resultaten - FotoArchief',
+        'operation_title' => 'Foto’s en AI-resultaten - Vistora',
         'operation_heading' => 'Foto\'s en AI-resultaten',
         'operation_summary' => 'Taak :run · :type',
         'operation_intro' => 'Hier staan de toegankelijke foto\'s die volgens het auditlog succesvol zijn verwerkt, inclusief eerdere pogingen van deze taak. De link opent de volledige opgeslagen AI-historie van de foto, niet uitsluitend de uitvoer van deze taak.',

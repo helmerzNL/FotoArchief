@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Publicatie - FotoArchief')
+@section('title', 'Publicatie - Vistora')
 @section('content')
     <p class="eyebrow">Publicatieworkflow</p>
     <h1>Publicatie</h1>

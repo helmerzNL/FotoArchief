@@ -17,7 +17,7 @@ it('renders representative shared, authentication and onboarding text from Dutch
     config(['app.locale' => 'nl', 'installation.enabled' => false]);
 
     $this->get('/login')->assertOk()
-        ->assertSee('Jouw geschiedenis, zorgvuldig bewaard')
+        ->assertSee('Historische beelden. Dichtbij gebracht.')
         ->assertSee('Welkom terug')
         ->assertSee('Inloggen met passkey')
         ->assertSee('Herstelcode gebruiken')

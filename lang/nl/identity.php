@@ -11,7 +11,7 @@ return [
     ],
     'invitations' => [
         'accept' => [
-            'title' => 'Uitnodiging accepteren - FotoArchief',
+            'title' => 'Uitnodiging accepteren - Vistora',
             'eyebrow' => 'Uitnodiging',
             'heading' => 'Account activeren',
             'account_for' => 'Je activeert een account voor',
@@ -21,7 +21,7 @@ return [
             'submit' => 'Account activeren',
         ],
         'create' => [
-            'title' => 'Uitnodigen - FotoArchief',
+            'title' => 'Uitnodigen - Vistora',
             'eyebrow' => 'Geen mailprovider',
             'heading' => 'Gebruiker uitnodigen',
             'intro' => 'Maak een eenmalige link. De link wordt alleen direct na aanmaken aan jou getoond.',
@@ -29,7 +29,7 @@ return [
         ],
     ],
     'security' => [
-        'title' => 'Beveiliging - FotoArchief',
+        'title' => 'Beveiliging - Vistora',
         'eyebrow' => 'Accountbeveiliging',
         'heading' => 'Passkeys en herstelcodes',
         'intro' => 'Registreer een passkey voor veilig inloggen zonder wachtwoord. Bewaar herstelcodes offline; elke code werkt één keer.',
@@ -52,7 +52,7 @@ return [
         ],
     ],
     'users' => [
-        'title' => 'Identiteit - FotoArchief',
+        'title' => 'Identiteit - Vistora',
         'eyebrow' => 'Identiteit en toegang',
         'heading' => 'Gebruikers',
         'intro' => 'Beheer rollen, trek sessies direct in of deactiveer accounts. Minstens één actieve beheerder blijft verplicht.',

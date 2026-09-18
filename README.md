@@ -1,4 +1,4 @@
-# FotoArchief
+# Vistora (FotoArchief)
 
 > Historische beeldbank als provider-onafhankelijke Laravel-modulaire monoliet.
 >
@@ -12,6 +12,10 @@
 ## Nederlands
 
 ### Overzicht
+
+De publieksnaam en huisstijl zijn **Vistora**. Zie
+[huisstijl, thema's en installatie-iconen](docs/BRANDING.md).
+Technische namen en bestaande deploymentconfiguratie blijven ongewijzigd.
 
 FotoArchief is de installeerbare basis voor de historische beeldbank uit de
 [architectuurbeschrijving](docs/ARCHITECTURE.md). De publieke portal en de
@@ -162,6 +166,10 @@ het [acceptatieregister](docs/RELEASE_ACCEPTANCE.md).
 ## English
 
 ### Overview
+
+The user-facing name and visual identity are **Vistora**. See
+[branding, themes and install icons](docs/BRANDING.md).
+Technical names and existing deployment configuration remain unchanged.
 
 FotoArchief is the installable foundation for the historical image archive
 described in the [architecture document](docs/ARCHITECTURE.md). The public

@@ -13,6 +13,18 @@ foreach ($required as $name) {
         throw new RuntimeException('Missing release file: '.$name);
     }
 }
+$brandRoot = dirname(__DIR__, 2).'/public';
+$brandFiles = ['theme.js', 'manifest.webmanifest', 'favicon.ico'];
+foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($brandRoot.'/brand', FilesystemIterator::SKIP_DOTS)) as $asset) {
+    if ($asset->isFile()) {
+        $brandFiles[] = str_replace('\\', '/', substr($asset->getPathname(), strlen($brandRoot) + 1));
+    }
+}
+foreach ($brandFiles as $asset) {
+    if ($zip->getFromName('public/'.$asset) !== file_get_contents($brandRoot.'/'.$asset)) {
+        throw new RuntimeException('Missing or stale release branding asset: public/'.$asset);
+    }
+}
 $catalogues = glob(dirname(__DIR__, 2).'/lang/nl/*.php');
 if ($catalogues === false || $catalogues === []) {
     throw new RuntimeException('No source translation catalogues found.');

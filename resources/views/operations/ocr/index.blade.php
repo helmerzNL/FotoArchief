@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'OCR Tekstherkenning - FotoArchief Operaties')
+@section('title', 'OCR Tekstherkenning - Vistora Operaties')
 @section('content')
     @include('operations._nav')
     <p class="eyebrow">{{ __('operations.generated.t_a70fa03342889655') }}</p>

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Duplicaat Vergelijken & Koppelen - FotoArchief')
+@section('title', 'Duplicaat Vergelijken & Koppelen - Vistora')
 @section('content')
     @include('operations._nav')
     <p class="eyebrow"><a href="{{ route('admin.operations.duplicates.index') }}">{{ __('operations.generated.t_7cc9180df13d2af4') }}</a></p>
