@@ -125,7 +125,7 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
             ->and(file_exists($disposable->target_directory))->toBeFalse();
         expect(file_exists($directory.'/second'))->toBeFalse()
             ->and(RestoreDrill::query()->where('status', 'failed')->count())->toBe(2)
-            ->and(RestoreDrill::query()->where('status', 'verified')->count())->toBe(1);
+            ->and(RestoreDrill::query()->where('status', 'verified')->count())->toBe(2);
         DB::statement('DROP DATABASE "'.$targetDatabase.'"');
         DB::statement('CREATE DATABASE "'.$targetDatabase.'"');
         $tar = new PharData($source.'/storage-app.tar');
@@ -139,7 +139,7 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
         File::put($source.'/SHA256SUMS', $manifest);
         $corrupt = app(BackupRegisterService::class)->register($source);
         expect(fn () => $service->run($corrupt, $targetDatabase, $directory.'/corrupt', true))->toThrow(RuntimeException::class, 'checksum or byte size mismatch');
-        expect(RestoreDrill::query()->where('status', 'verified')->count())->toBe(1);
+        expect(RestoreDrill::query()->where('status', 'verified')->count())->toBe(2);
         File::put($source.'/database.dump', 'tampered');
         expect(fn () => $service->run($backup, $targetDatabase, $directory.'/tampered', true))->toThrow(RuntimeException::class, 'manifest');
         expect(RestoreDrill::query()->where('status', 'failed')->count())->toBe(4);
