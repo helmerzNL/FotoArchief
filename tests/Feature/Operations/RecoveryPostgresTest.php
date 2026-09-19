@@ -132,8 +132,18 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
         $tar->delete('app/private/proof.jpg');
         $tar->addFromString('app/private/proof.jpg', 'wrong original bytes');
         unset($tar);
+        File::put($source.'/BACKUP-MANIFEST.json', json_encode([
+            'schema_version' => 2,
+            'format' => 'fotoarchief-local-backup-v2',
+            'app_version' => trim(File::get(base_path('VERSION'))),
+            'created_at' => now()->toAtomString(),
+            'components' => [
+                'database.dump' => ['sha256' => hash_file('sha256', $source.'/database.dump'), 'bytes' => filesize($source.'/database.dump')],
+                'storage-app.tar' => ['sha256' => hash_file('sha256', $source.'/storage-app.tar'), 'bytes' => filesize($source.'/storage-app.tar')],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n");
         $manifest = '';
-        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT'] as $file) {
+        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT', 'BACKUP-MANIFEST.json'] as $file) {
             $manifest .= hash_file('sha256', $source.'/'.$file).'  '.$file."\n";
         }
         File::put($source.'/SHA256SUMS', $manifest);
