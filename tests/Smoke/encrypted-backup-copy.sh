@@ -13,15 +13,27 @@ trap 'exit 143' TERM
 
 backup=$tmp/source-backup
 mkdir "$backup"
-printf '%s\n' 'fotoarchief-local-backup-v1' > "$backup/FORMAT"
+printf '%s\n' 'fotoarchief-local-backup-v2' > "$backup/FORMAT"
 printf '%s\n' '0.9.51' > "$backup/VERSION"
 printf '%s\n' 'database bytes' > "$backup/database.dump"
 mkdir "$tmp/storage"
 printf '%s\n' 'private installation state' > "$tmp/storage/state.txt"
 tar -C "$tmp/storage" -cf "$backup/storage-app.tar" .
+cat > "$backup/BACKUP-MANIFEST.json" <<EOF
+{
+  "schema_version": 2,
+  "format": "fotoarchief-local-backup-v2",
+  "app_version": "0.9.51",
+  "created_at": "2026-10-12T12:00:00Z",
+  "components": {
+    "database.dump": {"sha256": "$(sha256sum "$backup/database.dump" | awk '{print $1}')", "bytes": $(wc -c < "$backup/database.dump" | tr -d ' ')},
+    "storage-app.tar": {"sha256": "$(sha256sum "$backup/storage-app.tar" | awk '{print $1}')", "bytes": $(wc -c < "$backup/storage-app.tar" | tr -d ' ')}
+  }
+}
+EOF
 (
     cd "$backup"
-    sha256sum database.dump storage-app.tar VERSION FORMAT > SHA256SUMS
+    sha256sum database.dump storage-app.tar VERSION FORMAT BACKUP-MANIFEST.json > SHA256SUMS
 )
 
 printf '%s\n' 'disposable encrypted-copy test key' > "$tmp/key"
@@ -35,6 +47,7 @@ sh "$root/scripts/backup-restore-encrypted-copy.sh" "$copy" "$restored" "$tmp/ke
 diff "$backup/FORMAT" "$restored/FORMAT"
 diff "$backup/VERSION" "$restored/VERSION"
 diff "$backup/SHA256SUMS" "$restored/SHA256SUMS"
+diff "$backup/BACKUP-MANIFEST.json" "$restored/BACKUP-MANIFEST.json"
 
 tampered=$tmp/tampered.tar.gz.enc
 cp "$copy" "$tampered"

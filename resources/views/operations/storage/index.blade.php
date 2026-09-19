@@ -43,6 +43,7 @@
             </div>
 
             <div>
+                <button type="submit" class="secondary" formaction="{{ route('admin.operations.storage.preflight') }}">Dry-run</button>
                 <button type="submit" class="button">{{ __('operations.generated.t_75c99008d444cb03') }}</button>
             </div>
         </form>

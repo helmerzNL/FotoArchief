@@ -7,9 +7,13 @@ use App\Modules\Ai\Services\LocalAiProvider;
 use App\Modules\ArchiveOperations\Models\BackupRecord;
 use App\Modules\ArchiveOperations\Models\RestoreDrill;
 use App\Modules\ArchiveOperations\Services\BackupRegisterService;
+use App\Modules\ArchiveOperations\Services\DisposableRestoreDrillService;
+use App\Modules\ArchiveOperations\Services\EncryptedOffsiteCopyService;
 use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\ArchiveOperations\Services\RestoreAcceptanceService;
 use App\Modules\ArchiveOperations\Services\RestoreDrillService;
+use App\Modules\ArchiveOperations\Services\S3ProtectionPolicy;
+use App\Modules\ArchiveOperations\Services\StorageMigrationService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
@@ -201,6 +205,42 @@ Artisan::command('operations:restore-drill {backup} {--database=} {--directory=}
     return 0;
 })->purpose('Restore only to a separate empty PostgreSQL database and new directory, then verify all originals');
 
+Artisan::command('operations:restore-drill-disposable {--parent=} {--confirm-disposable}', function (DisposableRestoreDrillService $drills): int {
+    $parent = $this->option('parent') ?: config('recovery.automatic_restore.parent_directory');
+    if (! is_string($parent) || $parent === '') {
+        $this->error('Configure AUTOMATIC_RESTORE_DRILL_PARENT or pass --parent.');
+
+        return 1;
+    }
+    $drill = $drills->runLatest($parent, (bool) $this->option('confirm-disposable'));
+    $this->info('Disposable restore drill verified and cleaned: '.$drill->getKey());
+    $this->line(json_encode($drill->report, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Restore the latest current-version v2 backup into disposable PostgreSQL and storage targets, verify it, and remove the targets');
+
+Artisan::command('operations:copy-backup-offsite {encrypted} {object}', function (EncryptedOffsiteCopyService $copies): int {
+    $result = $copies->copy((string) $this->argument('encrypted'), (string) $this->argument('object'));
+    $this->line(json_encode($result, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Copy an already encrypted backup and its manifest to a configured private Flysystem disk and verify it');
+
+Artisan::command('operations:verify-s3-versioning {disk=s3}', function (S3ProtectionPolicy $policy): int {
+    $this->line(json_encode($policy->verifyVersioning((string) $this->argument('disk')), JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Require live bucket versioning before destructive cleanup on an S3 disk');
+
+Artisan::command('operations:storage-preflight {source} {target}', function (StorageMigrationService $migrations): int {
+    $this->line(json_encode($migrations->preflightMigration(
+        (string) $this->argument('source'),
+        (string) $this->argument('target'),
+    ), JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Dry-run storage migration connectivity, capacity, headroom, and S3 versioning checks without moving archive bytes');
+
 Artisan::command('ai:probe-local', function (LocalAiProvider $provider): int {
     $capabilities = $provider->probe();
     $this->info('Lokale AI-provider bereikbaar.');
@@ -223,3 +263,6 @@ Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverl
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();
 Schedule::command('operations:check-alerts')->hourly()->withoutOverlapping();
+if (config('recovery.automatic_restore.enabled')) {
+    Schedule::command('operations:restore-drill-disposable --confirm-disposable')->monthly()->withoutOverlapping();
+}

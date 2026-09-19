@@ -11,7 +11,10 @@
     {"id":"identity-and-passkeys","status":"shipped","evidence":["app/Modules/Identity","docs/ARCHITECTURE.md"]},
     {"id":"data-exchange","status":"shipped","evidence":["app/Modules/DataExchange","docs/DATA_EXCHANGE.md"]},
     {"id":"archive-operations","status":"shipped","evidence":["app/Modules/ArchiveOperations","docs/OPERATIONS.md"]},
-    {"id":"backup-and-restore","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/RestoreDrillService.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"backup-and-restore","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/BackupRegisterService.php","app/Modules/ArchiveOperations/Services/RestoreDrillService.php","app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"encrypted-offsite-backup-copy","status":"conditional","requires":["operator-configured private Laravel filesystem disk","externally encrypted backup bytes"],"evidence":["app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"storage-migration-preflight","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/StorageMigrationService.php","docs/OPERATIONS.md"]},
+    {"id":"s3-versioned-cleanup","status":"conditional","requires":["S3 source disk","provider bucket versioning status Enabled","provider noncurrent-version retention"],"evidence":["app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php","app/Modules/ArchiveOperations/Models/StorageTombstone.php","docs/BACKUP_RESTORE.md"]},
     {"id":"local-ai-provider","status":"conditional","requires":["administrator opt-in","approved provider/model"],"evidence":["app/Modules/Ai","docs/AI_PROVIDER_SETUP.md"]},
     {"id":"pgvector-semantic-search","status":"conditional","requires":["PostgreSQL pgvector extension","compatible text/image embedding space"],"evidence":["app/Modules/Ai/Services/PgvectorEmbeddingStore.php","docs/VECTOR_RECOVERY_DELIVERY.md"]},
     {"id":"vistora-identity","status":"shipped","evidence":["public/brand","docs/BRANDING.md"]}

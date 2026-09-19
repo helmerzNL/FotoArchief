@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\ArchiveOperations\Models\RestoreDrill;
 use App\Modules\ArchiveOperations\Services\BackupRegisterService;
+use App\Modules\ArchiveOperations\Services\DisposableRestoreDrillService;
 use App\Modules\ArchiveOperations\Services\RestoreAcceptanceService;
 use App\Modules\ArchiveOperations\Services\RestoreDrillService;
 use App\Modules\Catalogue\Models\Asset;
@@ -67,9 +68,19 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
         $tar->addFromString('app/installation/state.json', $stateJson);
         unset($tar);
         File::put($source.'/VERSION', trim(File::get(base_path('VERSION')))."\n");
-        File::put($source.'/FORMAT', "fotoarchief-local-backup-v1\n");
+        File::put($source.'/FORMAT', "fotoarchief-local-backup-v2\n");
+        File::put($source.'/BACKUP-MANIFEST.json', json_encode([
+            'schema_version' => 2,
+            'format' => 'fotoarchief-local-backup-v2',
+            'app_version' => trim(File::get(base_path('VERSION'))),
+            'created_at' => now()->toAtomString(),
+            'components' => [
+                'database.dump' => ['sha256' => hash_file('sha256', $source.'/database.dump'), 'bytes' => filesize($source.'/database.dump')],
+                'storage-app.tar' => ['sha256' => hash_file('sha256', $source.'/storage-app.tar'), 'bytes' => filesize($source.'/storage-app.tar')],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n");
         $manifest = '';
-        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT'] as $file) {
+        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT', 'BACKUP-MANIFEST.json'] as $file) {
             $manifest .= hash_file('sha256', $source.'/'.$file).'  '.$file."\n";
         }
         File::put($source.'/SHA256SUMS', $manifest);
@@ -108,6 +119,10 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
             ->and(DB::table('acceptance_evidence')->where('result', 'failed')->count())->toBe(2)
             ->and(glob($directory.'/restored/.acceptance-*'))->toBe([]);
         expect(fn () => $service->run($backup, $targetDatabase, $directory.'/second', true))->toThrow(RuntimeException::class, 'not empty');
+        $disposable = app(DisposableRestoreDrillService::class)->runLatest($directory, true);
+        expect($disposable->status)->toBe('verified')
+            ->and($disposable->report['disposable_cleanup'])->toBe('verified')
+            ->and(file_exists($disposable->target_directory))->toBeFalse();
         expect(file_exists($directory.'/second'))->toBeFalse()
             ->and(RestoreDrill::query()->where('status', 'failed')->count())->toBe(2)
             ->and(RestoreDrill::query()->where('status', 'verified')->count())->toBe(1);

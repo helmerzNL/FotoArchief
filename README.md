@@ -52,7 +52,10 @@ opensource-licentie gekozen.
 - gecoördineerde automatische deploymentmigraties voor app, worker en
   scheduler; zie [deploymentmigraties](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproduceerbare PHP- en deploymentarchieven, containeracceptatie en een
-  consistente back-up- en herstelprocedure voor lokale volumes.
+  consistente back-up- en herstelprocedure voor lokale volumes;
+- versiegebonden back-upmanifesten, providerneutrale versleutelde
+  offsite-kopie, optionele wegwerpbare PostgreSQL-herstelproeven en
+  opslagmigratiepreflight met verplichte S3-versioneringscontrole.
 
 Composer-afhankelijkheden worden niet in de repository opgenomen. Installeer
 de vergrendelde set met `composer install`; gebruik `composer update` niet als
@@ -207,7 +210,10 @@ separate owner decisions; no open-source licence has been selected.
 - coordinated automatic deployment migrations for app, worker and scheduler;
   see [deployment migrations](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproducible PHP and deployment archives, container acceptance and a
-  consistent local-volume backup and restore procedure.
+  consistent local-volume backup and restore procedure;
+- version-bound backup manifests, provider-neutral encrypted offsite copying,
+  optional disposable PostgreSQL restore drills and storage-migration
+  preflight with mandatory S3 versioning verification.
 
 Composer dependencies are not vendored in the repository. Install the locked
 set with `composer install`; do not use `composer update` as an installation

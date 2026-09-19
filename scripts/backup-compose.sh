@@ -46,9 +46,27 @@ docker compose -f "$compose_file" exec -T postgres sh -ec \
 docker compose -f "$compose_file" run --rm --no-deps --entrypoint tar app \
     --exclude=app/.gitignore -cf - -C storage app > "$backup/storage-app.tar"
 docker compose -f "$compose_file" run --rm --no-deps --entrypoint cat app VERSION > "$backup/VERSION"
-printf '%s\n' 'fotoarchief-local-backup-v1' > "$backup/FORMAT"
+printf '%s\n' 'fotoarchief-local-backup-v2' > "$backup/FORMAT"
+database_sha=$(sha256sum "$backup/database.dump" | awk '{print $1}')
+storage_sha=$(sha256sum "$backup/storage-app.tar" | awk '{print $1}')
+database_bytes=$(wc -c < "$backup/database.dump" | tr -d ' ')
+storage_bytes=$(wc -c < "$backup/storage-app.tar" | tr -d ' ')
+version=$(tr -d '\r\n' < "$backup/VERSION")
+created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+cat > "$backup/BACKUP-MANIFEST.json" <<EOF
+{
+  "schema_version": 2,
+  "format": "fotoarchief-local-backup-v2",
+  "app_version": "$version",
+  "created_at": "$created_at",
+  "components": {
+    "database.dump": {"sha256": "$database_sha", "bytes": $database_bytes},
+    "storage-app.tar": {"sha256": "$storage_sha", "bytes": $storage_bytes}
+  }
+}
+EOF
 (
     cd "$backup"
-    sha256sum database.dump storage-app.tar VERSION FORMAT > SHA256SUMS
+    sha256sum database.dump storage-app.tar VERSION FORMAT BACKUP-MANIFEST.json > SHA256SUMS
 )
 printf '%s\n' "Backup complete: $backup"

@@ -1,5 +1,16 @@
 # Backup and restore
 
+## Versioned backup manifest
+
+New local backup sets use `fotoarchief-local-backup-v2`. Alongside
+`SHA256SUMS`, every set contains `BACKUP-MANIFEST.json` with schema version 2,
+the exact application version, UTC creation time, and byte size plus SHA-256
+for the PostgreSQL dump and private-storage archive. Registration verifies both
+layers and stores the structured manifest. Restore drills require the backup's
+application version to match the running code. Legacy v1 sets remain
+registerable for existing evidence, but automated disposable drills select
+only current-version v2 sets.
+
 FotoArchief must back up PostgreSQL metadata, S3-compatible object storage,
 deployment configuration and required secrets separately. A backup is not a
 recovery control until a restore has been tested.
@@ -189,6 +200,56 @@ generations to cover accidental deletion and delayed ransomware discovery. For
 S3-based archives, the second location must include the database dump,
 `storage/app/installation`, deployment config and the object-storage snapshot or
 sync result for originals and retained derivatives.
+
+After encryption, `operations:copy-backup-offsite` can copy the encrypted file
+and its adjacent `.manifest` through any configured private Laravel filesystem
+disk. The application never receives the encryption key. It verifies the local
+encrypted checksum before upload and streams the remote object back through
+SHA-256 verification:
+
+```sh
+BACKUP_OFFSITE_DISK=s3 php artisan operations:copy-backup-offsite \
+  /private/fotoarchief-2026-10-12.tar.gz.enc \
+  backups/fotoarchief-2026-10-12.tar.gz.enc
+```
+
+Do not set `BACKUP_OFFSITE_DISK=public`. The named disk must have independent
+credentials and retention from the primary archive.
+
+## Disposable automated restore drill
+
+`operations:restore-drill-disposable` selects the newest checksum-verified v2
+backup for the running application version, creates a randomly named empty
+PostgreSQL database and new storage directory, runs the existing byte-level
+restore verification, then removes both targets. Cleanup failure changes the
+drill status to `cleanup_failed` and fails the command.
+
+```sh
+php artisan operations:restore-drill-disposable \
+  --parent=/private/restore-drills --confirm-disposable
+```
+
+Set `AUTOMATIC_RESTORE_DRILL_ENABLED=true` and
+`AUTOMATIC_RESTORE_DRILL_PARENT=/private/restore-drills` only after creating
+that private, empty parent and granting the database role `CREATE DATABASE`.
+The scheduler then runs the drill monthly. The default is disabled.
+
+## S3 versioning and deletion tombstones
+
+Before an S3-backed source is cleaned after migration, FotoArchief calls the
+provider's bucket-versioning API and requires status `Enabled`. Verify this
+independently with:
+
+```sh
+php artisan operations:verify-s3-versioning s3
+```
+
+Every logical delete from a versioned source first records a database tombstone
+with object key, checksum, deletion time and `retained_until`. The default
+retention evidence window is 30 days and is configured with
+`STORAGE_TOMBSTONE_RETENTION_DAYS`. The register does not itself retain object
+versions: provider lifecycle rules must preserve noncurrent versions and delete
+markers for at least the same number of days.
 
 ## Geplande versleutelde tweede kopie / Scheduled encrypted second copy
 
