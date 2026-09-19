@@ -44,9 +44,11 @@ class StorageMigrationController extends Controller
             'target_disk' => ['required', 'string', 'different:source_disk'],
         ]);
 
+        $preflight = $this->migrationService->preflightMigration($validated['source_disk'], $validated['target_disk']);
+
         // Only the intent is recorded here; copying and verifying bytes happens on the
         // ingest queue, so a large archive cannot outlive the request.
-        $migration = $this->migrationService->prepareMigration($validated['source_disk'], $validated['target_disk'], $user);
+        $migration = $this->migrationService->prepareMigration($validated['source_disk'], $validated['target_disk'], $user, $preflight);
 
         $this->runService->dispatchRun(
             StorageCopyJob::class,
@@ -59,6 +61,23 @@ class StorageMigrationController extends Controller
         return redirect()
             ->route('admin.operations.storage.index')
             ->with('status', "Migratie {$migration->id} gestart op de achtergrond. {$migration->total_files} bestanden worden gekopieerd en geverifieerd.");
+    }
+
+    public function preflight(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
+
+        $validated = $request->validate([
+            'source_disk' => ['required', 'string'],
+            'target_disk' => ['required', 'string', 'different:source_disk'],
+        ]);
+        $report = $this->migrationService->preflightMigration($validated['source_disk'], $validated['target_disk']);
+        $available = $report['available_bytes'] === null ? 'providerbeheerd' : number_format($report['available_bytes'], 0, ',', '.').' bytes';
+
+        return redirect()
+            ->route('admin.operations.storage.index')
+            ->with('status', "Dry-run geslaagd: {$report['file_count']} bestanden, {$report['required_with_headroom']} bytes inclusief marge; beschikbaar: {$available}; versionering: {$report['versioning']}.");
     }
 
     public function cutover(Request $request, StorageMigration $migration): RedirectResponse

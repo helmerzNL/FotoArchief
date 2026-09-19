@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 use App\Modules\Ai\Support\SemanticRelevanceEvaluator;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\PerformanceContracts;
 
 require __DIR__.'/bootstrap.php';
+$guard = require __DIR__.'/guard.php';
 
 $base = (string) getenv('SMOKE_URL');
 if (parse_url($base, PHP_URL_HOST) !== '127.0.0.1') {
     throw new RuntimeException('Relevance measurement only targets the owned loopback fixture.');
 }
 $exitCode = 0;
-$queries = [
-    ['query' => 'straat met huizen', 'expected_ids' => ['BENCH-000000', 'BENCH-000001', 'BENCH-000002', 'BENCH-000003', 'BENCH-000004']],
-    ['query' => 'schepen in de haven', 'expected_ids' => ['BENCH-000005', 'BENCH-000006', 'BENCH-000007', 'BENCH-000008', 'BENCH-000009']],
-    ['query' => 'markt op het dorpsplein', 'expected_ids' => ['BENCH-000010', 'BENCH-000011', 'BENCH-000012', 'BENCH-000013', 'BENCH-000014']],
-];
+$dataset = PerformanceContracts::relevanceDataset();
+$queries = $dataset['queries'];
 foreach ($queries as &$query) {
     $response = Http::timeout(30)->get($base.'/ontdek', [
         'semantic_q' => $query['query'], 'semantic_provider' => 'local', 'semantic_consent' => 1,
@@ -31,14 +30,22 @@ foreach ($queries as &$query) {
     }
 }
 unset($query);
-$metrics = (new SemanticRelevanceEvaluator)->evaluate($queries, 5);
-echo json_encode([
+$metrics = (new SemanticRelevanceEvaluator)->evaluate($queries, $dataset['k']);
+$result = [
+    'schema_version' => 1,
+    'dataset' => $dataset['dataset'],
     'scope' => 'actual-public-http-route-with-deterministic-local-provider',
     'negative_control' => in_array('--negative-control', $argv, true),
-    'live_model_quality' => false, 'k' => 5, 'minimum_precision' => 1, 'minimum_recall' => 1,
+    'live_model_quality' => false,
+    'k' => $dataset['k'],
+    'thresholds' => $dataset['thresholds'],
+    'acceptance_boundary' => $dataset['acceptance_boundary'],
     'metrics' => $metrics, 'queries' => $queries,
-], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR).PHP_EOL;
-if ($metrics['precision_at_k'] < 1 || $metrics['recall_at_k'] < 1) {
+];
+PerformanceContracts::writeResult($guard['root'], in_array('--negative-control', $argv, true) ? 'relevance-negative-control' : 'relevance', $result);
+if ($metrics['precision_at_k'] < $dataset['thresholds']['precision_at_k']
+    || $metrics['recall_at_k'] < $dataset['thresholds']['recall_at_k']
+    || $metrics['reciprocal_rank'] < $dataset['thresholds']['reciprocal_rank']) {
     fwrite(STDERR, "Relevance thresholds not met.\n");
     $exitCode = 1;
 }

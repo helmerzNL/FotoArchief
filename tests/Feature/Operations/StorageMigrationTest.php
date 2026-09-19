@@ -9,7 +9,9 @@ use App\Modules\ArchiveOperations\Jobs\StorageCleanupJob;
 use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\StorageMigration;
+use App\Modules\ArchiveOperations\Models\StorageTombstone;
 use App\Modules\ArchiveOperations\Services\OperationRunService;
+use App\Modules\ArchiveOperations\Services\S3ProtectionPolicy;
 use App\Modules\ArchiveOperations\Services\StorageMigrationService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
@@ -118,6 +120,74 @@ test('cleanup refuses out-of-band file binding changes after cutover', function 
         ->and($migration->fresh()->status)->toBe('cutover_completed')
         ->and($migration->fresh()->source_cleaned_at)->toBeNull();
 })->with(['disk', 'key', 'checksum']);
+
+test('versioned S3 cleanup records retained tombstones before deleting source objects', function (): void {
+    Storage::fake('versioned');
+    Storage::fake('target');
+    config([
+        'filesystems.disks.versioned.driver' => 's3',
+        'filesystems.disks.versioned.bucket' => 'archive-source',
+        'recovery.storage_protection.tombstone_retention_days' => 45,
+    ]);
+    $this->mock(S3ProtectionPolicy::class)
+        ->shouldReceive('verifyVersioning')
+        ->once()
+        ->with('versioned')
+        ->andReturn(['disk' => 'versioned', 'bucket' => 'archive-source', 'versioning' => 'Enabled']);
+    $asset = Asset::query()->create(['accession_number' => 'VERSIONED-CLEANUP', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id,
+        'storage_disk' => 'versioned',
+        'storage_key' => 'originals/versioned.jpg',
+        'sha256' => hash('sha256', 'original'),
+        'media_type' => 'image/jpeg',
+        'byte_size' => 8,
+        'derivatives' => [],
+    ]);
+    Storage::disk('versioned')->put($file->storage_key, 'original');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->startMigration('versioned', 'target', $this->admin);
+    $service->cutover($migration, $this->admin);
+    $service->cleanupSourceFiles($migration->fresh(), $this->admin);
+
+    $tombstone = StorageTombstone::query()->sole();
+    expect($tombstone->status)->toBe('deleted')
+        ->and($tombstone->disk)->toBe('versioned')
+        ->and($tombstone->object_key)->toBe($file->storage_key)
+        ->and($tombstone->deleted_at)->not->toBeNull()
+        ->and($tombstone->retained_until->gte($tombstone->created_at->copy()->addDays(44)))->toBeTrue()
+        ->and(Storage::disk('versioned')->exists($file->storage_key))->toBeFalse();
+});
+
+test('S3 cleanup fails closed before tombstones or deletion when versioning is not verified', function (): void {
+    Storage::fake('versioned');
+    Storage::fake('target');
+    config(['filesystems.disks.versioned.driver' => 's3']);
+    $this->mock(S3ProtectionPolicy::class)
+        ->shouldReceive('verifyVersioning')
+        ->once()
+        ->with('versioned')
+        ->andThrow(new RuntimeException('S3 bucket versioning must be enabled.'));
+    $asset = Asset::query()->create(['accession_number' => 'UNVERSIONED-CLEANUP', 'created_by_user_id' => $this->admin->id]);
+    $file = AssetFile::query()->create([
+        'asset_id' => $asset->id,
+        'storage_disk' => 'versioned',
+        'storage_key' => 'originals/unversioned.jpg',
+        'sha256' => hash('sha256', 'original'),
+        'media_type' => 'image/jpeg',
+        'byte_size' => 8,
+        'derivatives' => [],
+    ]);
+    Storage::disk('versioned')->put($file->storage_key, 'original');
+    $service = app(StorageMigrationService::class);
+    $migration = $service->startMigration('versioned', 'target', $this->admin);
+    $service->cutover($migration, $this->admin);
+
+    expect(fn () => $service->cleanupSourceFiles($migration->fresh(), $this->admin))
+        ->toThrow(RuntimeException::class, 'S3 bucket versioning must be enabled.');
+    expect(StorageTombstone::query()->count())->toBe(0)
+        ->and(Storage::disk('versioned')->exists($file->storage_key))->toBeTrue();
+});
 
 test('verified receipts recover stale counters without copying and backfill legacy derivative checksums', function (): void {
     $asset = Asset::query()->create(['accession_number' => 'LEGACY-COPY', 'created_by_user_id' => $this->admin->id]);
@@ -256,6 +326,12 @@ test('storage migration copies files, derivatives and verifies checksums without
 });
 
 test('starting a migration only queues work and the job copies and verifies every byte', function (): void {
+    config(['filesystems.disks.s3.driver' => 's3']);
+    $this->mock(S3ProtectionPolicy::class)
+        ->shouldReceive('verifyVersioning')
+        ->once()
+        ->with('s3')
+        ->andReturn(['disk' => 's3', 'bucket' => 'test-bucket', 'versioning' => 'Enabled']);
     $asset = Asset::create([
         'title' => 'Queued Migration Asset',
         'accession_number' => 'FA-MIG-002',

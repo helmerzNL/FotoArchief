@@ -11,13 +11,27 @@
     <p class="eyebrow">Foto</p>
     <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
     @if($file)
-        <figure class="viewer" data-viewer>
-            <img class="preview" id="viewer-image" tabindex="0" role="button"
-                 aria-pressed="false" aria-label="{{ __('publication.generated.t_ce26a2644085865e') }}"
-                 src="{{ ($staffPreview ?? false) ? route('admin.assets.media', [$asset, $file, 'preview1200']) : route('public.photo.media', [$publication, 'preview1200']) }}" alt="">
-            <figcaption>
-                <button type="button" id="viewer-zoom" aria-controls="viewer-image">{{ __('publication.generated.t_d452d1d286679966') }}</button>
+        <figure class="viewer" data-viewer
+                @unless($staffPreview ?? false) data-manifest-url="{{ route('iiif.manifest', $publication) }}" @endunless>
+            <div class="viewer-viewport" id="viewer-viewport" role="region" tabindex="0"
+                 aria-label="{{ __('publication.viewer.region') }}" aria-describedby="viewer-help">
+                <img class="preview" id="viewer-image"
+                     src="{{ ($staffPreview ?? false) ? route('admin.assets.media', [$asset, $file, 'preview1200']) : route('public.photo.media', [$publication, 'preview1200']) }}"
+                     alt="{{ $asset->title ?: $asset->accession_number }}" data-zoom="1" data-pan-x="0" data-pan-y="0">
+            </div>
+            <figcaption class="viewer-controls">
+                <button type="button" id="viewer-zoom-in" aria-controls="viewer-viewport">{{ __('publication.viewer.zoom_in') }}</button>
+                <button type="button" id="viewer-zoom-out" aria-controls="viewer-viewport">{{ __('publication.viewer.zoom_out') }}</button>
+                <button type="button" id="viewer-reset" aria-controls="viewer-viewport">{{ __('publication.viewer.reset') }}</button>
+                <span id="viewer-help">{{ __('publication.viewer.help') }}</span>
+                <span id="viewer-status" role="status"
+                      data-loading="{{ __('publication.viewer.loading') }}"
+                      data-loaded="{{ __('publication.viewer.loaded') }}"
+                      data-fallback="{{ __('publication.viewer.fallback') }}"></span>
             </figcaption>
+            @unless($staffPreview ?? false)
+                <noscript><p><a href="{{ route('iiif.manifest', $publication) }}">{{ __('publication.viewer.manifest_link') }}</a></p></noscript>
+            @endunless
         </figure>
     @endif
     @if($asset->description)<p class="intro">{{ $asset->description }}</p>@endif
@@ -45,7 +59,7 @@
         <ul class="share-links">
             <li><a rel="noopener" target="_blank" href="https://wa.me/?text={{ urlencode(($asset->title ?: $asset->accession_number).' '.$canonicalUrl) }}">{{ __('publication.generated.t_026fa7e0fe75a1a5') }}</a></li>
             <li><a href="mailto:?subject={{ urlencode($asset->title ?: $asset->accession_number) }}&amp;body={{ urlencode($canonicalUrl) }}">{{ __('publication.generated.t_e2cc2cd1412e51dd') }}</a></li>
-            @if($file)<li><a href="{{ route('iiif.manifest', $publication) }}">IIIF-manifest</a></li>@endif
+            @if($file)<li><a href="{{ route('iiif.manifest', $publication) }}">{{ __('publication.viewer.manifest_link') }}</a></li>@endif
         </ul>
     </section>
 

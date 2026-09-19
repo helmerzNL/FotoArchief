@@ -191,7 +191,8 @@ jobs:
           name: fotoarchief-performance-${{ github.sha }}
           path: |
             performance-acceptance.log
-          if-no-files-found: ignore
+            benchmark-results.json
+          if-no-files-found: error
 
   browser:
     name: Browser acceptance (11-15)

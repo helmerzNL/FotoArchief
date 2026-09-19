@@ -4,14 +4,16 @@ FotoArchief is operated as a self-hosted Laravel application on a managed VPS or
 equivalent server, with an additional shared-hosting deployment path. The
 initial topology uses PostgreSQL, private local or S3-compatible storage,
 file cache/sessions and database queues. Valkey/Redis is optional for larger
-deployments, not required before the onboarding wizard.
+deployments, not required before the onboarding wizard. Ingest records its job
+in the PostgreSQL transactional outbox before returning success; the scheduler
+dispatches committed rows to the configured queue connection.
 
 ## Service responsibilities
 
 - `app`: serves the Laravel web/API runtime behind a TLS reverse proxy such as
   Caddy or Nginx.
 - `worker`: waits for completed installation, then processes the dedicated
-  database `ingest` queue: validation, optional scanning, checksums,
+  `ingest` queue: validation, optional scanning, checksums,
   technical metadata, private derivatives, OCR, AI indexing, import/export
   work and retry recovery. These features are implemented; availability still
   depends on their documented configuration and worker prerequisites.
@@ -194,6 +196,10 @@ php artisan operations:register-backup /private/backup
 php artisan operations:restore-drill BACKUP_ID \
   --database=archive_restore_drill \
   --directory=/private/new-drill --confirm-empty-target
+php artisan operations:restore-drill-disposable \
+  --parent=/private/restore-drills --confirm-disposable
+php artisan operations:storage-preflight local s3
+php artisan operations:verify-s3-versioning s3
 ```
 
 **Nederlands.** Gebruik uitsluitend vertrouwde lokale backups uit
@@ -235,6 +241,21 @@ storage fails explicitly. A persistent report records success/failure and scope.
 Login, previews, external storage and a complete working installation remain
 unproven. Targets remain after failure: inspect and remove only the explicit test
 database/directory. The live database retains the drill report.
+
+**Opslagmigratie.** Een migratie die via de beheerinterface wordt gestart voert
+altijd eerst dezelfde dry-run uit als `operations:storage-preflight`:
+bronvolume, tien procent capaciteitsmarge, schrijf/lees/verwijderbereikbaarheid
+en voor S3 live bucketversionering. De dry-run verplaatst geen archiefbytes en
+maakt geen migratierecord. S3-bronopschoning bewaart tombstones; fysieke
+herstelbaarheid blijft afhankelijk van de providerretentie voor niet-actuele
+objectversies.
+
+**Storage migration.** A migration started through the administration UI always
+runs the same dry run as `operations:storage-preflight`: source volume, ten
+percent capacity headroom, write/read/delete reachability and live bucket
+versioning for S3. The dry run moves no archive bytes and creates no migration
+record. S3 source cleanup records tombstones; physical recovery still depends
+on provider retention for noncurrent object versions.
 
 ### Incidentdeduplicatie / Incident deduplication
 

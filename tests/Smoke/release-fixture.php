@@ -61,6 +61,20 @@ function releaseArtisan(string $installed, array $environment, array $arguments)
     (new Process([PHP_BINARY, 'artisan', ...$arguments], $installed, $environment, timeout: 120))->mustRun();
 }
 
+function releaseArtisanCommandExists(string $installed, array $environment, string $console, string $command): bool
+{
+    $process = new Process([PHP_BINARY, $console, 'list', '--raw'], $installed, $environment, timeout: 120);
+    $process->mustRun();
+
+    foreach (preg_split('/\R/', $process->getOutput()) ?: [] as $line) {
+        if ($line === $command || str_starts_with($line, $command.' ')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function startReleaseServer(string $installed, array $environment, ?string $router = null): Process
 {
     $address = parse_url($environment['SMOKE_URL'], PHP_URL_HOST).':'.parse_url($environment['SMOKE_URL'], PHP_URL_PORT);
@@ -86,6 +100,7 @@ function startReleaseServer(string $installed, array $environment, ?string $rout
 function runReleaseOnboarding(string $installed, array $environment, string $console = 'artisan'): void
 {
     $worker = null;
+    $dispatchesOutbox = releaseArtisanCommandExists($installed, $environment, $console, 'outbox:dispatch');
     $acceptance = new Process([PHP_BINARY, __DIR__.'/http-onboarding.php'], $installed, $environment, timeout: 150);
     try {
         $acceptance->start();
@@ -101,9 +116,20 @@ function runReleaseOnboarding(string $installed, array $environment, string $con
             }
             usleep(100000);
         }
+        while ($worker?->isRunning() && $acceptance->isRunning()) {
+            if ($dispatchesOutbox) {
+                (new Process([PHP_BINARY, $console, 'outbox:dispatch'], $installed, $environment, timeout: 120))->mustRun();
+            }
+            usleep(250000);
+        }
         $acceptance->wait();
         if (! $acceptance->isSuccessful()) {
-            throw new RuntimeException($acceptance->getErrorOutput().$acceptance->getOutput().($worker?->getErrorOutput() ?? ''));
+            throw new RuntimeException(
+                $acceptance->getErrorOutput()
+                .$acceptance->getOutput()
+                .($worker?->getErrorOutput() ?? '')
+                .($worker?->getOutput() ?? '')
+            );
         }
         echo $acceptance->getOutput();
     } finally {

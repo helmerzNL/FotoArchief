@@ -10,6 +10,7 @@ use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Services\TransactionalOutbox;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
@@ -51,6 +52,7 @@ it('upgrades the previous schema preserving originals then processes and edits o
         $user->roles()->attach(Role::query()->where('key', 'administrator')->firstOrFail());
         $asset = Asset::query()->create(['accession_number' => 'UPGRADE-NEW', 'title' => 'New', 'created_by_user_id' => $user->id]);
         $upload = app(QuarantineUploadService::class)->quarantine($asset, UploadedFile::fake()->image('pg.png', 120, 60), $user->id);
+        app(TransactionalOutbox::class)->dispatchBatch();
         Artisan::call('queue:work', ['connection' => 'ingest', '--once' => true, '--tries' => 3]);
         expect($upload->fresh()->status)->toBe('completed')->and(AssetFile::count())->toBe(2);
         $path = '/admin/assets/'.$asset->id;

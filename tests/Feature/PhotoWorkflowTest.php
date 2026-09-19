@@ -8,16 +8,17 @@ use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
+use App\Modules\Ingest\Models\JobOutboxMessage;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
 use App\Modules\Ingest\Services\MalwareScanner;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Services\TransactionalOutbox;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -55,7 +56,11 @@ it('runs real queued processing with immutable private originals and bounded str
     $user = photoUser();
     $upload = photoUpload($user, 'image.'.$extension);
     $original = Storage::disk($disk)->get($upload->storage_key);
-    expect(AssetFile::count())->toBe(0)->and(DB::table('jobs')->where('queue', 'ingest')->count())->toBe(1);
+    expect(AssetFile::count())->toBe(0)
+        ->and(JobOutboxMessage::query()->where('status', 'pending')->count())->toBe(1)
+        ->and(DB::table('jobs')->where('queue', 'ingest')->count())->toBe(0);
+    app(TransactionalOutbox::class)->dispatchBatch();
+    expect(DB::table('jobs')->where('queue', 'ingest')->count())->toBe(1);
     Artisan::call('queue:work', ['connection' => 'ingest', '--once' => true, '--tries' => 3]);
     expect($upload->fresh()->status)->toBe('completed');
     $file = AssetFile::query()->sole();
@@ -288,9 +293,10 @@ it('rejects inconsistent dates and oversized tags without losing metadata', func
     [['tags' => implode(',', range(1, 21))]],
 ]);
 
-it('cleans private objects and empty assets when queue persistence fails', function (): void {
-    Queue::shouldReceive('connection')->with('ingest')->andReturnSelf();
-    Queue::shouldReceive('push')->andThrow(new RuntimeException('queue write failure'));
+it('cleans private objects and empty assets when outbox persistence fails', function (): void {
+    $outbox = Mockery::mock(TransactionalOutbox::class);
+    $outbox->shouldReceive('record')->once()->andThrow(new RuntimeException('outbox write failure'));
+    $this->app->instance(TransactionalOutbox::class, $outbox);
     $this->actingAs(photoUser())->postJson('/admin/assets', ['files' => [UploadedFile::fake()->image('x.png')]])
         ->assertUnprocessable()->assertJsonPath('results.0.ok', false);
     expect(QuarantineUpload::count())->toBe(0)->and(Asset::count())->toBe(0)

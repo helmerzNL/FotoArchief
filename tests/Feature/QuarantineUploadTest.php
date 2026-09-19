@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Ingest\Jobs\ProcessUpload;
+use App\Modules\Ingest\Models\JobOutboxMessage;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Services\TransactionalOutbox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -35,5 +37,9 @@ it('streams an allowed upload to private quarantine and dispatches processing', 
         ->and($quarantine->storage_key)->toStartWith('quarantine/');
 
     Storage::disk($disk)->assertExists($quarantine->storage_key);
+    Queue::assertNothingPushed();
+    expect(JobOutboxMessage::query()->where('aggregate_id', $quarantine->id)->where('status', 'pending')->exists())->toBeTrue();
+
+    app(TransactionalOutbox::class)->dispatchBatch();
     Queue::assertPushed(ProcessUpload::class, fn (ProcessUpload $job): bool => $job->uploadId === $quarantine->id);
 })->with(['s3', 'local']);

@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $location
  * @property string $manifest_sha256
  * @property int $byte_size
+ * @property int $manifest_schema_version
+ * @property string $backup_format
+ * @property array<string, mixed>|null $manifest
  */
 class BackupRecord extends Model
 {
@@ -23,7 +26,12 @@ class BackupRecord extends Model
 
     protected function casts(): array
     {
-        return ['checksum_verified_at' => 'immutable_datetime', 'byte_size' => 'integer'];
+        return [
+            'checksum_verified_at' => 'immutable_datetime',
+            'byte_size' => 'integer',
+            'manifest_schema_version' => 'integer',
+            'manifest' => 'array',
+        ];
     }
 
     /** @return HasMany<RestoreDrill, $this> */

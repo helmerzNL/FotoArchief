@@ -44,7 +44,8 @@ opensource-licentie gekozen.
 - collecties, personen, organisaties, historische locaties, herkomst, tags,
   synoniemen, geavanceerd zoeken en bulkacties;
 - publicatiereview, embargo- en privacycontrole, publieke collecties,
-  bezoekerssuggesties, sitemaps en IIIF Presentation 3-manifesten;
+  bezoekerssuggesties, sitemaps, IIIF Presentation 3-manifesten en een
+  toetsenbordbedienbare ingebouwde viewer;
 - diagnostiek, processingoperaties, integriteitscontrole, opslagverplaatsing,
   herstelbaar verwijderen en optionele OCR;
 - een technische taalvoorkeurbasis met Nederlands (`nl`) als enige actieve
@@ -52,7 +53,13 @@ opensource-licentie gekozen.
 - gecoördineerde automatische deploymentmigraties voor app, worker en
   scheduler; zie [deploymentmigraties](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproduceerbare PHP- en deploymentarchieven, containeracceptatie en een
-  consistente back-up- en herstelprocedure voor lokale volumes.
+  consistente back-up- en herstelprocedure voor lokale volumes;
+- versiebeheerbare 50.000-fotobenchmarks, regressiebudgetten, semantische
+  relevantiesets en brede toegankelijkheidsregressies; zie
+  [meetbare kwaliteit](docs/QUALITY_ACCEPTANCE.md);
+- versiegebonden back-upmanifesten, providerneutrale versleutelde
+  offsite-kopie, optionele wegwerpbare PostgreSQL-herstelproeven en
+  opslagmigratiepreflight met verplichte S3-versioneringscontrole.
 
 Composer-afhankelijkheden worden niet in de repository opgenomen. Installeer
 de vergrendelde set met `composer install`; gebruik `composer update` niet als
@@ -63,6 +70,8 @@ PostgreSQL blijft verplicht voor beide distributievormen.
 Implementatie en releaseacceptatie zijn niet hetzelfde. Raadpleeg het
 [acceptatieregister](docs/RELEASE_ACCEPTANCE.md) voor meetresultaten en
 resterende poorten voordat de applicatie publiek beschikbaar wordt gemaakt.
+Het gegenereerde [functieregister](docs/CAPABILITIES.md) koppelt iedere
+geleverde of voorwaardelijke mogelijkheid aan concreet bronbewijs.
 
 ### Vereisten
 
@@ -82,8 +91,9 @@ Voor lokale ontwikkeling zijn nodig:
 - optioneel een private S3-compatibele objectstore.
 
 De eerste installatie ondersteunt private lokale opslag, bestandssessies en
--cache en databasequeues zonder Redis. Ingest gebruikt altijd de afzonderlijke
-transactionele databasequeue.
+-cache en databasequeues zonder Redis. Ingest schrijft atomair naar de
+transactionele outbox; de scheduler levert daarna aan de databasequeue of,
+optioneel, de private Redis/Valkey-queue.
 
 ### Eerste installatie
 
@@ -196,7 +206,8 @@ separate owner decisions; no open-source licence has been selected.
 - collections, people, organisations, historical locations, provenance, tags,
   synonyms, advanced search and bulk actions;
 - publication review, embargo and privacy controls, public collections,
-  visitor suggestions, sitemaps and IIIF Presentation 3 manifests;
+  visitor suggestions, sitemaps, IIIF Presentation 3 manifests, and a
+  keyboard-operable embedded viewer;
 - diagnostics, processing operations, integrity checks, storage relocation,
   recoverable deletion and optional OCR;
 - a technical language-preference foundation with Dutch (`nl`) as the only
@@ -204,7 +215,13 @@ separate owner decisions; no open-source licence has been selected.
 - coordinated automatic deployment migrations for app, worker and scheduler;
   see [deployment migrations](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproducible PHP and deployment archives, container acceptance and a
-  consistent local-volume backup and restore procedure.
+  consistent local-volume backup and restore procedure;
+- version-controlled 50,000-photo benchmarks, regression budgets, semantic
+  relevance sets, and broad accessibility regressions; see
+  [measurable quality](docs/QUALITY_ACCEPTANCE.md);
+- version-bound backup manifests, provider-neutral encrypted offsite copying,
+  optional disposable PostgreSQL restore drills and storage-migration
+  preflight with mandatory S3 versioning verification.
 
 Composer dependencies are not vendored in the repository. Install the locked
 set with `composer install`; do not use `composer update` as an installation
@@ -215,6 +232,8 @@ both distribution formats.
 Implementation and release acceptance are not the same. Consult the
 [acceptance ledger](docs/RELEASE_ACCEPTANCE.md) for measurements and remaining
 gates before exposing the application publicly.
+The generated [capability register](docs/CAPABILITIES.md) ties every shipped
+or conditional capability to concrete source evidence.
 
 ### Requirements
 
@@ -234,8 +253,9 @@ Local development requires:
 - optionally, a private S3-compatible object store.
 
 The initial installation supports private local storage, file sessions/cache
-and database queues without Redis. Ingest always uses its separate
-transactional database queue.
+and database queues without Redis. Ingest writes atomically to the
+transactional outbox; the scheduler then delivers to the database queue or,
+optionally, the private Redis/Valkey queue.
 
 ### First installation
 

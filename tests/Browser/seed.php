@@ -31,7 +31,7 @@ foreach (['archivist', 'editor', 'volunteer', 'viewer'] as $role) {
     $users[$role] = $user;
 }
 $manifest = ['url' => (string) getenv('SMOKE_URL'), 'assets' => [], 'suggestions' => [], 'publications' => []];
-foreach (['review', 'stale', 'revoke', 'embargo', 'trash', 'volunteer'] as $index => $name) {
+foreach (['review', 'stale', 'revoke', 'embargo', 'trash', 'volunteer', 'public'] as $index => $name) {
     $asset = Asset::query()->create([
         'accession_number' => 'FA-BROWSER-'.strtoupper($name),
         'title' => 'Browser '.$name, 'lock_version' => 1,
@@ -82,7 +82,7 @@ foreach (['review', 'stale', 'revoke', 'embargo', 'trash', 'volunteer'] as $inde
             $manifest['suggestions'][$name][$label] = $suggestion->id;
         }
     }
-    if (in_array($name, ['revoke', 'embargo', 'trash'], true)) {
+    if (in_array($name, ['revoke', 'embargo', 'trash', 'public'], true)) {
         $asset->rights()->create(['verification_status' => 'verified', 'rights_holder' => 'Synthetic browser fixture']);
         $publication = Publication::query()->create([
             'asset_id' => $asset->id, 'status' => 'published', 'privacy_cleared' => true,

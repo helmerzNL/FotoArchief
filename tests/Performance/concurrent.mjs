@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { performance } from 'node:perf_hooks';
@@ -10,6 +10,9 @@ assert.equal(process.env.FOTOARCHIEF_DISPOSABLE_BENCH, '1');
 assert.equal(dirname(root), realpathSync(tmpdir()));
 assert.ok(basename(root).startsWith('fotoarchief-benchmark-'));
 readFileSync(`${root}/.disposable-benchmark-fixture`);
+const budgets = JSON.parse(readFileSync(new URL('./budgets.v1.json', import.meta.url), 'utf8'));
+assert.equal(budgets.schema_version, 1);
+assert.equal(budgets.dataset_records, 50000);
 assert.equal(base.hostname, '127.0.0.1');
 assert.equal(base.protocol, 'http:');
 const cookies = new Map();
@@ -47,24 +50,24 @@ assert.equal(detailResponse.status, 200);
 const accession = detailResponse.body.match(/BENCH-[0-9]{6}/)?.[0];
 assert.ok(accession, 'Actual private asset identity required');
 const paths = [
-  ['/admin/assets', 800, 'Historische straat'],
-  ['/admin/assets?q=straat', 800, 'Historische straat'],
-  [detail, 400, accession],
-  ['/ontdek?q=straat&collection=benchmark-straten', 700, 'Historische straat', false],
-  ['/foto/benchmark-bench-000000', 400, 'Historische straat', false],
-  ['/ontdek?semantic_q=straat+met+huizen&semantic_provider=local&semantic_consent=1', 700, 'benchmark-bench-000000', false],
+  ['/admin/assets', budgets.p95_ms.private_listing, 'Historische straat'],
+  ['/admin/assets?q=straat', budgets.p95_ms.private_search, 'Historische straat'],
+  [detail, budgets.p95_ms.private_detail, accession],
+  ['/ontdek?q=straat&collection=benchmark-straten', budgets.p95_ms.public_search, 'Historische straat', false],
+  ['/foto/benchmark-bench-000000', budgets.p95_ms.public_detail, 'Historische straat', false],
+  ['/ontdek?semantic_q=straat+met+huizen&semantic_provider=local&semantic_consent=1', budgets.p95_ms.semantic_search, 'benchmark-bench-000000', false],
 ];
 const report = [];
 for (const [path, limit, marker, authenticated = true] of paths) {
-  for (let warmup = 0; warmup < 8; warmup++) {
+  for (let warmup = 0; warmup < budgets.samples.warmup; warmup++) {
     const result = await request(path, {}, authenticated);
     assert.equal(result.status, 200);
     assert.ok(result.body.includes(marker));
   }
   const results = [];
   let cursor = 0;
-  await Promise.all(Array.from({ length: 4 }, async () => {
-    while (cursor++ < 40) {
+  await Promise.all(Array.from({ length: budgets.samples.concurrency }, async () => {
+    while (cursor++ < budgets.samples.measured) {
       const result = await request(path, {}, authenticated);
       assert.equal(result.status, 200, `${path}: unexpected status`);
       assert.ok(result.body.includes(marker), `${path}: incorrect response body`);
@@ -72,18 +75,23 @@ for (const [path, limit, marker, authenticated = true] of paths) {
       results.push(result);
     }
   }));
-  assert.equal(results.length, 40);
+  assert.equal(results.length, budgets.samples.measured);
   const overlap = results.some(a => results.some(b => a.pid !== b.pid
     && Math.max(a.started, b.started) < Math.min(a.finished, b.finished)));
   assert.ok(overlap, 'No overlap between different PHP application workers; client-side concurrency alone is not proof');
   const times = results.map(result => result.ms).sort((a, b) => a - b);
   const databaseTimes = results.map(result => result.dbMs).sort((a, b) => a - b);
-  report.push({ path, anonymous: !authenticated, samples: 40, concurrency: 4, php_workers: new Set(results.map(result => result.pid)).size,
-    application_overlap_verified: overlap, p95_ms: Number(times[37].toFixed(2)),
-    p95_db_ms: databaseTimes[37], limit_ms: limit, passed: times[37] < limit });
+  const p95Index = Math.ceil(results.length * 0.95) - 1;
+  report.push({ path, anonymous: !authenticated, samples: results.length, concurrency: budgets.samples.concurrency, php_workers: new Set(results.map(result => result.pid)).size,
+    application_overlap_verified: overlap, p95_ms: Number(times[p95Index].toFixed(2)),
+    p95_db_ms: databaseTimes[p95Index], limit_ms: limit, passed: times[p95Index] < limit });
 }
-console.log(JSON.stringify({ scope: '50k-real-concurrent-http-four-owned-php-workers', records: 50000,
-  synthetic: true, provider: 'deterministic-loopback-fixture', results: report }, null, 2));
+const result = { schema_version: 1, budget_contract: 'budgets.v1.json',
+  scope: '50k-real-concurrent-http-four-owned-php-workers', records: budgets.dataset_records,
+  synthetic: true, provider: 'deterministic-loopback-fixture', results: report };
+const json = JSON.stringify(result, null, 2);
+writeFileSync(`${root}/concurrent-http.json`, `${json}\n`, { flag: 'w' });
+console.log(json);
 if (report.some(result => !result.passed)) {
   console.error('Concurrent HTTP performance thresholds exceeded.');
   process.exitCode = 1;

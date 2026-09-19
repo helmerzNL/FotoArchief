@@ -95,6 +95,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
 
     Route::prefix('storage-migration')->name('storage.')->group(function (): void {
         Route::get('/', [StorageMigrationController::class, 'index'])->name('index');
+        Route::post('/preflight', [StorageMigrationController::class, 'preflight'])->name('preflight');
         Route::post('/start', [StorageMigrationController::class, 'start'])->name('start');
         Route::post('/{migration}/cutover', [StorageMigrationController::class, 'cutover'])->name('cutover');
         Route::post('/{migration}/cleanup', [StorageMigrationController::class, 'cleanup'])->name('cleanup');

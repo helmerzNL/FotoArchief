@@ -20,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $copied_files
  * @property int $verified_files
  * @property int $failed_files
+ * @property int $required_bytes
+ * @property int|null $available_bytes
+ * @property array<string, mixed>|null $preflight_report
  * @property CarbonImmutable|null $cutover_at
  * @property CarbonImmutable|null $source_cleaned_at
  * @property CarbonImmutable|null $created_at
@@ -36,6 +39,9 @@ class StorageMigration extends CatalogueModel
         'copied_files' => 'integer',
         'verified_files' => 'integer',
         'failed_files' => 'integer',
+        'required_bytes' => 'integer',
+        'available_bytes' => 'integer',
+        'preflight_report' => 'array',
         'cutover_at' => 'immutable_datetime',
         'source_cleaned_at' => 'immutable_datetime',
     ];

@@ -7,6 +7,7 @@ namespace App\Modules\ArchiveOperations\Services;
 use App\Models\User;
 use App\Modules\ArchiveOperations\Models\StorageMigration;
 use App\Modules\ArchiveOperations\Models\StorageRelocation;
+use App\Modules\ArchiveOperations\Models\StorageTombstone;
 use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,8 @@ use RuntimeException;
 
 class StorageMigrationService
 {
+    public function __construct(private readonly S3ProtectionPolicy $s3Protection) {}
+
     /**
      * @return array<string, array{driver: string, file_count: int}>
      */
@@ -43,8 +46,21 @@ class StorageMigrationService
      *
      * Copying is bounded work for the ingest queue; an HTTP request only records the
      * intent so the operator immediately has a run to watch.
+     *
+     * @param  array{
+     *     ready: true,
+     *     source_disk: string,
+     *     target_disk: string,
+     *     file_count: int,
+     *     required_bytes: int,
+     *     required_with_headroom: int,
+     *     available_bytes: int|null,
+     *     capacity: 'sufficient'|'provider-managed',
+     *     versioning: 'not-applicable'|'verified',
+     *     checked_at: string
+     * }|null  $preflight
      */
-    public function prepareMigration(string $sourceDisk, string $targetDisk, User $user): StorageMigration
+    public function prepareMigration(string $sourceDisk, string $targetDisk, User $user, ?array $preflight = null): StorageMigration
     {
         if ($sourceDisk === $targetDisk) {
             throw new RuntimeException(__('operations.generated.t_ec41088f129fa460'));
@@ -59,8 +75,82 @@ class StorageMigrationService
             'copied_files' => 0,
             'verified_files' => 0,
             'failed_files' => 0,
+            'required_bytes' => (int) ($preflight['required_bytes'] ?? 0),
+            'available_bytes' => $preflight['available_bytes'] ?? null,
+            'preflight_report' => $preflight,
             'initiated_by_user_id' => $user->id,
         ]);
+    }
+
+    /**
+     * @return array{
+     *     ready: true,
+     *     source_disk: string,
+     *     target_disk: string,
+     *     file_count: int,
+     *     required_bytes: int,
+     *     required_with_headroom: int,
+     *     available_bytes: int|null,
+     *     capacity: 'sufficient'|'provider-managed',
+     *     versioning: 'not-applicable'|'verified',
+     *     checked_at: string
+     * }
+     */
+    public function preflightMigration(string $sourceDisk, string $targetDisk): array
+    {
+        if ($sourceDisk === $targetDisk) {
+            throw new RuntimeException(__('operations.generated.t_ec41088f129fa460'));
+        }
+        $sourceConfig = config("filesystems.disks.{$sourceDisk}");
+        $targetConfig = config("filesystems.disks.{$targetDisk}");
+        if (! is_array($sourceConfig) || ! is_array($targetConfig)) {
+            throw new RuntimeException('Source and target storage disks must be configured.');
+        }
+        $files = $this->sourceFiles($sourceDisk);
+        $fileCount = (int) $files->count();
+        $requiredBytes = (int) $files->sum('byte_size');
+        $requiredWithHeadroom = (int) ceil($requiredBytes * 1.1);
+        $availableBytes = null;
+        $capacity = 'provider-managed';
+        $targetDriver = $targetConfig['driver'] ?? null;
+        $versioning = 'not-applicable';
+
+        if ($targetDriver === 'local') {
+            $root = $targetConfig['root'] ?? null;
+            $available = is_string($root) ? disk_free_space($root) : false;
+            if ($available === false) {
+                throw new RuntimeException('Target storage capacity could not be measured.');
+            }
+            $availableBytes = (int) $available;
+            if ($availableBytes < $requiredWithHeadroom) {
+                throw new RuntimeException('Target storage has insufficient free capacity including ten percent headroom.');
+            }
+            $capacity = 'sufficient';
+        } elseif ($targetDriver === 's3') {
+            $this->s3Protection->verifyVersioning($targetDisk);
+            $versioning = 'verified';
+        }
+
+        $probeKey = 'migration-preflight/'.(string) Str::ulid();
+        $target = Storage::disk($targetDisk);
+        if (! $target->put($probeKey, 'fotoarchief-preflight', ['visibility' => 'private'])
+            || $target->get($probeKey) !== 'fotoarchief-preflight'
+            || ! $target->delete($probeKey)) {
+            throw new RuntimeException('Target storage write, read, and delete probe failed.');
+        }
+
+        return [
+            'ready' => true,
+            'source_disk' => $sourceDisk,
+            'target_disk' => $targetDisk,
+            'file_count' => $fileCount,
+            'required_bytes' => $requiredBytes,
+            'required_with_headroom' => $requiredWithHeadroom,
+            'available_bytes' => $availableBytes,
+            'capacity' => $capacity,
+            'versioning' => $versioning,
+            'checked_at' => now()->toAtomString(),
+        ];
     }
 
     /**
@@ -327,6 +417,11 @@ class StorageMigrationService
 
         $sourceStorage = Storage::disk($migration->source_disk);
         $targetStorage = Storage::disk($migration->target_disk);
+        $sourceConfig = config("filesystems.disks.{$migration->source_disk}");
+        $versionedSource = is_array($sourceConfig) && ($sourceConfig['driver'] ?? null) === 's3';
+        if ($versionedSource) {
+            $this->s3Protection->verifyVersioning($migration->source_disk);
+        }
         $relocations = $migration->relocations()->whereNotNull('cutover_completed_at')->get();
         if ($relocations->count() !== $migration->total_files) {
             throw new RuntimeException(__('operations.storage.source_changed'));
@@ -342,9 +437,26 @@ class StorageMigrationService
             $file = $this->cleanupFile($migration, $relocation);
             $this->verifyTarget($file, $sourceStorage, $targetStorage, $relocation->verified_derivatives);
             foreach ([$relocation->source_key, ...array_keys($relocation->verified_derivatives ?? [])] as $key) {
+                $tombstone = null;
+                if ($versionedSource) {
+                    $tombstone = StorageTombstone::query()->updateOrCreate([
+                        'storage_migration_id' => $migration->id,
+                        'object_key' => $key,
+                    ], [
+                        'storage_relocation_id' => $relocation->id,
+                        'disk' => $migration->source_disk,
+                        'sha256' => $key === $relocation->source_key
+                            ? $relocation->sha256
+                            : ($relocation->verified_derivatives[$key] ?? ''),
+                        'status' => 'pending',
+                        'retained_until' => now()->addDays(max(1, (int) config('recovery.storage_protection.tombstone_retention_days', 30))),
+                        'deleted_at' => null,
+                    ]);
+                }
                 if ($sourceStorage->exists($key) && ! $sourceStorage->delete($key)) {
                     throw new RuntimeException(__('operations.storage.cleanup_failed'));
                 }
+                $tombstone?->update(['status' => 'deleted', 'deleted_at' => now()]);
             }
             $deletedCount++;
         }

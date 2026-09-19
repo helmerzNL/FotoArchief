@@ -1,9 +1,10 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, realpathSync } from 'node:fs';
 import { dirname, join, sep } from 'node:path';
 import { tmpdir } from 'node:os';
 
-type AssetName = 'review' | 'stale' | 'revoke' | 'embargo' | 'trash' | 'volunteer';
+type AssetName = 'review' | 'stale' | 'revoke' | 'embargo' | 'trash' | 'volunteer' | 'public';
 interface Fixture {
   url: string;
   operation_id: string;
@@ -394,4 +395,43 @@ test('review queue confirms selected proposals and displays individual results o
   await page.getByRole('combobox', { name: 'Beoordelingsstatus', exact: true }).selectOption('rejected');
   await page.getByRole('button', { name: 'Filters toepassen', exact: true }).click();
   await expect(page.locator('article')).toHaveCount(1);
+});
+
+test('public and staff journeys have no automated WCAG A or AA violations', async ({ page }) => {
+  const publicRoutes = ['/', '/login', '/ontdek', '/foto/browser-public'];
+  for (const path of publicRoutes) {
+    await page.goto(url(path));
+    const results = await new AxeBuilder({ page }).withTags([
+      'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa',
+    ]).analyze();
+    expect(results.violations, `${path}\n${JSON.stringify(results.violations, null, 2)}`).toEqual([]);
+  }
+
+  await login(page);
+  for (const path of ['/admin', '/admin/assets', '/admin/uploads', '/admin/publications']) {
+    await page.goto(url(path));
+    const results = await new AxeBuilder({ page }).withTags([
+      'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa',
+    ]).analyze();
+    expect(results.violations, `${path}\n${JSON.stringify(results.violations, null, 2)}`).toEqual([]);
+  }
+});
+
+test('embedded IIIF viewer loads its manifest and supports keyboard zoom pan and reset', async ({ page }) => {
+  await page.goto(url('/foto/browser-public'));
+  const viewport = page.getByRole('region', { name: 'Interactieve IIIF-afbeelding' });
+  const image = viewport.getByRole('img');
+  await expect(viewport).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('IIIF-afbeelding geladen');
+  await page.getByRole('button', { name: 'Inzoomen' }).click();
+  await expect(image).toHaveAttribute('data-zoom', '1.5');
+  await viewport.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(image).toHaveAttribute('data-pan-x', '-40');
+  await page.getByRole('button', { name: 'Weergave herstellen' }).click();
+  await expect(image).toHaveAttribute('data-zoom', '1');
+  await expect(image).toHaveAttribute('data-pan-x', '0');
+  await expect(page.getByRole('link', { name: 'Open het IIIF-manifest' })).toHaveAttribute(
+    'href', /\/iiif\/browser-public\/manifest\.json$/,
+  );
 });
