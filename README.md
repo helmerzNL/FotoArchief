@@ -84,8 +84,9 @@ Voor lokale ontwikkeling zijn nodig:
 - optioneel een private S3-compatibele objectstore.
 
 De eerste installatie ondersteunt private lokale opslag, bestandssessies en
--cache en databasequeues zonder Redis. Ingest gebruikt altijd de afzonderlijke
-transactionele databasequeue.
+-cache en databasequeues zonder Redis. Ingest schrijft atomair naar de
+transactionele outbox; de scheduler levert daarna aan de databasequeue of,
+optioneel, de private Redis/Valkey-queue.
 
 ### Eerste installatie
 
@@ -238,8 +239,9 @@ Local development requires:
 - optionally, a private S3-compatible object store.
 
 The initial installation supports private local storage, file sessions/cache
-and database queues without Redis. Ingest always uses its separate
-transactional database queue.
+and database queues without Redis. Ingest writes atomically to the
+transactional outbox; the scheduler then delivers to the database queue or,
+optionally, the private Redis/Valkey queue.
 
 ### First installation
 

@@ -10,7 +10,6 @@ use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -18,6 +17,10 @@ use Throwable;
 
 class QuarantineUploadService
 {
+    public function __construct(
+        private readonly TransactionalOutbox $outbox,
+    ) {}
+
     public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null): QuarantineUpload
     {
         $this->validate($upload);
@@ -43,8 +46,11 @@ class QuarantineUploadService
                     'original_filename' => mb_substr(basename($upload->getClientOriginalName()), 0, 255),
                     'status' => 'queued',
                 ]);
-                // The queue row and domain row commit on the same database, never after HTTP success.
-                Queue::connection('ingest')->push(new ProcessUpload($record->id));
+                $this->outbox->record(
+                    new ProcessUpload($record->id),
+                    'quarantine-upload',
+                    $record->id,
+                );
                 AssetAuditEvent::query()->create(['asset_id' => $asset->id, 'actor_user_id' => $userId, 'event_type' => 'upload.accepted', 'details' => ['upload_id' => $record->id]]);
 
                 return $record->refresh();

@@ -13,6 +13,7 @@ use App\Modules\ArchiveOperations\Services\RestoreDrillService;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
 use App\Modules\DataExchange\Services\DataExportService;
 use App\Modules\DataExchange\Services\MetadataImportService;
+use App\Modules\Ingest\Services\TransactionalOutbox;
 use App\Modules\Ingest\Services\UploadSessionService;
 use App\Modules\Installation\DeploymentMigrationCoordinator;
 use App\Modules\Installation\InstallationStore;
@@ -24,6 +25,20 @@ Artisan::command('uploads:prune', function (UploadSessionService $sessions): voi
     $this->line((string) $sessions->prune());
 })->purpose('Remove chunks from at most 100 closed or expired upload sessions; retain receipts');
 Schedule::command('uploads:prune')->hourly()->withoutOverlapping();
+
+Artisan::command('outbox:dispatch {--limit=100} {--retry=} {--discard=}', function (TransactionalOutbox $outbox): int {
+    if (is_string($this->option('retry'))) {
+        return $outbox->retryDeadLetter($this->option('retry')) ? 0 : 1;
+    }
+    if (is_string($this->option('discard'))) {
+        return $outbox->discardDeadLetter($this->option('discard')) ? 0 : 1;
+    }
+    $result = $outbox->dispatchBatch((int) $this->option('limit'));
+    $this->line(json_encode($result, JSON_THROW_ON_ERROR));
+
+    return $result['dead'] === 0 ? 0 : 1;
+})->purpose('Dispatch transactional outbox messages and manage outbox dead letters');
+Schedule::command('outbox:dispatch')->everyMinute()->withoutOverlapping();
 
 Artisan::command('operations:accept-restored {drill} {--asset=} {--confirm-isolated-target} {--credentials-stdin}', function (RestoreAcceptanceService $acceptance): int {
     $credentials = $this->option('credentials-stdin')

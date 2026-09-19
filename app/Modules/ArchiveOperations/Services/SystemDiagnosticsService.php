@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\ArchiveOperations\Services;
 
+use App\Modules\Ingest\Models\JobOutboxMessage;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Facades\DB;
@@ -361,6 +362,7 @@ class SystemDiagnosticsService
         $pendingJobs = 0;
         $failedJobs = 0;
         $staleClaims = 0;
+        $outbox = ['pending' => 0, 'leased' => 0, 'dead' => 0, 'stale' => 0];
 
         try {
             $pendingJobs = QuarantineUpload::query()->whereIn('status', ['queued', 'running'])->count();
@@ -369,11 +371,18 @@ class SystemDiagnosticsService
                 ->where('status', 'running')
                 ->where('started_at', '<', now()->subMinutes(5))
                 ->count();
+            foreach (['pending', 'leased', 'dead'] as $status) {
+                $outbox[$status] = JobOutboxMessage::query()->where('status', $status)->count();
+            }
+            $outbox['stale'] = JobOutboxMessage::query()
+                ->whereIn('status', ['pending', 'leased'])
+                ->where('created_at', '<=', now()->subMinutes((int) config('outbox.readiness_minutes', 10)))
+                ->count();
         } catch (Throwable) {
             // Table might not exist or DB error
         }
 
-        $hasWarnings = $staleClaims > 0 || $failedJobs > 5;
+        $hasWarnings = $staleClaims > 0 || $failedJobs > 5 || $outbox['dead'] > 0 || $outbox['stale'] > 0;
 
         return [
             'status' => $hasWarnings ? 'warning' : 'ok',
@@ -381,6 +390,7 @@ class SystemDiagnosticsService
             'pending_ingest_jobs' => $pendingJobs,
             'failed_ingest_jobs' => $failedJobs,
             'stale_claims' => $staleClaims,
+            'outbox' => $outbox,
             'remediation' => $staleClaims > 0
                 ? "Er zijn {$staleClaims} vastgelopen verwerkingstaken gedetecteerd. Controleer worker-processen of herstart verwerking."
                 : ($failedJobs > 0 ? "Er zijn {$failedJobs} mislukte taken. Bekijk het Verwerkingscentrum voor details en herpogingen." : null),

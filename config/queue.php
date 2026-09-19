@@ -13,6 +13,14 @@ return [
             'retry_after' => 180,
             'after_commit' => false,
         ],
+        'ingest_redis' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'ingest',
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 180),
+            'block_for' => 5,
+            'after_commit' => false,
+        ],
         'sync' => [
             'driver' => 'sync',
         ],

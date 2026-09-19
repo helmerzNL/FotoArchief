@@ -4,14 +4,16 @@ FotoArchief is operated as a self-hosted Laravel application on a managed VPS or
 equivalent server, with an additional shared-hosting deployment path. The
 initial topology uses PostgreSQL, private local or S3-compatible storage,
 file cache/sessions and database queues. Valkey/Redis is optional for larger
-deployments, not required before the onboarding wizard.
+deployments, not required before the onboarding wizard. Ingest records its job
+in the PostgreSQL transactional outbox before returning success; the scheduler
+dispatches committed rows to the configured queue connection.
 
 ## Service responsibilities
 
 - `app`: serves the Laravel web/API runtime behind a TLS reverse proxy such as
   Caddy or Nginx.
 - `worker`: waits for completed installation, then processes the dedicated
-  database `ingest` queue: validation, optional scanning, checksums,
+  `ingest` queue: validation, optional scanning, checksums,
   technical metadata, private derivatives, OCR, AI indexing, import/export
   work and retry recovery. These features are implemented; availability still
   depends on their documented configuration and worker prerequisites.
