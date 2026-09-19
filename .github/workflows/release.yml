@@ -71,7 +71,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat dist/DOCKER-SHA256SUMS >> dist/SHA256SUMS
+          php scripts/release-asset-manifest.php create dist "$GITHUB_REF_NAME" "$GITHUB_SHA"
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag --prerelease \
             --title "FotoArchief $GITHUB_REF_NAME — Testrelease / Test release" \
             --notes-file "docs/releases/$GITHUB_REF_NAME.md" dist/*
+      - name: Verify persistent release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: sh scripts/verify-published-release.sh "$GITHUB_REF_NAME"

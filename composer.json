@@ -43,7 +43,8 @@
     "analyse": "phpstan analyse --configuration=phpstan.neon.dist",
     "lint": [
       "pint --test",
-      "@php artisan translations:check"
+      "@php artisan translations:check",
+      "@php scripts/check-capabilities.php"
     ],
     "translations": "@php artisan translations:check",
     "format": "pint",
@@ -72,4 +73,3 @@
   "minimum-stability": "stable",
   "prefer-stable": true
 }
-

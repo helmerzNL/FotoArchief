@@ -44,10 +44,11 @@ search index, cache, thumbnails, previews or embeddings as a source of truth.
 
 ## Upload and publication workflow
 
-The diagram below is the target architecture, not the shipped publication
-contract. Version 0.3.0 ends at **ready_private**, never publishable: it has
-ownership-aware private media, metadata/rights revisions and optional ClamAV.
-OCR/indexing/publication and the public portal remain future work.
+The diagram below describes the implemented workflow. Private ingest,
+derivatives, optional OCR, indexing, publication review and the public portal
+are shipped capabilities; installation-specific requirements and remaining
+external acceptance boundaries are recorded in the generated
+[capability register](CAPABILITIES.md).
 Current ingest uses one idempotent queued job and a dedicated PostgreSQL queue
 on the same transaction as upload acceptance. It intentionally does not switch
 to Redis with `QUEUE_CONNECTION`; that future transition needs an outbox.

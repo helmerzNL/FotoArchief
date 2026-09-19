@@ -63,6 +63,8 @@ PostgreSQL blijft verplicht voor beide distributievormen.
 Implementatie en releaseacceptatie zijn niet hetzelfde. Raadpleeg het
 [acceptatieregister](docs/RELEASE_ACCEPTANCE.md) voor meetresultaten en
 resterende poorten voordat de applicatie publiek beschikbaar wordt gemaakt.
+Het gegenereerde [functieregister](docs/CAPABILITIES.md) koppelt iedere
+geleverde of voorwaardelijke mogelijkheid aan concreet bronbewijs.
 
 ### Vereisten
 
@@ -215,6 +217,8 @@ both distribution formats.
 Implementation and release acceptance are not the same. Consult the
 [acceptance ledger](docs/RELEASE_ACCEPTANCE.md) for measurements and remaining
 gates before exposing the application publicly.
+The generated [capability register](docs/CAPABILITIES.md) ties every shipped
+or conditional capability to concrete source evidence.
 
 ### Requirements
 
