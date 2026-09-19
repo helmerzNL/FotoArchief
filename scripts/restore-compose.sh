@@ -9,11 +9,26 @@ if [ "$#" != 2 ] || [ "$2" != "--confirm-empty-target" ] || [ ! -d "$1" ]; then
 fi
 backup=$(cd "$1" && pwd)
 compose_file=${COMPOSE_FILE:-deploy/compose.yaml}
-test "$(cat "$backup/FORMAT")" = fotoarchief-local-backup-v1
-(
-    cd "$backup"
-    sha256sum database.dump storage-app.tar VERSION FORMAT | diff - SHA256SUMS
-)
+format=$(cat "$backup/FORMAT")
+case "$format" in
+    fotoarchief-local-backup-v1)
+        (
+            cd "$backup"
+            sha256sum database.dump storage-app.tar VERSION FORMAT | diff - SHA256SUMS
+        )
+        ;;
+    fotoarchief-local-backup-v2)
+        test -f "$backup/BACKUP-MANIFEST.json"
+        (
+            cd "$backup"
+            sha256sum --check SHA256SUMS
+        )
+        ;;
+    *)
+        echo "Restore refused: unsupported backup format '$format'." >&2
+        exit 1
+        ;;
+esac
 docker compose -f "$compose_file" stop app worker scheduler
 docker compose -f "$compose_file" up -d --wait postgres
 count=$(docker compose -f "$compose_file" exec -T postgres sh -ec \
