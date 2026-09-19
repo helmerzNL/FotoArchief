@@ -114,7 +114,7 @@ function waitForStatus(string $path, array $done, array $failed, int $seconds, s
     $deadline = time() + $seconds;
     $seen = '';
     do {
-        [$status, $body] = request('GET', $path);
+        [$status, $body] = smokeRequest('GET', $path);
         check($status === 200, $what.' page returned '.$status.'.');
         $seen = statusLine($body);
         foreach ($failed as $label) {
@@ -157,7 +157,7 @@ function assertNoStorageLeak(string $haystack, string $what): void
  */
 function exportAndDownload(string $type, string $assetId, string $contentType, int $budget): array
 {
-    [$status, $body] = request('GET', '/exchange');
+    [$status, $body] = smokeRequest('GET', '/exchange');
     check($status === 200, 'Exchange page is not available.');
     $exportPath = redirectTarget('/exchange/exports', [
         '_token' => token($body),
@@ -187,12 +187,12 @@ try {
     check(extension_loaded('zip'), 'The zip extension is required to verify a package export.');
     check(extension_loaded('gd'), 'The gd extension is required to generate the fixture photo.');
 
-    [, $body] = request('GET', '/login');
-    [$status] = request('POST', '/login', ['_token' => token($body), 'email' => $email, 'password' => $password]);
+    [, $body] = smokeRequest('GET', '/login');
+    [$status] = smokeRequest('POST', '/login', ['_token' => token($body), 'email' => $email, 'password' => $password]);
     check($status === 302, 'Login failed for the disposable acceptance account.');
 
     // A photo made here, so the harness never edits data it did not create.
-    [$status, $body] = request('GET', '/admin/assets');
+    [$status, $body] = smokeRequest('GET', '/admin/assets');
     check($status === 200, 'The archive is not available.');
     $bitmap = imagecreatetruecolor(160, 90);
     imagefill($bitmap, 0, 0, (int) imagecolorallocate($bitmap, 52, 111, 86));
@@ -203,7 +203,7 @@ try {
         imagesetpixel($bitmap, random_int(0, 159), random_int(0, 89), (int) imagecolorallocate($bitmap, random_int(0, 255), random_int(0, 255), random_int(0, 255)));
     }
     imagepng($bitmap, $image);
-    [$status, $body] = request('POST', '/admin/assets', [
+    [$status, $body] = smokeRequest('POST', '/admin/assets', [
         '_token' => token($body),
         'files[0]' => new CURLFile($image, 'image/png', 'exchange-acceptance.png'),
     ], true);
@@ -218,7 +218,7 @@ try {
     // onboarding harness waits for before asking for anything.
     $deadline = time() + $budget;
     do {
-        [$status, $detail] = request('GET', $detailPath);
+        [$status, $detail] = smokeRequest('GET', $detailPath);
         check($status === 200, 'The photo page returned '.$status.'.');
         $processed = str_contains($detail, 'preview1200');
         if (! $processed) {
@@ -242,7 +242,7 @@ try {
     $marker = 'Acceptatietitel '.date('YmdHis');
     file_put_contents($csvFile, "accession_number,lock_version,title\n".'"'.$accession.'","'.$version.'","'.$marker."\"\n");
 
-    [$status, $body] = request('GET', '/exchange');
+    [$status, $body] = smokeRequest('GET', '/exchange');
     check($status === 200, 'Exchange page is not available.');
     $importPath = redirectTarget('/exchange/imports', [
         '_token' => token($body),
@@ -256,16 +256,16 @@ try {
     check(str_contains($page, 'Klaar om bij te werken: 1'), 'The dry run did not plan exactly one row.');
     check(str_contains($page, $marker), 'The dry run did not show the proposed new title.');
     check(str_contains($page, 'Bijgewerkt: 0'), 'The dry run reported applied rows before it was confirmed.');
-    [$status, $detail] = request('GET', $detailPath);
+    [$status, $detail] = smokeRequest('GET', $detailPath);
     check($status === 200, 'The photo page is not available during the dry run.');
     check(! str_contains($detail, $marker), 'The dry run changed the photo before it was confirmed.');
 
-    [$status] = request('POST', $importPath.'/confirm', ['_token' => token($page), 'checksum' => formField($page, 'checksum')]);
+    [$status] = smokeRequest('POST', $importPath.'/confirm', ['_token' => token($page), 'checksum' => formField($page, 'checksum')]);
     check($status === 302, 'The import confirmation was refused with status '.$status.'.');
     $page = waitForStatus($importPath, ['Afgerond'], ['Mislukt'], $budget, 'Import run');
     check(str_contains($page, 'Bijgewerkt: 1'), 'The confirmed import did not report one updated row.');
 
-    [$status, $detail] = request('GET', $detailPath);
+    [$status, $detail] = smokeRequest('GET', $detailPath);
     check($status === 200 && str_contains($detail, $marker), 'The confirmed import did not reach the photo.');
 
     [, $jsonBytes] = exportAndDownload('metadata_json', $assetId, 'application/json', $budget);
@@ -308,10 +308,10 @@ try {
     assertNoStorageLeak($listing, 'The package listing');
 
     // The link is personal: once the session is gone it has to stop working.
-    [, $body] = request('GET', '/exchange');
-    [$status] = request('POST', '/logout', ['_token' => token($body)]);
+    [, $body] = smokeRequest('GET', '/exchange');
+    [$status] = smokeRequest('POST', '/logout', ['_token' => token($body)]);
     check($status === 302, 'Logout failed.');
-    [$status, $body] = request('GET', $downloadPath);
+    [$status, $body] = smokeRequest('GET', $downloadPath);
     check($status === 302, 'An anonymous visitor was not denied a download link, status '.$status.'.');
     check(! str_contains($body, 'PK'), 'An anonymous visitor received archive bytes.');
 

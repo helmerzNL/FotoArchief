@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Ingest\Jobs\AssembleUpload;
+use App\Modules\Ingest\Models\JobOutboxMessage;
 use App\Modules\Ingest\Models\UploadSession;
 use App\Modules\Ingest\Services\QuarantineUploadService;
 use App\Modules\Ingest\Services\UploadSessionService;
@@ -68,7 +69,8 @@ it('receives chunks idempotently and assembles only complete verified files once
     $job = new AssembleUpload($item->id);
     $job->handle(app(UploadSessionService::class), app(QuarantineUploadService::class));
     $job->handle(app(UploadSessionService::class), app(QuarantineUploadService::class));
-    expect(Asset::count())->toBe(1)->and(DB::table('jobs')->count())->toBe(2)
+    expect(Asset::count())->toBe(1)->and(DB::table('jobs')->count())->toBe(1)
+        ->and(JobOutboxMessage::query()->where('status', 'pending')->count())->toBe(1)
         ->and($item->fresh()->status)->toBe('received');
     $upload = $item->fresh()->upload;
     expect(Storage::disk('local')->get($upload->storage_key))->toBe($bytes);

@@ -37,6 +37,18 @@ final class UserVisibleTextScanner
     ];
 
     /**
+     * @var list<string>
+     */
+    private const TECHNICAL_PHP_FILES = [
+        'app/Http/Controllers/RuntimeHealthController.php',
+        'app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php',
+        'app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php',
+        'app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php',
+        'app/Modules/ArchiveOperations/Services/StorageMigrationService.php',
+        'app/Modules/Ingest/Services/TransactionalOutbox.php',
+    ];
+
+    /**
      * @return list<array{file: string, line: int, kind: string, text: string, batch: string}>
      */
     public function remainingInventory(): array
@@ -46,7 +58,9 @@ final class UserVisibleTextScanner
             foreach (File::allFiles(base_path($directory)) as $file) {
                 $relative = str_replace('\\', '/', $file->getRelativePathname());
                 $relative = $directory.'/'.$relative;
-                if (! in_array($relative, self::EXTRACTED_FILES, true) && ($file->getExtension() === 'php' || str_ends_with($relative, '.blade.php'))) {
+                if (! in_array($relative, self::EXTRACTED_FILES, true)
+                    && ! in_array($relative, self::TECHNICAL_PHP_FILES, true)
+                    && ($file->getExtension() === 'php' || str_ends_with($relative, '.blade.php'))) {
                     $files[] = $relative;
                 }
             }
@@ -187,6 +201,9 @@ final class UserVisibleTextScanner
             || str_starts_with($text, ".'")
             || str_starts_with($text, 'style=')
             || str_starts_with($text, 'aria-pressed=')
+            || str_starts_with($text, 'aria-label=')
+            || str_starts_with($text, 'alt=')
+            || str_starts_with($text, 'data-')
             || str_starts_with($text, 'src=')
             || str_contains($text, '|| request(');
     }

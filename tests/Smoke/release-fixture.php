@@ -101,9 +101,18 @@ function runReleaseOnboarding(string $installed, array $environment, string $con
             }
             usleep(100000);
         }
+        while ($worker?->isRunning() && $acceptance->isRunning()) {
+            (new Process([PHP_BINARY, $console, 'outbox:dispatch'], $installed, $environment, timeout: 120))->mustRun();
+            usleep(250000);
+        }
         $acceptance->wait();
         if (! $acceptance->isSuccessful()) {
-            throw new RuntimeException($acceptance->getErrorOutput().$acceptance->getOutput().($worker?->getErrorOutput() ?? ''));
+            throw new RuntimeException(
+                $acceptance->getErrorOutput()
+                .$acceptance->getOutput()
+                .($worker?->getErrorOutput() ?? '')
+                .($worker?->getOutput() ?? '')
+            );
         }
         echo $acceptance->getOutput();
     } finally {

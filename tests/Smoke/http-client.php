@@ -9,7 +9,7 @@ function check(bool $condition, string $message): void
     }
 }
 
-function request(string $method, string $path, ?array $data = null, bool $json = false): array
+function smokeRequest(string $method, string $path, ?array $data = null, bool $json = false): array
 {
     global $base, $cookie;
     $curl = curl_init($base.$path);

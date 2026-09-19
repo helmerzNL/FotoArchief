@@ -14,12 +14,12 @@ require __DIR__.'/http-client.php';
 try {
     if (! $restoring) {
         check(is_string($codePath) && is_file($codePath), 'Disposable installation code file required.');
-        [$status, $body] = request('GET', '/setup');
+        [$status, $body] = smokeRequest('GET', '/setup');
         check($status === 200, 'Fresh setup must respond with 200.');
-        [$status] = request('POST', '/setup/unlock', ['_token' => token($body), 'code' => trim(file_get_contents($codePath))]);
+        [$status] = smokeRequest('POST', '/setup/unlock', ['_token' => token($body), 'code' => trim(file_get_contents($codePath))]);
         check($status === 302, 'Setup unlock failed.');
-        [, $body] = request('GET', '/setup');
-        [$status] = request('POST', '/setup/complete', [
+        [, $body] = smokeRequest('GET', '/setup');
+        [$status] = smokeRequest('POST', '/setup/complete', [
             '_token' => token($body),
             'db_host' => getenv('SMOKE_DB_HOST') ?: 'postgres', 'db_port' => getenv('SMOKE_DB_PORT') ?: '5432',
             'db_database' => getenv('SMOKE_DB_DATABASE') ?: 'fotoarchief',
@@ -36,14 +36,14 @@ try {
         ]);
         check($status === 302, 'Onboarding did not redirect.');
     }
-    [$status] = request('GET', '/setup');
+    [$status] = smokeRequest('GET', '/setup');
     check($status === 404, 'Installer must be closed after successful onboarding.');
-    [, $body] = request('GET', '/login');
-    [$status] = request('POST', '/login', [
+    [, $body] = smokeRequest('GET', '/login');
+    [$status] = smokeRequest('POST', '/login', [
         '_token' => token($body), 'email' => 'release@example.test', 'password' => 'disposable-smoke-password',
     ]);
     check($status === 302, 'Administrator login failed.');
-    [$status, $body] = request('GET', '/admin/assets');
+    [$status, $body] = smokeRequest('GET', '/admin/assets');
     check($status === 200, 'Administrator cannot open archive.');
     $csrf = token($body);
     if ($restoring) {
@@ -54,7 +54,7 @@ try {
         imagefill($bitmap, 0, 0, imagecolorallocate($bitmap, 37, 96, 148));
         imagepng($bitmap, $image);
         unset($bitmap);
-        [$status, $body] = request('POST', '/admin/assets', [
+        [$status, $body] = smokeRequest('POST', '/admin/assets', [
             '_token' => $csrf, 'files[0]' => new CURLFile($image, 'image/png', 'acceptance.png'),
         ], true);
         check($status === 201, 'Upload acceptance failed.');
@@ -66,7 +66,7 @@ try {
     check(is_string($detailPath) && str_starts_with($detailPath, '/admin/assets/'), 'Unexpected asset link.');
     $media = null;
     for ($attempt = 0; $attempt < 60; $attempt++) {
-        [$status, $body] = request('GET', $detailPath);
+        [$status, $body] = smokeRequest('GET', $detailPath);
         check($status === 200, 'Uploaded asset not accessible to owner.');
         if (preg_match('~(?:src|href)="([^"]+/media/preview1200)"~', $body, $matches)) {
             $media = parse_url(html_entity_decode($matches[1], ENT_QUOTES), PHP_URL_PATH);
@@ -75,19 +75,19 @@ try {
         sleep(1);
     }
     check(is_string($media), 'Worker did not generate a private preview within 60 seconds.');
-    [$status, $body] = request('GET', $media);
+    [$status, $body] = smokeRequest('GET', $media);
     check($status === 200 && str_starts_with($body, "\xff\xd8"), 'Private preview is not a JPEG.');
     if (! $restoring) {
-        [$status] = request('POST', '/admin/assets', [
+        [$status] = smokeRequest('POST', '/admin/assets', [
             '_token' => $csrf, 'files[0]' => new CURLFile($image, 'image/png', 'duplicate.png'),
         ], true);
         check($status === 201, 'Duplicate should be accepted into quarantine for asynchronous validation.');
     }
-    [$status] = request('POST', '/logout', ['_token' => $csrf]);
+    [$status] = smokeRequest('POST', '/logout', ['_token' => $csrf]);
     check($status === 302, 'Logout failed.');
-    [$status] = request('GET', $media);
+    [$status] = smokeRequest('GET', $media);
     check($status === 302, 'Anonymous access to a private preview was not denied.');
-    [$status] = request('GET', '/.env');
+    [$status] = smokeRequest('GET', '/.env');
     check(in_array($status, [403, 404], true), 'Server exposed private configuration.');
     echo $restoring ? "Restored installer lock, original account, photo preview and anonymous denial passed.\n"
         : "HTTP onboarding, login, queued upload, real JPEG and anonymous denial passed.\n";

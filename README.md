@@ -44,7 +44,8 @@ opensource-licentie gekozen.
 - collecties, personen, organisaties, historische locaties, herkomst, tags,
   synoniemen, geavanceerd zoeken en bulkacties;
 - publicatiereview, embargo- en privacycontrole, publieke collecties,
-  bezoekerssuggesties, sitemaps en IIIF Presentation 3-manifesten;
+  bezoekerssuggesties, sitemaps, IIIF Presentation 3-manifesten en een
+  toetsenbordbedienbare ingebouwde viewer;
 - diagnostiek, processingoperaties, integriteitscontrole, opslagverplaatsing,
   herstelbaar verwijderen en optionele OCR;
 - een technische taalvoorkeurbasis met Nederlands (`nl`) als enige actieve
@@ -53,6 +54,9 @@ opensource-licentie gekozen.
   scheduler; zie [deploymentmigraties](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproduceerbare PHP- en deploymentarchieven, containeracceptatie en een
   consistente back-up- en herstelprocedure voor lokale volumes;
+- versiebeheerbare 50.000-fotobenchmarks, regressiebudgetten, semantische
+  relevantiesets en brede toegankelijkheidsregressies; zie
+  [meetbare kwaliteit](docs/QUALITY_ACCEPTANCE.md);
 - versiegebonden back-upmanifesten, providerneutrale versleutelde
   offsite-kopie, optionele wegwerpbare PostgreSQL-herstelproeven en
   opslagmigratiepreflight met verplichte S3-versioneringscontrole.
@@ -202,7 +206,8 @@ separate owner decisions; no open-source licence has been selected.
 - collections, people, organisations, historical locations, provenance, tags,
   synonyms, advanced search and bulk actions;
 - publication review, embargo and privacy controls, public collections,
-  visitor suggestions, sitemaps and IIIF Presentation 3 manifests;
+  visitor suggestions, sitemaps, IIIF Presentation 3 manifests, and a
+  keyboard-operable embedded viewer;
 - diagnostics, processing operations, integrity checks, storage relocation,
   recoverable deletion and optional OCR;
 - a technical language-preference foundation with Dutch (`nl`) as the only
@@ -211,6 +216,9 @@ separate owner decisions; no open-source licence has been selected.
   see [deployment migrations](docs/DEPLOYMENT_MIGRATIONS.md);
 - reproducible PHP and deployment archives, container acceptance and a
   consistent local-volume backup and restore procedure;
+- version-controlled 50,000-photo benchmarks, regression budgets, semantic
+  relevance sets, and broad accessibility regressions; see
+  [measurable quality](docs/QUALITY_ACCEPTANCE.md);
 - version-bound backup manifests, provider-neutral encrypted offsite copying,
   optional disposable PostgreSQL restore drills and storage-migration
   preflight with mandatory S3 versioning verification.

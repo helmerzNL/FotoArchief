@@ -11,7 +11,7 @@ Product version / Productversie: **0.9.65**
 | `metadata-and-rights` | shipped | - | [`app/Modules/Catalogue/Models/Asset.php`](../app/Modules/Catalogue/Models/Asset.php), [`app/Modules/Publication/Services/PublicationReviewService.php`](../app/Modules/Publication/Services/PublicationReviewService.php) |
 | `publication-review` | shipped | - | [`app/Modules/Publication/Services/PublicationReviewService.php`](../app/Modules/Publication/Services/PublicationReviewService.php) |
 | `public-portal` | shipped | - | [`app/Http/Controllers/Publication/PublicDiscoveryController.php`](../app/Http/Controllers/Publication/PublicDiscoveryController.php) |
-| `iiif-presentation` | shipped | - | [`app/Http/Controllers/Publication/IiifManifestController.php`](../app/Http/Controllers/Publication/IiifManifestController.php) |
+| `iiif-presentation` | shipped | - | [`app/Http/Controllers/Publication/IiifManifestController.php`](../app/Http/Controllers/Publication/IiifManifestController.php), [`public/viewer.js`](../public/viewer.js), [`docs/QUALITY_ACCEPTANCE.md`](../docs/QUALITY_ACCEPTANCE.md) |
 | `identity-and-passkeys` | shipped | - | [`app/Modules/Identity`](../app/Modules/Identity), [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md) |
 | `data-exchange` | shipped | - | [`app/Modules/DataExchange`](../app/Modules/DataExchange), [`docs/DATA_EXCHANGE.md`](../docs/DATA_EXCHANGE.md) |
 | `archive-operations` | shipped | - | [`app/Modules/ArchiveOperations`](../app/Modules/ArchiveOperations), [`docs/OPERATIONS.md`](../docs/OPERATIONS.md) |
@@ -21,6 +21,7 @@ Product version / Productversie: **0.9.65**
 | `s3-versioned-cleanup` | conditional | S3 source disk; provider bucket versioning status Enabled; provider noncurrent-version retention | [`app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php`](../app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php), [`app/Modules/ArchiveOperations/Models/StorageTombstone.php`](../app/Modules/ArchiveOperations/Models/StorageTombstone.php), [`docs/BACKUP_RESTORE.md`](../docs/BACKUP_RESTORE.md) |
 | `local-ai-provider` | conditional | administrator opt-in; approved provider/model | [`app/Modules/Ai`](../app/Modules/Ai), [`docs/AI_PROVIDER_SETUP.md`](../docs/AI_PROVIDER_SETUP.md) |
 | `pgvector-semantic-search` | conditional | PostgreSQL pgvector extension; compatible text/image embedding space | [`app/Modules/Ai/Services/PgvectorEmbeddingStore.php`](../app/Modules/Ai/Services/PgvectorEmbeddingStore.php), [`docs/VECTOR_RECOVERY_DELIVERY.md`](../docs/VECTOR_RECOVERY_DELIVERY.md) |
+| `quality-regression-gates` | shipped | - | [`tests/Performance/budgets.v1.json`](../tests/Performance/budgets.v1.json), [`tests/Performance/relevance-dataset.v1.json`](../tests/Performance/relevance-dataset.v1.json), [`tests/Browser/acceptance.spec.ts`](../tests/Browser/acceptance.spec.ts), [`docs/QUALITY_ACCEPTANCE.md`](../docs/QUALITY_ACCEPTANCE.md) |
 | `vistora-identity` | shipped | - | [`public/brand`](../public/brand), [`docs/BRANDING.md`](../docs/BRANDING.md) |
 
 ## External acceptance boundaries / Externe acceptatiegrenzen

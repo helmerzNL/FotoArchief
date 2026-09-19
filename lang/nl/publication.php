@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 return [
     'application_suffix' => ' - Vistora',
+    'viewer' => [
+        'region' => 'Interactieve IIIF-afbeelding',
+        'zoom_in' => 'Inzoomen',
+        'zoom_out' => 'Uitzoomen',
+        'reset' => 'Weergave herstellen',
+        'help' => 'Gebruik de pijltoetsen om een ingezoomde afbeelding te verschuiven.',
+        'loading' => 'IIIF-manifest laden.',
+        'loaded' => 'IIIF-afbeelding geladen.',
+        'fallback' => 'IIIF-manifest niet beschikbaar; de voorbeeldafbeelding blijft zichtbaar.',
+        'manifest_link' => 'Open het IIIF-manifest',
+    ],
     'generated' => [
         't_026fa7e0fe75a1a5' => 'Delen via WhatsApp',
         't_05722e41037c766f' => 'Publieke collectie',
@@ -56,10 +67,8 @@ return [
         't_b7de418a87e289e8' => 'Alleen een publicatie in review kan worden afgewezen.',
         't_b81cc74c63510f91' => 'Filters wissen',
         't_bec92f3cceb1d55c' => 'Embargo tot (optioneel)',
-        't_ce26a2644085865e' => 'Klik om in of uit te zoomen',
         't_d111dfbcca7960ef' => 'Notitie (optioneel)',
         't_d12c4fd3c482fab1' => 'Ik herken iets of iemand',
-        't_d452d1d286679966' => 'Vergroten / verkleinen',
         't_e1a4ac883863c604' => 'Alleen bekijken, geen download',
         't_e2cc2cd1412e51dd' => 'Delen via e-mail',
         't_e478c368772600a8' => 'Foto’s in deze collectie',

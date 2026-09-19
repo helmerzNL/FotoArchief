@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "dataset_records": 50000,
+  "samples": {
+    "warmup": 5,
+    "measured": 40,
+    "concurrency": 4
+  },
+  "p95_ms": {
+    "private_listing": 800,
+    "private_search": 800,
+    "private_detail": 400,
+    "public_search": 700,
+    "public_detail": 400,
+    "semantic_search": 700,
+    "pgvector_exact_cosine": 700
+  }
+}

@@ -115,6 +115,16 @@ try {
     if ($failed !== []) {
         throw new RuntimeException('Benchmark gates failed: '.implode(', ', $failed));
     }
+    $resultFiles = ['private-http', 'public-http', 'pgvector', 'relevance', 'concurrent-http'];
+    $summary = ['schema_version' => 1, 'records' => 50000, 'results' => []];
+    foreach ($resultFiles as $resultFile) {
+        $path = $root.'/'.$resultFile.'.json';
+        if (! is_file($path)) {
+            throw new RuntimeException("Required benchmark result {$resultFile}.json is missing.");
+        }
+        $summary['results'][$resultFile] = json_decode(file_get_contents($path) ?: '', true, 512, JSON_THROW_ON_ERROR);
+    }
+    file_put_contents($source.'/benchmark-results.json', json_encode($summary, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR).PHP_EOL, LOCK_EX);
     echo "All bounded 50k HTTP/vector/relevance gates passed; wrong-ranking control failed as required.\n";
 } finally {
     foreach (array_reverse($processes) as $process) {

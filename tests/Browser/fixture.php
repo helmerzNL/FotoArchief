@@ -40,7 +40,7 @@ $environment = [
     'DB_PASSWORD' => 'disposable-fixture-password', 'SMOKE_STORAGE_DISK' => 'local', 'SMOKE_RESTORE' => '0',
 ];
 $cwd = dirname(__DIR__, 2);
-$server = $worker = null;
+$server = $worker = $outbox = null;
 try {
     (new Process([PHP_BINARY, __DIR__.'/console.php', 'installation:prepare', '--quiet-code'], $cwd, $environment, timeout: 120))->mustRun();
     $server = startReleaseServer($cwd, $environment, __DIR__.'/router.php');
@@ -48,9 +48,11 @@ try {
     (new Process([PHP_BINARY, __DIR__.'/seed.php'], $cwd, $environment, timeout: 120))->mustRun();
     $worker = new Process([PHP_BINARY, __DIR__.'/console.php', 'queue:work', 'ingest', '--sleep=1', '--tries=3'], $cwd, $environment, timeout: 3600);
     $worker->start();
+    $outbox = new Process([PHP_BINARY, __DIR__.'/outbox-worker.php'], $cwd, $environment, timeout: 3600);
+    $outbox->start();
     echo json_encode(['url' => $url, 'root' => $root, 'manifest' => $root.'/manifest.json'], JSON_THROW_ON_ERROR).PHP_EOL;
-    if (! $worker->isRunning() || ! $server->isRunning()) {
-        throw new RuntimeException('Browser fixture server or worker failed to start.');
+    if (! $worker->isRunning() || ! $outbox->isRunning() || ! $server->isRunning()) {
+        throw new RuntimeException('Browser fixture server, outbox dispatcher, or queue worker failed to start.');
     }
     $test = null;
     if (in_array('--run', $argv, true)) {
@@ -62,8 +64,15 @@ try {
         });
     }
     while (! is_file($root.'/stop') && ($test === null || $test->isRunning())) {
-        if (! $server->isRunning() || ! $worker->isRunning()) {
-            throw new RuntimeException('Browser fixture stopped unexpectedly: '.$server->getErrorOutput().$worker->getErrorOutput());
+        if (! $server->isRunning() || ! $outbox->isRunning() || ! $worker->isRunning()) {
+            throw new RuntimeException(
+                'Browser fixture stopped unexpectedly: '
+                .$server->getErrorOutput()
+                .$outbox->getErrorOutput()
+                .$outbox->getOutput()
+                .$worker->getErrorOutput()
+                .$worker->getOutput()
+            );
         }
         $server->checkTimeout();
         $worker->checkTimeout();
@@ -77,6 +86,7 @@ try {
     if (isset($test)) {
         $test->stop();
     }
+    $outbox?->stop();
     $worker?->stop();
     $server?->stop();
     removeReleaseFixture($root);

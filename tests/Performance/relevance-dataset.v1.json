@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "dataset": "fotoarchief-semantic-relevance-v1",
+  "k": 5,
+  "thresholds": {
+    "precision_at_k": 1,
+    "recall_at_k": 1,
+    "reciprocal_rank": 1
+  },
+  "queries": [
+    {
+      "query": "straat met huizen",
+      "expected_ids": ["BENCH-000000", "BENCH-000001", "BENCH-000002", "BENCH-000003", "BENCH-000004"]
+    },
+    {
+      "query": "schepen in de haven",
+      "expected_ids": ["BENCH-000005", "BENCH-000006", "BENCH-000007", "BENCH-000008", "BENCH-000009"]
+    },
+    {
+      "query": "markt op het dorpsplein",
+      "expected_ids": ["BENCH-000010", "BENCH-000011", "BENCH-000012", "BENCH-000013", "BENCH-000014"]
+    }
+  ],
+  "acceptance_boundary": "This deterministic set verifies application ranking behavior, not external model quality."
+}
