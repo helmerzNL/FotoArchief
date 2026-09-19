@@ -125,21 +125,31 @@ it('restores a real PostgreSQL backup and byte-identical originals into isolated
             ->and(file_exists($disposable->target_directory))->toBeFalse();
         expect(file_exists($directory.'/second'))->toBeFalse()
             ->and(RestoreDrill::query()->where('status', 'failed')->count())->toBe(2)
-            ->and(RestoreDrill::query()->where('status', 'verified')->count())->toBe(1);
+            ->and(RestoreDrill::query()->where('status', 'verified')->count())->toBe(2);
         DB::statement('DROP DATABASE "'.$targetDatabase.'"');
         DB::statement('CREATE DATABASE "'.$targetDatabase.'"');
         $tar = new PharData($source.'/storage-app.tar');
         $tar->delete('app/private/proof.jpg');
         $tar->addFromString('app/private/proof.jpg', 'wrong original bytes');
         unset($tar);
+        File::put($source.'/BACKUP-MANIFEST.json', json_encode([
+            'schema_version' => 2,
+            'format' => 'fotoarchief-local-backup-v2',
+            'app_version' => trim(File::get(base_path('VERSION'))),
+            'created_at' => now()->toAtomString(),
+            'components' => [
+                'database.dump' => ['sha256' => hash_file('sha256', $source.'/database.dump'), 'bytes' => filesize($source.'/database.dump')],
+                'storage-app.tar' => ['sha256' => hash_file('sha256', $source.'/storage-app.tar'), 'bytes' => filesize($source.'/storage-app.tar')],
+            ],
+        ], JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT)."\n");
         $manifest = '';
-        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT'] as $file) {
+        foreach (['database.dump', 'storage-app.tar', 'VERSION', 'FORMAT', 'BACKUP-MANIFEST.json'] as $file) {
             $manifest .= hash_file('sha256', $source.'/'.$file).'  '.$file."\n";
         }
         File::put($source.'/SHA256SUMS', $manifest);
         $corrupt = app(BackupRegisterService::class)->register($source);
         expect(fn () => $service->run($corrupt, $targetDatabase, $directory.'/corrupt', true))->toThrow(RuntimeException::class, 'checksum or byte size mismatch');
-        expect(RestoreDrill::query()->where('status', 'verified')->count())->toBe(1);
+        expect(RestoreDrill::query()->where('status', 'verified')->count())->toBe(2);
         File::put($source.'/database.dump', 'tampered');
         expect(fn () => $service->run($backup, $targetDatabase, $directory.'/tampered', true))->toThrow(RuntimeException::class, 'manifest');
         expect(RestoreDrill::query()->where('status', 'failed')->count())->toBe(4);
