@@ -67,12 +67,13 @@ class InstallationController extends Controller
         $this->requireAuthorization($request);
         $settings = $this->settings($request);
         $admin = $request->validate([
+            'association_name' => ['required', 'string', 'max:160'],
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:254'],
             'password' => ['required', 'string', 'min:14', 'max:128', 'confirmed'],
         ]);
         try {
-            $runner->complete($settings, $admin['name'], $admin['email'], $admin['password']);
+            $runner->complete($settings, $admin['name'], $admin['email'], $admin['password'], trim($admin['association_name']));
         } catch (Throwable $exception) {
             $this->connectionFailure($exception);
         }

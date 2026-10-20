@@ -24,6 +24,12 @@ return [
         ],
         'resume_notice' => 'Een eerdere installatie is onderbroken. Gebruik exact dezelfde database, opslaggegevens en het oorspronkelijke e-mailadres om veilig te hervatten. Een bestaande beheerder wordt niet overschreven.',
         'authorized_notice' => 'Je toegang is 20 minuten geldig. Gebruik HTTPS buiten een lokale testomgeving. Geheimen worden nooit opnieuw in het formulier getoond.',
+        'association' => [
+            'legend' => 'Je vereniging',
+            'help' => 'Elke installatie is van één historische vereniging. Deze naam staat bij bezoekers in de kop en voet van het fotoarchief. Vistora blijft de naam van het platform.',
+            'name' => 'Naam van de vereniging',
+            'placeholder' => 'Historische Vereniging …',
+        ],
         'database' => [
             'legend' => 'Database',
             'help' => 'PostgreSQL is vereist. In de meegeleverde Docker-stack is de host <code>postgres</code>. Gebruik de gebruikersnaam en het wachtwoord van die databasecontainer.',
@@ -131,6 +137,7 @@ return [
         'installation' => 'Installatie',
         'storage_local' => 'Lokale private opslag',
         'storage_s3' => 'Private S3-compatible opslag',
+        'association' => 'Vereniging',
         'installation_locked' => 'Wizard vergrendeld. De instellingen blijven bewaard bij een herstart.',
         'first_photos' => 'Eerste foto\'s',
         'first_photos_help' => 'Upload private afbeeldingen, volg de verwerking en beschrijf ze voordat er later een publicatieworkflow komt.',

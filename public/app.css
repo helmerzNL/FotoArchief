@@ -89,6 +89,7 @@ th, td { text-align: left; padding: .6rem .75rem; border-bottom: 1px solid var(-
 .brand { display: inline-flex; align-items: center; gap: .6rem; font-size: 1.75rem; font-weight: 600; text-decoration: none; letter-spacing: -.035em; }
 .brand span { color: var(--ink); }
 .brand-mark { width: 44px; height: 44px; flex: none; color: var(--accent); }
+.archive-sender { margin: 0; font-weight: 600; color: var(--ink); }
 .public-nav { display: flex; flex-wrap: wrap; gap: 1.5rem; }
 .public-nav a, .staff-nav a { display: inline-flex; min-height: 44px; align-items: center; text-decoration: none; }
 .public-nav a[aria-current="page"], .staff-nav a[aria-current="page"] { font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; }

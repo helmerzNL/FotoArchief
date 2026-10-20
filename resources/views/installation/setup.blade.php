@@ -31,6 +31,12 @@
         <p>{{ __('onboarding.setup.authorized_notice') }}</p>
         <form method="post" action="/setup/complete">
             @csrf
+            <fieldset class="card">
+                <legend>{{ __('onboarding.setup.association.legend') }}</legend>
+                <p>{{ __('onboarding.setup.association.help') }}</p>
+                <label for="association_name">{{ __('onboarding.setup.association.name') }}</label>
+                <input id="association_name" name="association_name" value="{{ old('association_name') }}" required maxlength="160" autocomplete="organization" placeholder="{{ __('onboarding.setup.association.placeholder') }}">
+            </fieldset>
             <div class="grid">
                 <fieldset class="card">
                     <legend>{{ __('onboarding.setup.database.legend') }}</legend>

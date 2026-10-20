@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Modules\Archive\Models\ArchiveProfile;
 use App\Modules\Installation\InstallationBootstrap;
 use App\Modules\Installation\InstallationDatabase;
 use App\Modules\Installation\InstallationSettings;
@@ -35,6 +36,7 @@ function installationInput(): array
         'db_host' => 'postgres', 'db_port' => '5432', 'db_database' => 'fotoarchief',
         'db_username' => 'fotoarchief', 'db_password' => 'disposable-db-password',
         'db_sslmode' => 'prefer', 'disk' => 'local', 'path_style' => '1',
+        'association_name' => 'Historische Vereniging Zwartsluis',
         'name' => 'Archive owner', 'email' => 'owner@example.test',
         'password' => 'a-long-test-password', 'password_confirmation' => 'a-long-test-password',
     ];
@@ -82,7 +84,7 @@ it('unlocks with a private code and throttles invalid attempts without flashing 
     expect(session()->getOldInput('code'))->toBeNull();
     $code = trim(file_get_contents($this->store->directory.'/setup-code.txt'));
     $this->post('/setup/unlock', ['code' => $code])->assertRedirect('/setup');
-    $this->get('/setup')->assertSee('Controleren en installeren')->assertDontSee($code);
+    $this->get('/setup')->assertSee('Controleren en installeren')->assertSee('Naam van de vereniging')->assertDontSee($code);
     for ($attempt = 0; $attempt < 3; $attempt++) {
         $this->post('/setup/unlock', ['code' => 'wrong'])->assertSessionHasErrors('code');
     }
@@ -133,8 +135,33 @@ it('resumes after database commit without recreating or resetting the administra
     $this->withSession(['installation_authorized_until' => now()->addMinutes(20)->timestamp])
         ->post('/setup/complete', $input)->assertRedirect('/login');
     expect(User::query()->count())->toBe(1)
+        ->and(ArchiveProfile::query()->count())->toBe(1)
         ->and(Hash::check('a-long-test-password', User::query()->firstOrFail()->password))->toBeTrue()
         ->and($this->store->completed())->toBeTrue();
+});
+
+it('records the historical society during onboarding and shows it next to the Vistora brand', function (): void {
+    $this->withSession(['installation_authorized_until' => now()->addMinutes(20)->timestamp])
+        ->post('/setup/complete', array_replace(installationInput(), ['association_name' => '  Historische Vereniging Zwartsluis  ']))
+        ->assertRedirect('/login');
+    expect(ArchiveProfile::query()->sole()->name)->toBe('Historische Vereniging Zwartsluis');
+    foreach (['/', '/ontdek', '/collecties', '/login'] as $path) {
+        $this->get($path)->assertOk()
+            ->assertSee('Vistora')
+            ->assertSee('<p class="archive-sender">Historische Vereniging Zwartsluis</p>', false)
+            ->assertSee('Fotoarchief van Historische Vereniging Zwartsluis');
+    }
+});
+
+it('requires the society name and installs nothing without it', function (): void {
+    foreach ([null, '', '   ', str_repeat('x', 161)] as $invalid) {
+        $input = installationInput();
+        $invalid === null ? $input = array_diff_key($input, ['association_name' => true]) : $input['association_name'] = $invalid;
+        $this->withSession(['installation_authorized_until' => now()->addMinutes(20)->timestamp])
+            ->from('/setup')->post('/setup/complete', $input)->assertSessionHasErrors('association_name');
+    }
+    expect($this->store->read()->phase)->toBe('pending')
+        ->and(DB::getSchemaBuilder()->getTables())->toBe([]);
 });
 
 it('rejects switching database during resume and never flashes connection secrets', function (): void {

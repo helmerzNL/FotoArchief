@@ -6,10 +6,28 @@ The same PHP application now boots into `/setup` without a configured database,
 Redis, S3 or application key. The Dutch wizard provides:
 
 1. Ownership verification with a random installation code.
-2. PostgreSQL connection settings and private local or S3-compatible storage.
-3. A write/read/delete storage probe and a database connection test.
-4. Schema migration, permission seeding and the first administrator.
-5. A locked installer, login, logout and an initial administrator dashboard.
+2. The name of the historical society that owns this installation (see below).
+3. PostgreSQL connection settings and private local or S3-compatible storage.
+4. A write/read/delete storage probe and a database connection test.
+5. Schema migration, permission seeding and the first administrator.
+6. A locked installer, login, logout and an initial administrator dashboard.
+
+## One installation per historical society
+
+Each installation serves exactly one historical society. The wizard asks for
+the society's name (required, at most 160 characters) and stores it in the
+single-row `archive_profile` table in the same database transaction as the
+first administrator and the installation receipt. A retried installation
+therefore never produces a second profile, and an interrupted one never leaves
+an administrator without a society.
+
+The name is content of the installation, not a brand: public pages and the
+login page show it next to the Vistora mark (header) and as "Fotoarchief van
+&lt;name&gt;" (footer); the administrator dashboard lists it. Vistora remains
+the platform name, and `APP_NAME` and other technical identifiers are
+unchanged. Before the wizard completes no database query is made for it, so
+database-free setup is preserved. There is no screen yet to change the name
+after installation.
 
 After installation, continue with [photo management](PHOTO_WORKFLOW.md),
 [catalogue and exchange](DATA_EXCHANGE.md) and [publication](PUBLIC_PORTAL.md).

@@ -45,7 +45,7 @@ it('installs against an empty PostgreSQL database and enforces its native constr
             'db_database' => $settings->database, 'db_username' => $settings->username,
             'db_password' => $settings->password, 'db_sslmode' => 'prefer',
             'disk' => 'local', 'path_style' => '1',
-            'name' => 'PostgreSQL Test Owner', 'email' => 'postgres@example.test',
+            'association_name' => 'PostgreSQL Test Society', 'name' => 'PostgreSQL Test Owner', 'email' => 'postgres@example.test',
             'password' => 'disposable-postgres-test-password',
             'password_confirmation' => 'disposable-postgres-test-password',
         ])->assertSessionHasNoErrors()->assertRedirect('/login');

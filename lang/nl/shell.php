@@ -27,6 +27,9 @@ return [
         'login' => 'Inloggen',
         'logout' => 'Uitloggen',
     ],
+    'archive' => [
+        'footer' => 'Fotoarchief van :name',
+    ],
     'theme' => [
         'label' => 'Weergave',
         'system' => 'Systeem',
