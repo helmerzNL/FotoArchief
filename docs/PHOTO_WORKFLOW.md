@@ -181,10 +181,17 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   `asset_files.original_path`) en staat op de fotopagina onder "Oorspronkelijk pad".
 - Een herhaalde run slaat paden over die al zijn geïmporteerd; gebruik `--limit` om in
   porties te werken. De scheduler (`outbox:dispatch`) en een worker verwerken de rij.
-- Ondersteund: JPEG, PNG, WebP en BMP. Een BMP-origineel blijft ongewijzigd bewaard; de
-  weergaven zijn JPEG. PDF, TIFF en HEIC worden geteld en **overgeslagen** tot daarvoor
-  ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd. BMP kan alleen via
-  dit commando worden aangeboden; de uploadschermen in de browser accepteren het nog niet.
+- Ondersteund: JPEG, PNG, WebP, BMP en PDF. BMP- en PDF-originelen blijven ongewijzigd
+  bewaard; de weergaven zijn JPEG. TIFF en HEIC worden geteld en **overgeslagen** tot daarvoor
+  ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd. BMP en PDF kunnen
+  alleen via dit commando worden aangeboden; de uploadschermen in de browser accepteren ze niet.
+- **PDF** wordt behandeld als document: de weergaven zijn van **pagina 1**, het aantal pagina's
+  staat bij het bestand, en meerdere pagina's bekijken in de portal bestaat nog niet. Wachtwoord-
+  beveiligde, beschadigde of te trage PDF's worden afgewezen; het renderen heeft een tijdslimiet
+  (`PDF_RENDER_TIMEOUT`, standaard 60 s). Hiervoor is `poppler-utils` (`pdfinfo`, `pdftoppm`)
+  nodig. Het Docker-image bevat het; bij PHP-webhosting moet de host het installeren. Ontbreekt het,
+  dan blijft de upload in de wachtrij met een fout (herstelbaar), in plaats van afgewezen te worden.
+  Een PDF wordt als niet-vertrouwde invoer behandeld: geen shell, vaste argumenten, alleen pagina 1.
 - Staat dezelfde foto onder twee mappen, dan wordt de tweede als duplicaat afgewezen
   (zie het duplicatendossier). Het pad van die tweede locatie blijft op het afgewezen
   uploadrecord staan en wordt op de fotopagina getoond onder "Dezelfde foto is ook
@@ -198,8 +205,8 @@ or sync the folder to the server and let the app read it **read-only** with
 `ingest:import-directory`. Run `--dry-run` first. Each file enters the normal pipeline
 (quarantine, scan, checksum, derivatives); nothing is published. The relative folder path
 is kept as provenance and shown as "Oorspronkelijk pad" on the photo page. Re-runs skip
-paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP and BMP are
-supported (a BMP original is kept unchanged, previews are JPEG); PDF, TIFF and HEIC are counted and skipped for now. A photo present in
+paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP, BMP and PDF are
+supported (BMP and PDF originals are kept unchanged, previews are JPEG; a PDF's previews come from page 1 only and the page count is recorded; it requires `poppler-utils`); TIFF and HEIC are counted and skipped for now. A photo present in
 two folders is rejected as a duplicate the second time, but the second path stays on the
 rejected upload record. For Docker, mounting the folder read-only into `app` and `worker`
 is an operator change to their own Compose files; this feature changes none.

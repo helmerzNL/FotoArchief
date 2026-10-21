@@ -8,7 +8,7 @@ RUN apt-get update \
     && curl --fail --silent --show-error https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
     && echo 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends postgresql-client-16 gosu libpq-dev libzip-dev libicu-dev libjpeg62-turbo-dev libpng-dev libwebp-dev tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld \
+    && apt-get install -y --no-install-recommends postgresql-client-16 gosu libpq-dev libzip-dev libicu-dev libjpeg62-turbo-dev libpng-dev libwebp-dev poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-nld \
     && pg_restore --version \
     && docker-php-ext-configure gd --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" pdo_pgsql zip intl pcntl gd exif \

@@ -32,10 +32,10 @@ use Throwable;
  */
 class ImportDirectoryCommand extends Command
 {
-    private const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp'];
+    private const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf'];
 
     /** Types the archive holds but ingest cannot process yet; counted, never imported. */
-    private const NOT_YET_SUPPORTED = ['pdf', 'tif', 'tiff', 'heic'];
+    private const NOT_YET_SUPPORTED = ['tif', 'tiff', 'heic'];
 
     protected $signature = 'ingest:import-directory
         {path : Folder on the server with the image files (read only)}
@@ -126,7 +126,7 @@ class ImportDirectoryCommand extends Command
                         'title' => mb_substr(pathinfo($entry->getFilename(), PATHINFO_FILENAME), 0, 255),
                         'created_by_user_id' => $user->id,
                     ]);
-                    $uploads->quarantine($asset, new UploadedFile($entry->getPathname(), $entry->getFilename(), test: true), $user->id, $relative);
+                    $uploads->quarantine($asset, new UploadedFile($entry->getPathname(), $entry->getFilename(), test: true), $user->id, $relative, allowExtendedTypes: true);
                 });
                 $counts['imported']++;
             } catch (ValidationException) {

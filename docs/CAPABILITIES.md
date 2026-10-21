@@ -23,6 +23,8 @@ Product version / Productversie: **0.9.65**
 | `pgvector-semantic-search` | conditional | PostgreSQL pgvector extension; compatible text/image embedding space | [`app/Modules/Ai/Services/PgvectorEmbeddingStore.php`](../app/Modules/Ai/Services/PgvectorEmbeddingStore.php), [`docs/VECTOR_RECOVERY_DELIVERY.md`](../docs/VECTOR_RECOVERY_DELIVERY.md) |
 | `quality-regression-gates` | shipped | - | [`tests/Performance/budgets.v1.json`](../tests/Performance/budgets.v1.json), [`tests/Performance/relevance-dataset.v1.json`](../tests/Performance/relevance-dataset.v1.json), [`tests/Browser/acceptance.spec.ts`](../tests/Browser/acceptance.spec.ts), [`docs/QUALITY_ACCEPTANCE.md`](../docs/QUALITY_ACCEPTANCE.md) |
 | `vistora-identity` | shipped | - | [`public/brand`](../public/brand), [`docs/BRANDING.md`](../docs/BRANDING.md) |
+| `folder-import` | experimental | - | [`app/Console/Commands/ImportDirectoryCommand.php`](../app/Console/Commands/ImportDirectoryCommand.php), [`app/Modules/Ingest/Support/OriginalPath.php`](../app/Modules/Ingest/Support/OriginalPath.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
+| `pdf-documents` | conditional | poppler-utils (pdfinfo and pdftoppm) in the runtime image | [`app/Modules/Ingest/Services/PdfPageRenderer.php`](../app/Modules/Ingest/Services/PdfPageRenderer.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
 
 ## External acceptance boundaries / Externe acceptatiegrenzen
 

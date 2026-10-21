@@ -40,6 +40,9 @@ jobs:
           tools: composer:v2
           extensions: pdo_sqlite, pdo_pgsql, mbstring, intl, zip, gd, exif
 
+      - name: Install PDF tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+
       - name: Detect Composer project
         id: project
         shell: bash

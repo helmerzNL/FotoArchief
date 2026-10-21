@@ -6,6 +6,11 @@ return [
     'max_upload_bytes' => (int) env('APP_MAX_UPLOAD_BYTES', 104_857_600),
     'max_image_pixels' => (int) env('APP_MAX_IMAGE_PIXELS', 80_000_000),
     'max_batch_upload_files' => (int) env('APP_MAX_BATCH_UPLOAD_FILES', 250),
+    'pdf' => [
+        'info_binary' => env('PDFINFO_BINARY', 'pdfinfo'),
+        'render_binary' => env('PDFTOPPM_BINARY', 'pdftoppm'),
+        'timeout_seconds' => (int) env('PDF_RENDER_TIMEOUT', 60),
+    ],
     'scanner' => env('INGEST_SCANNER', 'none'),
     'clamav_host' => env('CLAMAV_HOST', '127.0.0.1'),
     'clamav_port' => (int) env('CLAMAV_PORT', 3310),

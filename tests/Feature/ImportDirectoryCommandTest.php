@@ -34,7 +34,7 @@ beforeEach(function (): void {
     importFolder($this->folder, 'Straten/Havenstraat/haven-1.jpg');
     importFolder($this->folder, 'Gebeurtenissen/Koninginnedag 1950/optocht.jpg');
     importFolder($this->folder, 'Straten/scan.bmp');
-    File::put($this->folder.'/Straten/brief.pdf', '%PDF-1.4');
+    File::put($this->folder.'/Straten/kaart.tif', 'II*');
     File::put($this->folder.'/Straten/Thumbs.db', 'x');
 });
 
@@ -45,7 +45,7 @@ afterEach(function (): void {
 it('imports a folder into quarantine and keeps each relative path as provenance', function (): void {
     $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test'])
         ->expectsOutputToContain('Nieuw aangeboden: 3')
-        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .pdf')
+        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .tif')
         ->assertExitCode(0);
 
     expect(Asset::query()->count())->toBe(3)
@@ -142,4 +142,13 @@ it('keeps the folder path of a duplicate and shows it on the surviving photo', f
     expect($kept->status)->toBe('rejected');
     $this->actingAs($this->user)->get('/admin/assets/'.$kept->duplicate_of_asset_id)
         ->assertOk()->assertSee('Dezelfde foto is ook aangetroffen op')->assertSee($kept->original_path);
+});
+
+it('offers PDF documents for import next to photos', function (): void {
+    File::put($this->folder.'/Straten/brief.pdf', '%PDF-1.4');
+
+    $this->artisan('ingest:import-directory', ['path' => $this->folder, '--dry-run' => true])
+        ->expectsOutputToContain('Nieuw te importeren: 4')
+        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .tif')
+        ->assertExitCode(0);
 });

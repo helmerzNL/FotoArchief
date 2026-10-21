@@ -29,7 +29,7 @@
     @endforeach
     @if($file)
         <p>Status: <strong>{{ $file->ingest_status }}</strong> {{ __('catalogue.generated.t_ca0369fb4e5a2f74') }} <strong>{{ $file->scanner_status === 'clean' ? 'Schoon volgens ingest-scanner' : 'NIET GESCAND' }}</strong></p>
-        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} {{ __('catalogue.generated.t_98bb76673444cd14') }} {{ $file->media_type }} · {{ number_format($file->byte_size) }} {{ __('catalogue.fragments.bytes') }}</p>
+        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} {{ __('catalogue.generated.t_98bb76673444cd14') }} {{ $file->media_type }}@if(isset($file->technical_metadata['page_count'])) · {{ $file->technical_metadata['page_count'] }} {{ __('catalogue.fragments.pages') }}@endif · {{ number_format($file->byte_size) }} {{ __('catalogue.fragments.bytes') }}</p>
         <p class="checksum">SHA-256: {{ $file->sha256 }}</p>
         <p>{{ __('catalogue.generated.t_e09420bb3e35b28b') }} {{ $file->technical_metadata['orientation'] ?? 'onbekend' }}{{ __('catalogue.generated.t_cafe7f0d435cf7c0') }}</p>
     @else
