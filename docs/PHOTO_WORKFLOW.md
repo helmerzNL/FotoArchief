@@ -163,6 +163,44 @@ directories per invocation while retaining receipts. Without a scheduler,
 schedule that command yourself. Expired unpurged batches still consume quota.
 No new environment variables or Compose mappings are required.
 
+### Bestaande map importeren / Importing an existing folder
+
+**Nederlands.** Voor een bestaand archief van honderden GB is uploaden via de browser
+niet geschikt. Kopieer of synchroniseer de map naar de server (bijvoorbeeld met
+`rclone` of de OneDrive-synchronisatie) en laat de app die map **alleen lezen**:
+
+```bash
+php artisan ingest:import-directory /pad/naar/map --dry-run
+php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org --limit=500
+```
+
+- De proefdraai (`--dry-run`) telt alleen en slaat niets op. Draai hem eerst.
+- Elk bestand gaat de gewone route in: quarantaine, scan, checksum en afgeleiden.
+  Niets wordt gepubliceerd. De titel is de bestandsnaam zonder extensie.
+- Het **relatieve mappad** wordt bewaard (`quarantine_uploads.original_path`, daarna
+  `asset_files.original_path`) en staat op de fotopagina onder "Oorspronkelijk pad".
+- Een herhaalde run slaat paden over die al zijn geïmporteerd; gebruik `--limit` om in
+  porties te werken. De scheduler (`outbox:dispatch`) en een worker verwerken de rij.
+- Ondersteund: JPEG, PNG en WebP. BMP, PDF, TIFF en HEIC worden geteld en **overgeslagen**
+  tot daarvoor ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd.
+- Staat dezelfde foto onder twee mappen, dan wordt de tweede als duplicaat afgewezen
+  (zie het duplicatendossier). Het pad van die tweede locatie blijft op het afgewezen
+  uploadrecord staan.
+- De app moet de map kunnen lezen. Bij Docker is dat een extra, read-only volume op de
+  `app`- en `worker`-container; dat is een eigen wijziging in de Compose-bestanden van de
+  operator. Deze functie wijzigt geen Compose- of omgevingsbestand.
+
+**English.** Browser upload is unsuitable for an existing archive of hundreds of GB. Copy
+or sync the folder to the server and let the app read it **read-only** with
+`ingest:import-directory`. Run `--dry-run` first. Each file enters the normal pipeline
+(quarantine, scan, checksum, derivatives); nothing is published. The relative folder path
+is kept as provenance and shown as "Oorspronkelijk pad" on the photo page. Re-runs skip
+paths already imported; use `--limit` to work in batches. JPEG, PNG and WebP are
+supported; BMP, PDF, TIFF and HEIC are counted and skipped for now. A photo present in
+two folders is rejected as a duplicate the second time, but the second path stays on the
+rejected upload record. For Docker, mounting the folder read-only into `app` and `worker`
+is an operator change to their own Compose files; this feature changes none.
+
 ### Autorisatie
 
 Beheerders, archivarissen en redacteuren kunnen alle foto's zien en bewerken.

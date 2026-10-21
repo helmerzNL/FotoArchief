@@ -163,7 +163,7 @@ class ImageProcessor
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,
                         'storage_key' => $upload->storage_key, 'sha256' => $sha,
                         'media_type' => self::TYPES[$type], 'byte_size' => $upload->byte_size,
-                        'original_filename' => $upload->original_filename, 'pixel_width' => $width, 'pixel_height' => $height,
+                        'original_filename' => $upload->original_filename, 'original_path' => $upload->original_path, 'pixel_width' => $width, 'pixel_height' => $height,
                         'technical_metadata' => ['orientation' => $orientation, 'display_width' => $displayWidth, 'display_height' => $displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')],
                         'derivatives' => $derivatives, 'validated_at' => now(), 'processed_at' => now(),
                         'scanned_at' => $scannerStatus === 'clean' ? now() : null,

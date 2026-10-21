@@ -14,6 +14,7 @@
 <section class="card"><h2>Verwerking</h2>
     @foreach($asset->uploads as $upload)
         <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} {{ __('catalogue.fragments.attempts') }}</p>
+        @if($upload->original_path)<p>{{ __('catalogue.fragments.original_path') }}: <code>{{ $upload->original_path }}</code></p>@endif
         @if($upload->failure_reason)<p role="alert">{{ $upload->failure_reason }}</p>@endif
         @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">{{ __('catalogue.generated.t_02d801eb4453bb6e') }} {{ $upload->original_filename }}</a></p>@endcanany
         @can('update', $asset)

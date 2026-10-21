@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $storage_disk
  * @property string $storage_key
  * @property string|null $original_filename
+ * @property string|null $original_path
  * @property int $byte_size
  * @property string $status
  * @property string|null $failure_reason

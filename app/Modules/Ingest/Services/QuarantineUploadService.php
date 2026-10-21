@@ -8,6 +8,7 @@ use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use App\Modules\Ingest\Support\OriginalPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,9 +22,10 @@ class QuarantineUploadService
         private readonly TransactionalOutbox $outbox,
     ) {}
 
-    public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null): QuarantineUpload
+    public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null, ?string $originalPath = null): QuarantineUpload
     {
         $this->validate($upload);
+        $originalPath = $originalPath === null ? null : OriginalPath::normalize($originalPath);
         $diskName = (string) config('filesystems.default');
         $disk = Storage::disk($diskName);
         $storageKey = 'quarantine/'.str()->ulid().'/'.str()->random(32);
@@ -36,7 +38,7 @@ class QuarantineUploadService
                 throw new RuntimeException(__('shared.generated.t_7fe6a821c70aaab2'));
             }
 
-            return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey): QuarantineUpload {
+            return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey, $originalPath): QuarantineUpload {
                 $record = QuarantineUpload::query()->create([
                     'asset_id' => $asset->id,
                     'uploaded_by_user_id' => $userId,
@@ -44,6 +46,7 @@ class QuarantineUploadService
                     'storage_key' => $storageKey,
                     'byte_size' => $upload->getSize(),
                     'original_filename' => mb_substr(basename($upload->getClientOriginalName()), 0, 255),
+                    'original_path' => $originalPath,
                     'status' => 'queued',
                 ]);
                 $this->outbox->record(

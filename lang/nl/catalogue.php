@@ -6,6 +6,7 @@ return [
     'fragments' => [
         'application_suffix' => ' - Vistora',
         'attempts' => 'poging(en)',
+        'original_path' => 'Oorspronkelijk pad',
         'bytes' => 'bytes',
         'dating' => 'Datering',
         'rights_holder' => 'Rechthebbende',
