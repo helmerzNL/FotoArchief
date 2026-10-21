@@ -6,7 +6,7 @@ PostgreSQL, Valkey as the Redis-compatible queue/cache service, private
 local or S3-compatible object storage, one Laravel web container, one worker
 container and one scheduler container.
 
-The included `Dockerfile` installs PHP 8.5.10, Apache and production Composer
+The included `Dockerfile` installs PHP 8.5.12, Apache and production Composer
 dependencies from `composer.lock`. Apache serves only `public/` on port 8080.
 The container enables Apache `mod_rewrite` and uses explicit front-controller
 rules in `deploy/apache.conf`; it does not depend on `public/.htaccess`.
