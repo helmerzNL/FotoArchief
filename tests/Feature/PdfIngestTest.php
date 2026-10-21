@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Jobs\ProcessUpload;
+use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
 use App\Modules\Ingest\Services\MalwareScanner;
 use App\Modules\Ingest\Services\PdfPageRenderer;
@@ -15,6 +16,7 @@ use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -29,7 +31,7 @@ function pdfFixture(int $pages = 2): string
     return "%PDF-1.4\n{$objects}trailer<</Root 1 0 R/Size ".($pages + 3).">>\n%%EOF\n";
 }
 
-function pdfUpload(string $content, string $filename = 'document.pdf'): App\Modules\Ingest\Models\QuarantineUpload
+function pdfUpload(string $content, string $filename = 'document.pdf'): QuarantineUpload
 {
     $user = User::query()->create(['name' => 'pdf', 'email' => str()->uuid().'@example.test', 'password' => 'test-only-password']);
     $user->roles()->attach(Role::query()->where('key', 'administrator')->firstOrFail());
@@ -85,5 +87,5 @@ it('keeps PDFs and BMPs out of the browser upload paths', function (): void {
     $asset = Asset::query()->create(['accession_number' => (string) str()->ulid()]);
 
     expect(fn () => app(QuarantineUploadService::class)->quarantine($asset, UploadedFile::fake()->createWithContent('a.pdf', pdfFixture(1))))
-        ->toThrow(Illuminate\Validation\ValidationException::class);
+        ->toThrow(ValidationException::class);
 });
