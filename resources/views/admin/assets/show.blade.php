@@ -12,6 +12,10 @@
     <p><a href="{{ route('admin.assets.media', [$asset, $file, 'preview2000']) }}">{{ __('catalogue.generated.t_213d129cfee83c16') }}</a></p>
 @endif
 <section class="card"><h2>Verwerking</h2>
+    @if($duplicatePaths->isNotEmpty())
+        <p>{{ __('catalogue.fragments.duplicate_paths') }}:</p>
+        <ul>@foreach($duplicatePaths as $path)<li><code>{{ $path }}</code></li>@endforeach</ul>
+    @endif
     @foreach($asset->uploads as $upload)
         <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} {{ __('catalogue.fragments.attempts') }}</p>
         @if($upload->original_path)<p>{{ __('catalogue.fragments.original_path') }}: <code>{{ $upload->original_path }}</code></p>@endif

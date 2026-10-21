@@ -18,7 +18,7 @@ use RuntimeException;
 
 class ImageProcessor
 {
-    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp'];
+    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp', IMAGETYPE_BMP => 'image/bmp'];
 
     public function __construct(private readonly MalwareScanner $scanner) {}
 
@@ -94,6 +94,7 @@ class ImageProcessor
                     IMAGETYPE_JPEG => imagecreatefromjpeg($temporary),
                     IMAGETYPE_PNG => imagecreatefrompng($temporary),
                     IMAGETYPE_WEBP => imagecreatefromwebp($temporary),
+                    IMAGETYPE_BMP => imagecreatefrombmp($temporary),
                 };
                 if ($source === false) {
                     $this->reject(__('shared.generated.t_7f3c2eb3b57d427d'));

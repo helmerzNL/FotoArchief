@@ -181,11 +181,14 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   `asset_files.original_path`) en staat op de fotopagina onder "Oorspronkelijk pad".
 - Een herhaalde run slaat paden over die al zijn geïmporteerd; gebruik `--limit` om in
   porties te werken. De scheduler (`outbox:dispatch`) en een worker verwerken de rij.
-- Ondersteund: JPEG, PNG en WebP. BMP, PDF, TIFF en HEIC worden geteld en **overgeslagen**
-  tot daarvoor ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd.
+- Ondersteund: JPEG, PNG, WebP en BMP. Een BMP-origineel blijft ongewijzigd bewaard; de
+  weergaven zijn JPEG. PDF, TIFF en HEIC worden geteld en **overgeslagen** tot daarvoor
+  ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd. BMP kan alleen via
+  dit commando worden aangeboden; de uploadschermen in de browser accepteren het nog niet.
 - Staat dezelfde foto onder twee mappen, dan wordt de tweede als duplicaat afgewezen
   (zie het duplicatendossier). Het pad van die tweede locatie blijft op het afgewezen
-  uploadrecord staan.
+  uploadrecord staan en wordt op de fotopagina getoond onder "Dezelfde foto is ook
+  aangetroffen op".
 - De app moet de map kunnen lezen. Bij Docker is dat een extra, read-only volume op de
   `app`- en `worker`-container; dat is een eigen wijziging in de Compose-bestanden van de
   operator. Deze functie wijzigt geen Compose- of omgevingsbestand.
@@ -195,8 +198,8 @@ or sync the folder to the server and let the app read it **read-only** with
 `ingest:import-directory`. Run `--dry-run` first. Each file enters the normal pipeline
 (quarantine, scan, checksum, derivatives); nothing is published. The relative folder path
 is kept as provenance and shown as "Oorspronkelijk pad" on the photo page. Re-runs skip
-paths already imported; use `--limit` to work in batches. JPEG, PNG and WebP are
-supported; BMP, PDF, TIFF and HEIC are counted and skipped for now. A photo present in
+paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP and BMP are
+supported (a BMP original is kept unchanged, previews are JPEG); PDF, TIFF and HEIC are counted and skipped for now. A photo present in
 two folders is rejected as a duplicate the second time, but the second path stays on the
 rejected upload record. For Docker, mounting the folder read-only into `app` and `worker`
 is an operator change to their own Compose files; this feature changes none.

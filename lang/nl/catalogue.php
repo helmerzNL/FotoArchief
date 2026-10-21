@@ -7,6 +7,7 @@ return [
         'application_suffix' => ' - Vistora',
         'attempts' => 'poging(en)',
         'original_path' => 'Oorspronkelijk pad',
+        'duplicate_paths' => 'Dezelfde foto is ook aangetroffen op',
         'bytes' => 'bytes',
         'dating' => 'Datering',
         'rights_holder' => 'Rechthebbende',

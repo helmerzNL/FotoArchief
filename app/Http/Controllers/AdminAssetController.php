@@ -159,7 +159,12 @@ class AdminAssetController extends Controller
         $aiRuns = $asset->aiRuns()->with(['suggestions' => fn ($query) => $query->with('assetFile')->oldest('id')])
             ->latest('created_at')->latest('id')->paginate(10, ['*'], 'ai_page')->fragment('ai-results');
 
-        return view('admin.assets.show', compact('asset', 'events', 'aiRuns'));
+        // The same photo often sits in several folders (a street and an event); the
+        // later copies are rejected as duplicates but their folder paths are context.
+        $duplicatePaths = QuarantineUpload::query()->where('duplicate_of_asset_id', $asset->id)
+            ->whereNotNull('original_path')->orderBy('original_path')->pluck('original_path');
+
+        return view('admin.assets.show', compact('asset', 'events', 'aiRuns', 'duplicatePaths'));
     }
 
     public function update(Request $request, Asset $asset): RedirectResponse|View

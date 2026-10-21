@@ -75,7 +75,7 @@ class QuarantineUploadService
         if (! $upload->isValid() || $size === false || $size <= 0 || $size > $maxBytes) {
             throw ValidationException::withMessages(['files' => "De upload moet geldig zijn en tussen 1 en {$maxBytes} bytes bevatten."]);
         }
-        if (! in_array($upload->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        if (! in_array($upload->getMimeType(), ['image/jpeg', 'image/png', 'image/webp', 'image/bmp', 'image/x-ms-bmp'], true)) {
             throw ValidationException::withMessages(['files' => __('shared.generated.t_f92a35ba35c44c4b')]);
         }
     }
