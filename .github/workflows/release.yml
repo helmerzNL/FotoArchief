@@ -1,6 +1,12 @@
 name: Verified test release
 
+# Cut a release by running this workflow manually from main (Actions > Verified test release
+# > Run workflow). It creates the tag and the GitHub Release together, after Quality and the
+# release notes have passed, so a version tag without a release cannot come out of it
+# (App-Guidance project-baseline.md section 5). Pushing a v* tag by hand still works for
+# recovery, but is not the normal path.
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -24,16 +30,41 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Validate release identity
+      - name: Resolve and validate the release identity
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
-          git merge-base --is-ancestor HEAD origin/main
-          latest_tag="$(git tag --merged origin/main --list 'v*' --sort=-v:refname | head -n 1)"
-          test "$GITHUB_REF_NAME" = "$latest_tag"
+          version="$(tr -d '[:space:]' < VERSION)"
+          printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            tag="v$version"
+            if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+              echo "::error::Tag $tag already exists. A version tag is never written twice; bump VERSION."
+              exit 1
+            fi
+            highest="$(git tag --merged origin/main --list 'v*' --sort=-v:refname | head -n 1)"
+            if [ -n "$highest" ]; then
+              test "$(printf '%s\n%s\n' "${highest#v}" "$version" | sort -V | tail -n 1)" = "$version"
+              test "${highest#v}" != "$version"
+            fi
+            release_flags="--target $GITHUB_SHA"
+          else
+            tag="$GITHUB_REF_NAME"
+            test "$tag" = "v$version"
+            git merge-base --is-ancestor HEAD origin/main
+            latest_tag="$(git tag --merged origin/main --list 'v*' --sort=-v:refname | head -n 1)"
+            test "$tag" = "$latest_tag"
+            release_flags="--verify-tag"
+          fi
+          echo "RELEASE_TAG=$tag" >> "$GITHUB_ENV"
+          echo "RELEASE_FLAGS=$release_flags" >> "$GITHUB_ENV"
+          echo "Releasing $tag from $GITHUB_SHA"
       - name: Validate version-specific bilingual release notes
         shell: bash
-        run: sh scripts/check-release-notes.sh "$GITHUB_REF_NAME"
+        run: sh scripts/check-release-notes.sh "$RELEASE_TAG"
       - uses: actions/download-artifact@v4
         with:
           name: fotoarchief-php-${{ github.sha }}
@@ -54,7 +85,7 @@ jobs:
         run: |
           docker load -i dist/fotoarchief-docker.tar.gz
           repository="ghcr.io/${GITHUB_REPOSITORY,,}"
-          image="$repository:$GITHUB_REF_NAME"
+          image="$repository:$RELEASE_TAG"
           latest_image="$repository:latest"
           echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker tag "fotoarchief-ci:$GITHUB_SHA" "$image"
@@ -71,13 +102,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat dist/DOCKER-SHA256SUMS >> dist/SHA256SUMS
-          php scripts/release-asset-manifest.php create dist "$GITHUB_REF_NAME" "$GITHUB_SHA"
-          gh release create "$GITHUB_REF_NAME" \
-            --verify-tag --prerelease \
-            --title "FotoArchief $GITHUB_REF_NAME — Testrelease / Test release" \
-            --notes-file "docs/releases/$GITHUB_REF_NAME.md" dist/*
+          php scripts/release-asset-manifest.php create dist "$RELEASE_TAG" "$GITHUB_SHA"
+          # shellcheck disable=SC2086 -- RELEASE_FLAGS holds --verify-tag or --target <sha>
+          gh release create "$RELEASE_TAG" \
+            $RELEASE_FLAGS --prerelease \
+            --title "FotoArchief $RELEASE_TAG — Testrelease / Test release" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" dist/*
       - name: Verify persistent release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: sh scripts/verify-published-release.sh "$GITHUB_REF_NAME"
+        run: sh scripts/verify-published-release.sh "$RELEASE_TAG"
