@@ -168,8 +168,15 @@ Successful runs retain PHP archives and a compressed `docker save` image with
 checksums for 14 days. Download those artifacts before the retention window
 expires; use tagged releases for long-term retention.
 
-Pushing a `v` tag matching `VERSION` on a commit already merged into `main`
-starts Verified test release. It repeats Quality, then publishes those exact
+Release by running the Verified test release workflow manually from `main`
+(Actions > Verified test release > Run workflow), after the bilingual notes
+`docs/releases/vX.Y.Z.md` for the current `VERSION` have been merged. The
+workflow refuses to run from any other branch, for a version tag that already
+exists, for a version that is not higher than the highest released tag, or
+without valid notes; it creates the tag and the GitHub Release together. A
+`v` tag matching `VERSION` pushed by hand on a commit already merged into
+`main` still starts the same workflow and remains a recovery path. The workflow
+repeats Quality, then publishes those exact
 tested archives and that saved image, without rebuilding them, to a persistent
 GitHub prerelease and both a GHCR version tag and the rolling `latest` tag. Only
 the highest SemVer tag merged into `main` may publish, so a later push of an older

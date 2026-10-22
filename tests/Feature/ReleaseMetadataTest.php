@@ -23,8 +23,8 @@ it('keeps package and release metadata bilingual with Dutch first', function ():
         ->toContain('Historical image archive')
         ->and($releaseWorkflow)
         ->toContain('Testrelease / Test release')
-        ->toContain('run: sh scripts/check-release-notes.sh "$GITHUB_REF_NAME"')
-        ->toContain('--notes-file "docs/releases/$GITHUB_REF_NAME.md" dist/*');
+        ->toContain('run: sh scripts/check-release-notes.sh "$RELEASE_TAG"')
+        ->toContain('--notes-file "docs/releases/$RELEASE_TAG.md" dist/*');
 });
 
 it('keeps the version-specific release documents bilingual with Dutch first', function (): void {
