@@ -10,27 +10,27 @@
         {{-- Linkerkolom: Ruwe machine-tekst --}}
         <section class="card">
             <h2>{{ __('operations.generated.t_3eb5f202f67b4f94') }}</h2>
-            <p style="font-size: 0.875rem; color: #4b5563;">
+            <p style="font-size: 0.875rem; color: var(--color-text-secondary);">
                 <strong>Status:</strong> {{ $ocr->status }} &middot;
                 <strong>Taal:</strong> {{ $ocr->language }} &middot;
                 <strong>Engine:</strong> {{ $ocr->engine_version ?? '-' }}
             </p>
 
-            <div style="background: #f3f4f6; padding: 1rem; border-radius: 4px; font-family: monospace; white-space: pre-wrap; margin-top: 1rem; min-height: 200px; max-height: 500px; overflow-y: auto;">
+            <div style="background: var(--color-surface-subtle); padding: 1rem; border-radius: 4px; font-family: monospace; white-space: pre-wrap; margin-top: 1rem; min-height: 200px; max-height: 500px; overflow-y: auto;">
                 {{ $ocr->extracted_text ?: '(Geen machine-tekst herkend of fout opgetreden)' }}
             </div>
 
             @if($ocr->error_message)
-                <p style="color: #dc2626; margin-top: 0.5rem; font-size: 0.875rem;"><strong>Foutmelding:</strong> {{ $ocr->error_message }}</p>
+                <p style="color: var(--color-error); margin-top: 0.5rem; font-size: 0.875rem;"><strong>Foutmelding:</strong> {{ $ocr->error_message }}</p>
             @endif
         </section>
 
         {{-- Rechterkolom: Gecorrigeerde archieftekst bewerken --}}
         <section class="card">
             <h2>{{ __('operations.generated.t_80a8f43d8e1aaee6') }}</h2>
-            <p style="font-size: 0.875rem; color: #4b5563;">
+            <p style="font-size: 0.875rem; color: var(--color-text-secondary);">
                 @if($ocr->is_edited)
-                    <span style="color: #059669; font-weight: bold;">{{ __('operations.generated.t_3a8bb3d54c9921bc') }}</span>
+                    <span style="color: var(--color-success); font-weight: bold;">{{ __('operations.generated.t_3a8bb3d54c9921bc') }}</span>
                 @else
                     <span>{{ __('operations.generated.t_46f4f94bf07ffa30') }}</span>
                 @endif

@@ -9,14 +9,14 @@
     {{-- Diagnostiek Card --}}
     <section class="card" style="margin-bottom: 2rem;">
         <h2>{{ __('operations.generated.t_4e9196a03d483453') }}</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 1rem; margin-top: 1rem;">
             <div>
                 <strong>Configuratiestatus:</strong>
                 <p>
                     @if($diagnostics['enabled'])
-                        <span style="color: #059669; font-weight: bold;">{{ __('operations.generated.t_a94da4f43c16de24') }}</span>
+                        <span style="color: var(--color-success); font-weight: bold;">{{ __('operations.generated.t_a94da4f43c16de24') }}</span>
                     @else
-                        <span style="color: #dc2626; font-weight: bold;">{{ __('operations.generated.t_1e86c0fb71bbfdc5') }}</span>
+                        <span style="color: var(--color-error); font-weight: bold;">{{ __('operations.generated.t_1e86c0fb71bbfdc5') }}</span>
                     @endif
                 </p>
             </div>
@@ -24,9 +24,9 @@
                 <strong>{{ __('operations.generated.t_da836c86561bd59c') }}</strong>
                 <p>
                     @if($diagnostics['available'])
-                        <span style="color: #059669; font-weight: bold;">Beschikbaar</span>
+                        <span style="color: var(--color-success); font-weight: bold;">Beschikbaar</span>
                     @else
-                        <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_021d08e92e4b3adc') }}</span>
+                        <span style="color: var(--color-warning); font-weight: bold;">{{ __('operations.generated.t_021d08e92e4b3adc') }}</span>
                     @endif
                 </p>
             </div>
@@ -39,7 +39,7 @@
                 <p>{{ !empty($diagnostics['languages']) ? implode(', ', $diagnostics['languages']) : '-' }}</p>
             </div>
         </div>
-        <p style="margin-top: 0.5rem; font-size: 0.875rem; color: #4b5563;">{{ $diagnostics['status_message'] }}</p>
+        <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--color-text-secondary);">{{ $diagnostics['status_message'] }}</p>
     </section>
 
     {{-- Zoekbalk --}}
@@ -63,7 +63,7 @@
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
-                    <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
                         <th style="padding: 0.75rem;">Status</th>
@@ -74,16 +74,16 @@
                 </thead>
                 <tbody>
                     @foreach($ocrRecords as $rec)
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 0.75rem;"><strong>{{ $rec->asset?->accession_number ?? '-' }}</strong></td>
                             <td style="padding: 0.75rem;">{{ $rec->asset?->title ?? '-' }}</td>
                             <td style="padding: 0.75rem;">
                                 @if($rec->status === 'completed')
-                                    <span style="color: #059669; font-weight: bold;">Voltooid</span>
+                                    <span style="color: var(--color-success); font-weight: bold;">Voltooid</span>
                                 @elseif($rec->status === 'failed')
-                                    <span style="color: #dc2626; font-weight: bold;">Mislukt</span>
+                                    <span style="color: var(--color-error); font-weight: bold;">Mislukt</span>
                                 @elseif($rec->status === 'disabled')
-                                    <span style="color: #4b5563;">Uitgeschakeld</span>
+                                    <span style="color: var(--color-text-secondary);">Uitgeschakeld</span>
                                 @else
                                     <span>{{ $rec->status }}</span>
                                 @endif
@@ -93,9 +93,9 @@
                             </td>
                             <td style="padding: 0.75rem;">
                                 @if($rec->is_edited)
-                                    <span style="color: #2563eb; font-weight: bold;">{{ __('operations.generated.t_59c6040bf3ded0a7') }}</span>
+                                    <span style="color: var(--color-info); font-weight: bold;">{{ __('operations.generated.t_59c6040bf3ded0a7') }}</span>
                                 @else
-                                    <span style="color: #4b5563;">Machine-gegenereerd</span>
+                                    <span style="color: var(--color-text-secondary);">Machine-gegenereerd</span>
                                 @endif
                             </td>
                             <td style="padding: 0.75rem;">

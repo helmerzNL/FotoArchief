@@ -1,51 +1,31 @@
 @extends('layouts.app')
 @section('title', ($asset->title ?: $asset->accession_number).__('catalogue.fragments.application_suffix'))
 @section('content')
-<a href="{{ route('admin.assets.index') }}">{{ __('catalogue.generated.t_1453c8c37526025e') }}</a>
-<h1>{{ $asset->title ?: $asset->accession_number }}</h1>
-<p>{{ $asset->accession_number }} {{ __('catalogue.generated.t_5fac28e5672fef1d') }} {{ $asset->lock_version }}</p>
-<p><a href="#ai-results">{{ __('catalogue.generated.t_d22d67d7e9ebfa16') }}</a></p>
 @php($file = $asset->files->first())
 @php($right = $asset->rights->sortByDesc('id')->first())
-@if($file && isset($file->derivatives['preview1200']))
-    <img class="preview" src="{{ route('admin.assets.media', [$asset, $file, 'preview1200']) }}" alt="Voorbeeld van {{ $asset->title ?: $asset->accession_number }}">
-    <p><a href="{{ route('admin.assets.media', [$asset, $file, 'preview2000']) }}">{{ __('catalogue.generated.t_213d129cfee83c16') }}</a></p>
-@endif
-<section class="card"><h2>Verwerking</h2>
-    @if($duplicatePaths->isNotEmpty())
-        <p>{{ __('catalogue.fragments.duplicate_paths') }}:</p>
-        <ul>@foreach($duplicatePaths as $path)<li><code>{{ $path }}</code></li>@endforeach</ul>
+<div class="page-header">
+    <div>
+        <p><a href="{{ route('admin.assets.index') }}">{{ __('catalogue.generated.t_1453c8c37526025e') }}</a></p>
+        <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
+        <p class="photo-meta">{{ $asset->accession_number }} {{ __('catalogue.generated.t_5fac28e5672fef1d') }} {{ $asset->lock_version }}</p>
+    </div>
+    <div class="page-actions"><a class="button secondary" href="#ai-results">{{ __('catalogue.generated.t_d22d67d7e9ebfa16') }}</a></div>
+</div>
+<div class="split">
+    @if($file && isset($file->derivatives['preview1200']))
+    <div class="split-media">
+            <img class="preview" src="{{ route('admin.assets.media', [$asset, $file, 'preview1200']) }}" alt="Voorbeeld van {{ $asset->title ?: $asset->accession_number }}">
+            <p><a href="{{ route('admin.assets.media', [$asset, $file, 'preview2000']) }}">{{ __('catalogue.generated.t_213d129cfee83c16') }}</a></p>
+    </div>
     @endif
-    @foreach($asset->uploads as $upload)
-        <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} {{ __('catalogue.fragments.attempts') }}</p>
-        @if($upload->original_path)<p>{{ __('catalogue.fragments.original_path') }}: <code>{{ $upload->original_path }}</code></p>@endif
-        @if($upload->failure_reason)<p role="alert">{{ $upload->failure_reason }}</p>@endif
-        @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">{{ __('catalogue.generated.t_02d801eb4453bb6e') }} {{ $upload->original_filename }}</a></p>@endcanany
-        @can('update', $asset)
-            @if($upload->status === 'failed' || ($upload->status === 'running' && $upload->started_at?->lt(now()->subMinutes(4))))
-                <form method="post" action="{{ route('admin.assets.retry', [$asset, $upload]) }}">@csrf<button>{{ __('catalogue.generated.t_a69428155b67f899') }}</button></form>
-            @endif
-        @endcan
-    @endforeach
-    @if($file)
-        <p>Status: <strong>{{ $file->ingest_status }}</strong> {{ __('catalogue.generated.t_ca0369fb4e5a2f74') }} <strong>{{ $file->scanner_status === 'clean' ? 'Schoon volgens ingest-scanner' : 'NIET GESCAND' }}</strong></p>
-        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} {{ __('catalogue.generated.t_98bb76673444cd14') }} {{ $file->media_type }}@if(isset($file->technical_metadata['page_count'])) · {{ $file->technical_metadata['page_count'] }} {{ __('catalogue.fragments.pages') }}@endif · {{ number_format($file->byte_size) }} {{ __('catalogue.fragments.bytes') }}</p>
-        <p class="checksum">SHA-256: {{ $file->sha256 }}</p>
-        <p>{{ __('catalogue.generated.t_e09420bb3e35b28b') }} {{ $file->technical_metadata['orientation'] ?? 'onbekend' }}{{ __('catalogue.generated.t_cafe7f0d435cf7c0') }}</p>
-    @else
-        <p>{{ __('catalogue.generated.t_f447e280b1df24b2') }}</p>
-    @endif
-    <a href="{{ route('admin.assets.show', $asset) }}">{{ __('catalogue.generated.t_b64b6b7558474301') }}</a>
-    <p>{{ __('catalogue.generated.t_d9ec106a4491f7b6') }}</p>
-</section>
+    <div class="split-main">
 <section class="card"><h2>{{ __('catalogue.generated.t_c8e6c9b1a3d8fa52') }}</h2>
     <p>{{ $asset->description ?: 'Nog geen beschrijving.' }}</p>
     <p>{{ __('catalogue.fragments.dating') }}: {{ $asset->date_display ?: $asset->date_precision }} · {{ $asset->date_earliest?->format('Y-m-d') }} — {{ $asset->date_latest?->format('Y-m-d') }}</p>
     <p>Tags: {{ $asset->tags->pluck('name')->join(', ') ?: 'Geen' }}</p>
-    <p>{{ __('catalogue.fragments.rights_holder') }}: {{ $right?->rights_holder ?: 'Onbekend' }} · {{ $right?->verification_status ?? 'unverified' }}</p>
+    <p>{{ __('catalogue.fragments.rights_holder') }}: {{ $right?->rights_holder ?: 'Onbekend' }} · <x-status-badge :status="$right?->verification_status ?? 'unverified'" /></p>
     <p>{{ $right?->note }}</p>
 </section>
-@include('ai.results._photo')
 @can('update', $asset)
 <section class="card"><h2>{{ __('catalogue.generated.t_0b5aad2002476f41') }}</h2>
     <form method="post" action="{{ route('admin.assets.update', $asset) }}">
@@ -75,6 +55,36 @@
     </form>
 </section>
 @endcan
+    </div>
+</div>
+<section class="card"><h2>Verwerking</h2>
+    @if($duplicatePaths->isNotEmpty())
+        <p>{{ __('catalogue.fragments.duplicate_paths') }}:</p>
+        <ul>@foreach($duplicatePaths as $path)<li><code>{{ $path }}</code></li>@endforeach</ul>
+    @endif
+    @foreach($asset->uploads as $upload)
+        <p>{{ $upload->original_filename }}: <strong>{{ $upload->status }}</strong> · {{ $upload->attempts }} {{ __('catalogue.fragments.attempts') }}</p>
+        @if($upload->original_path)<p>{{ __('catalogue.fragments.original_path') }}: <code>{{ $upload->original_path }}</code></p>@endif
+        @if($upload->failure_reason)<p role="alert">{{ $upload->failure_reason }}</p>@endif
+        @canany(['assets.update', 'catalogue.manage', 'users.manage'])<p><a href="{{ route('admin.operations.processing.show', $upload) }}">{{ __('catalogue.generated.t_02d801eb4453bb6e') }} {{ $upload->original_filename }}</a></p>@endcanany
+        @can('update', $asset)
+            @if($upload->status === 'failed' || ($upload->status === 'running' && $upload->started_at?->lt(now()->subMinutes(4))))
+                <form method="post" action="{{ route('admin.assets.retry', [$asset, $upload]) }}">@csrf<button>{{ __('catalogue.generated.t_a69428155b67f899') }}</button></form>
+            @endif
+        @endcan
+    @endforeach
+    @if($file)
+        <p>Status: <strong>{{ $file->ingest_status }}</strong> {{ __('catalogue.generated.t_ca0369fb4e5a2f74') }} <strong>{{ $file->scanner_status === 'clean' ? 'Schoon volgens ingest-scanner' : 'NIET GESCAND' }}</strong></p>
+        <p>{{ $file->pixel_width }} × {{ $file->pixel_height }} {{ __('catalogue.generated.t_98bb76673444cd14') }} {{ $file->media_type }}@if(isset($file->technical_metadata['page_count'])) · {{ $file->technical_metadata['page_count'] }} {{ __('catalogue.fragments.pages') }}@endif · {{ number_format($file->byte_size) }} {{ __('catalogue.fragments.bytes') }}</p>
+        <p class="checksum">SHA-256: {{ $file->sha256 }}</p>
+        <p>{{ __('catalogue.generated.t_e09420bb3e35b28b') }} {{ $file->technical_metadata['orientation'] ?? 'onbekend' }}{{ __('catalogue.generated.t_cafe7f0d435cf7c0') }}</p>
+    @else
+        <p>{{ __('catalogue.generated.t_f447e280b1df24b2') }}</p>
+    @endif
+    <a href="{{ route('admin.assets.show', $asset) }}">{{ __('catalogue.generated.t_b64b6b7558474301') }}</a>
+    <p>{{ __('catalogue.generated.t_d9ec106a4491f7b6') }}</p>
+</section>
+@include('ai.results._photo')
 <section class="card"><h2>Archiefbewerkingen</h2>
     <p>{{ __('catalogue.generated.t_d75725cecb05bcc9') }}</p>
     <ul class="actions" style="list-style: none; padding: 0;">

@@ -5,7 +5,7 @@
 <h1>Tag: {{ $tag->name }}</h1>
 
 @if(session('status'))
-    <div class="card" style="border-color: #16a34a; background-color: #f0fdf4;">
+    <div class="card" style="border-color: var(--color-success); background-color: var(--color-success-surface);">
         <p>{{ session('status') }}</p>
     </div>
 @endif

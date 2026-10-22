@@ -36,7 +36,7 @@
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
-                    <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                         <th style="padding: 0.75rem;">Versie</th>
                         <th style="padding: 0.75rem;">Bestandsnaam</th>
                         <th style="padding: 0.75rem;">Resolutie</th>
@@ -48,11 +48,11 @@
                 </thead>
                 <tbody>
                     @foreach($versions as $v)
-                        <tr style="border-bottom: 1px solid #e5e7eb; @if($v->is_current) background-color: #f0fdf4; @endif">
+                        <tr style="border-bottom: 1px solid var(--border); @if($v->is_current) background-color: var(--color-success-surface); @endif">
                             <td style="padding: 0.75rem;">
                                 <strong>v{{ $v->version_number }}</strong>
                                 @if($v->is_current)
-                                    <span style="background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">Primair</span>
+                                    <span class="badge badge-success">Primair</span>
                                 @endif
                             </td>
                             <td style="padding: 0.75rem;">{{ $v->file?->original_filename ?? 'Onbekend' }}</td>

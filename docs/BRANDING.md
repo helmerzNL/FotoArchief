@@ -30,6 +30,30 @@ redactionele koppen en Source Sans 3 voor formulieren en beheer.
   catalogi voor enkele bestaande workflows, maar geen volledige Engelse shell;
   deze huisstijlwijziging claimt geen nieuwe taalondersteuning.
 
+### Schil, navigatie en accentkleur
+
+De beheeromgeving heeft vier bestemmingen in plaats van negen losse links:
+**Foto's**, **Catalogus**, **Publiceren** en **Beheer**. Welke pagina's onder een
+bestemming vallen en wie ze ziet staat in `app/Modules/Archive/StaffNavigation.php`;
+de zichtbaarheid volgt dezelfde rechten als de pagina's zelf.
+
+- Vanaf 60rem staat primaire navigatie links in een inklapbare zijbalk (de keuze
+  wordt in `vistora.sidebar` bewaard); onder 60rem is dat een glazen onderbalk met
+  dezelfde bestemmingen. Er is steeds één navigator zichtbaar.
+- De pagina's binnen de actieve bestemming staan als sectietabs boven de inhoud.
+  Account, beveiliging, weergave en uitloggen zitten in het accountmenu.
+- Weergave en kleur: Systeem/Licht/Donker plus vijf accentkleuren (Archiefgroen is
+  standaard, daarnaast Terracotta, Blauw, Pruim en Oker), bewaard in `vistora.accent`.
+  Elke combinatie haalt WCAG AA (minstens 4,5:1) voor tekst op de knop en voor de
+  accentkleur als tekst op de pagina, in licht en donker. Glas wordt alleen voor
+  zwevende balken en menu's gebruikt en valt terug op een effen vlak bij
+  `prefers-reduced-transparency`.
+- Statussen zijn tekst met een stip (badge), nooit alleen kleur. De publieke site
+  houdt een bovenbalk; de verenigingsnaam staat daar naast het Vistora-merk.
+- Vaste hexkleuren in de beheerschermen zijn vervangen door themakleuren, zodat de
+  donkere modus overal leesbaar is. Nieuwe schermen gebruiken tokens uit
+  `public/brand/tokens.css`, geen eigen kleuren of inline stijlen.
+
 ### Installatie-iconen en delen
 
 [Het webmanifest](../public/manifest.webmanifest) start op `/`, heeft een
@@ -121,6 +145,30 @@ and Source Sans 3 for forms and staff tools.
 - Dutch remains the supported default. Some existing workflows have English
   catalogues, but there is no complete English shell; this change adds no new
   language support.
+
+### Shell, navigation and accent colour
+
+The staff workspace has four destinations instead of nine flat links: **Photos**,
+**Catalogue**, **Publishing** and **Administration**. The pages under each
+destination and who sees them are defined in
+`app/Modules/Archive/StaffNavigation.php`; visibility follows the same abilities
+the pages themselves enforce.
+
+- From 60rem, primary navigation is a collapsible left sidebar (the state is kept
+  in `vistora.sidebar`); below 60rem it is a glass bottom bar with the same
+  destinations. Exactly one navigator is shown at a time.
+- The pages inside the active destination appear as section tabs above the content.
+  Account, security, appearance and sign-out live in the account menu.
+- Appearance and colour: System/Light/Dark plus five accent colours (Archive green
+  by default, then Terracotta, Blue, Plum and Ochre), kept in `vistora.accent`. Every
+  pair reaches WCAG AA (at least 4.5:1) for text on the button and for the accent as
+  text on the page, in light and dark. Glass is used only for floating bars and
+  menus and falls back to a solid surface under `prefers-reduced-transparency`.
+- Status is text with a dot (a badge), never colour alone. The public site keeps a
+  top bar; the society's name sits next to the Vistora mark.
+- Hard-coded hex colours in the staff screens were replaced by theme tokens so dark
+  mode is readable everywhere. New screens use the tokens in
+  `public/brand/tokens.css`, not their own colours or inline styles.
 
 ### Install icons and sharing
 

@@ -6,15 +6,15 @@
 <p>{{ __('daily.assignment_hint') }}</p>
 
 @if(session('status'))
-    <div class="card" style="border-color: #16a34a; background-color: #f0fdf4;">
+    <div class="card" style="border-color: var(--color-success); background-color: var(--color-success-surface);">
         <p>{{ session('status') }}</p>
     </div>
 @endif
 
 <section class="card">
     <h2>{{ __('catalogue.generated.t_dc9a8bc5b1640060') }}</h2>
-    <div style="background-color: #e5e7eb; border-radius: 9999px; height: 1.25rem; overflow: hidden; margin-bottom: 1rem;">
-        <div style="background-color: #16a34a; height: 100%; width: {{ $worklist->progressPercentage() }}%;"></div>
+    <div style="background-color: var(--border); border-radius: 9999px; height: 1.25rem; overflow: hidden; margin-bottom: 1rem;">
+        <div style="background-color: var(--color-success); height: 100%; width: {{ $worklist->progressPercentage() }}%;"></div>
     </div>
     <p><strong>Voortgang:</strong> {{ $worklist->progressPercentage() }}% ({{ $worklist->completedCount() }} {{ __('catalogue.fragments.of') }} {{ $worklist->totalCount() }} {{ __('catalogue.fragments.completed') }})</p>
     <p><strong>Status:</strong> {{ $worklist->status }} · <strong>{{ __('catalogue.fragments.type') }}:</strong> {{ $worklist->worklist_type }}</p>

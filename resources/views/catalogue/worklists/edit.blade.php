@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_06faef7436924547') }} {{ $worklist->title }}</h1>
 
 @if($errors->any())
-    <div class="card" style="border-color: #b91c1c; background-color: #fef2f2;">
+    <div class="card" style="border-color: var(--color-error); background-color: var(--color-error-surface);">
         <h2>Invoerfouten</h2>
         <ul>
             @foreach($errors->all() as $error)
@@ -62,7 +62,7 @@
     <form method="post" action="{{ route('catalogue.worklists.destroy', $worklist) }}">
         @csrf
         @method('delete')
-        <button type="submit" class="button secondary" style="color: #b91c1c;" onclick="return confirm('Weet je zeker dat je deze werklijst wilt verwijderen?')">{{ __('catalogue.generated.t_0c3fee1ce16c1371') }}</button>
+        <button type="submit" class="button secondary" style="color: var(--color-error);" onclick="return confirm('Weet je zeker dat je deze werklijst wilt verwijderen?')">{{ __('catalogue.generated.t_0c3fee1ce16c1371') }}</button>
     </form>
 </section>
 @endsection

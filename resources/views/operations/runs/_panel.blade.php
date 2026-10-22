@@ -1,7 +1,7 @@
 {{-- Shared status panel for background archive operations. --}}
 <section class="card" style="margin-top: 2rem;">
     <h2>Achtergrondtaken</h2>
-    <p style="font-size: 0.875rem; color: #4b5563;">
+    <p style="font-size: 0.875rem; color: var(--color-text-secondary);">
         {{ __('operations.generated.t_8a94fe8fea44c546') }}
     </p>
 
@@ -11,7 +11,7 @@
         {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
             <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                     <th style="padding: 0.75rem;">Taak</th>
                     <th style="padding: 0.75rem;">Type</th>
                     <th style="padding: 0.75rem;">Status</th>
@@ -22,34 +22,34 @@
             </thead>
             <tbody>
                 @foreach($runs as $run)
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: 0.75rem;"><a href="{{ route('admin.operations.runs.show', $run) }}"><code>{{ substr($run->id, 0, 12) }}</code></a></td>
                         <td style="padding: 0.75rem;">{{ $run->operation_type }}</td>
                         <td style="padding: 0.75rem;">
                             @if($run->status === 'completed')
-                                <span style="color: #059669; font-weight: bold;">Voltooid</span>
+                                <span style="color: var(--color-success); font-weight: bold;">Voltooid</span>
                             @elseif($run->status === 'failed')
-                                <span style="color: #dc2626; font-weight: bold;">Mislukt</span>
+                                <span style="color: var(--color-error); font-weight: bold;">Mislukt</span>
                             @elseif($run->status === 'running')
-                                <span style="color: #2563eb; font-weight: bold;">Bezig</span>
+                                <span style="color: var(--color-info); font-weight: bold;">Bezig</span>
                             @elseif($run->status === 'paused')
                                 <span>{{ __('workbench.paused') }}</span>
                             @elseif($run->status === 'cancelled')
-                                <span style="color: #6b7280; font-weight: bold;">Geannuleerd</span>
+                                <span style="color: var(--muted); font-weight: bold;">Geannuleerd</span>
                             @else
-                                <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_9b88bb032d925e75') }}</span>
+                                <span style="color: var(--color-warning); font-weight: bold;">{{ __('operations.generated.t_9b88bb032d925e75') }}</span>
                             @endif
                         </td>
                         <td style="padding: 0.75rem; font-size: 0.875rem;">
                             {{ $run->processed_items }}@if($run->total_items > 0) / {{ $run->total_items }}@endif {{ __('operations.fragments.processed') }}
                             @if($run->failed_items > 0)
-                                <span style="color: #dc2626;">({{ $run->failed_items }} {{ __('operations.fragments.failed') }})</span>
+                                <span style="color: var(--color-error);">({{ $run->failed_items }} {{ __('operations.fragments.failed') }})</span>
                             @endif
                         </td>
-                        <td style="padding: 0.75rem; font-size: 0.875rem; color: #dc2626; max-width: 320px;">
+                        <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-error); max-width: 320px;">
                             {{ $run->error_message ?? '-' }}
                             @if($run->auditEvents->isNotEmpty())
-                                <details style="margin-top: 0.5rem; color: #374151;">
+                                <details style="margin-top: 0.5rem; color: var(--color-text-secondary);">
                                     <summary>{{ __('operations.generated.t_dab34c3526adb141') }}{{ $run->auditEvents->count() }})</summary>
                                     <ol style="padding-left: 1.25rem;">
                                         @foreach($run->auditEvents as $event)
@@ -82,7 +82,7 @@
                                     <button type="submit" class="button secondary" style="padding: 4px 8px; font-size: 0.8rem;">Stoppen</button>
                                 </form>
                             @else
-                                <span style="color: #4b5563; font-size: 0.875rem;">-</span>
+                                <span style="color: var(--color-text-secondary); font-size: 0.875rem;">-</span>
                             @endif
                         </td>
                     </tr>

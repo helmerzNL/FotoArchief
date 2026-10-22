@@ -279,6 +279,7 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
 test('saved searches, confirmed bulk metadata and per-field conflict recovery retain current edits', async ({ page, context }) => {
   await login(page);
   await page.goto(url('/admin/assets?q=Browser%20mobiel%20toetsenbord'));
+  await page.getByText('Mijn opgeslagen zoekopdrachten', { exact: true }).click();
   await page.getByLabel('Naam zoekopdracht', { exact: true }).fill('Daily browser search');
   await page.getByRole('button', { name: 'Huidige filters opslaan', exact: true }).click();
   await page.getByRole('link', { name: 'Daily browser search', exact: true }).click();

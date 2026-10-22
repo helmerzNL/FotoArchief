@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_2d4e35046e927ab6') }}{{ $assets->count() }} geselecteerd)</h1>
 
 @if($errors->any())
-    <div class="card" style="border-color: #b91c1c; background-color: #fef2f2;">
+    <div class="card" style="border-color: var(--color-error); background-color: var(--color-error-surface);">
         <h2>{{ __('catalogue.generated.t_ee8eee677f2e1cf3') }}</h2>
         <ul>
             @foreach($errors->all() as $error)

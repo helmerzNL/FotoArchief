@@ -14,7 +14,7 @@
         {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1.5rem;">
             <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                     <th style="padding: 0.75rem;">Bestandsnaam</th>
                     <th style="padding: 0.75rem;">{{ __('operations.generated.t_32f3a0aac6c41170') }}</th>
                     <th style="padding: 0.75rem;">{{ __('operations.generated.t_94561214693936c1') }}</th>
@@ -25,7 +25,7 @@
             </thead>
             <tbody>
                 @foreach($duplicates as $duplicate)
-                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: 0.75rem;"><strong>{{ $duplicate->original_filename }}</strong></td>
                         <td style="padding: 0.75rem;">{{ $duplicate->uploadedBy?->name ?? 'Onbekend' }}</td>
                         <td style="padding: 0.75rem;">

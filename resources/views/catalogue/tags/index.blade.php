@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_edf0cac4b05289f5') }}</h1>
 
 @if(session('status'))
-    <div class="card" style="border-color: #16a34a; background-color: #f0fdf4;">
+    <div class="card" style="border-color: var(--color-success); background-color: var(--color-success-surface);">
         <p>{{ session('status') }}</p>
     </div>
 @endif

@@ -72,6 +72,19 @@
     --border: var(--color-border);
     --notice: var(--color-surface);
     --error: var(--color-error);
+    --color-primary-subtle: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+    --color-success-surface: #e6f0ea;
+    --color-warning-surface: #f6edd6;
+    --color-error-surface: #f8e4e2;
+    --color-info-surface: #e3edf3;
+    --glass-bg: rgb(255 255 255 / 74%);
+    --glass-border: rgb(39 43 39 / 10%);
+    --glass-blur: saturate(160%) blur(18px);
+    --glass-shadow: 0 8px 32px rgb(39 43 39 / 10%);
+    --sidebar-width: 15rem;
+    --sidebar-width-collapsed: 4.75rem;
+    --bottom-bar-height: 4.25rem;
+    --content-max: 1440px;
 }
 :root[data-theme="dark"] {
     color-scheme: dark;
@@ -95,6 +108,28 @@
     --color-info: #a6cee7;
     --shadow-sm: 0 1px 3px rgb(0 0 0 / 18%);
     --shadow-md: 0 8px 24px rgb(0 0 0 / 24%);
+    --color-success-surface: #1f3a2a;
+    --color-warning-surface: #3b331c;
+    --color-error-surface: #40272a;
+    --color-info-surface: #1f3342;
+    --glass-bg: rgb(34 42 37 / 74%);
+    --glass-border: rgb(255 255 255 / 11%);
+    --glass-shadow: 0 8px 32px rgb(0 0 0 / 30%);
+}
+/* Accent personalisation (design.md §2): one token pair drives buttons, links,
+   selection and active states. Every pair is contrast-checked in both themes:
+   white on light primary >= 6.3:1, dark text on dark primary >= 8.6:1, and the
+   primary as text on its page background >= 5.7:1. Archiefgroen is the default. */
+:root[data-accent="terracotta"] { --color-primary: #934b36; --color-primary-hover: #7a3d2b; --color-focus: #365447; }
+:root[data-accent="blauw"] { --color-primary: #315d79; --color-primary-hover: #264a61; }
+:root[data-accent="pruim"] { --color-primary: #6b4a73; --color-primary-hover: #573b5e; }
+:root[data-accent="oker"] { --color-primary: #7a5a14; --color-primary-hover: #634a0f; --color-focus: #365447; }
+:root[data-theme="dark"][data-accent="terracotta"] { --color-primary: #e6aa8f; --color-primary-hover: #f0c0aa; --color-focus: #a8c6b1; }
+:root[data-theme="dark"][data-accent="blauw"] { --color-primary: #a6cee7; --color-primary-hover: #bddcee; }
+:root[data-theme="dark"][data-accent="pruim"] { --color-primary: #d6b9de; --color-primary-hover: #e4ceea; }
+:root[data-theme="dark"][data-accent="oker"] { --color-primary: #e3c077; --color-primary-hover: #ecd093; --color-focus: #a8c6b1; }
+@media (prefers-reduced-transparency: reduce) {
+    :root, :root[data-theme="dark"] { --glass-bg: var(--color-surface); --glass-blur: none; }
 }
 @media (prefers-reduced-motion: reduce) {
     :root { --duration-fast: 0ms; --duration-normal: 0ms; }

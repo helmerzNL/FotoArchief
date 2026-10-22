@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_9b02a395dbf71608') }} {{ $tag->name }}</h1>
 
 @if($errors->any())
-    <div class="card" style="border-color: #b91c1c; background-color: #fef2f2;">
+    <div class="card" style="border-color: var(--color-error); background-color: var(--color-error-surface);">
         <h2>Invoerfouten</h2>
         <ul>
             @foreach($errors->all() as $error)
@@ -69,7 +69,7 @@
     <form method="post" action="{{ route('catalogue.tags.destroy', $tag) }}">
         @csrf
         @method('delete')
-        <button type="submit" class="button secondary" style="color: #b91c1c;" onclick="return confirm('Weet je zeker dat je deze tag wilt verwijderen?')">{{ __('catalogue.generated.t_a7fc42260182c959') }}</button>
+        <button type="submit" class="button secondary" style="color: var(--color-error);" onclick="return confirm('Weet je zeker dat je deze tag wilt verwijderen?')">{{ __('catalogue.generated.t_a7fc42260182c959') }}</button>
     </form>
 </section>
 @endsection

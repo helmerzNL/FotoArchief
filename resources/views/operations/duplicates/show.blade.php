@@ -8,18 +8,18 @@
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1.5rem;">
         {{-- Nieuwe duplicaat upload --}}
-        <section class="card" style="border: 2px dashed #d1d5db;">
+        <section class="card" style="border: 2px dashed var(--color-control-border);">
             <h2>{{ __('operations.generated.t_f3f514bd279cacd5') }}</h2>
             <p><strong>Bestandsnaam:</strong> {{ $upload->original_filename }}</p>
             <p><strong>Grootte:</strong> {{ number_format($upload->byte_size / 1024, 1) }} KB</p>
             <p><strong>{{ __('operations.generated.t_d4cdd72bedd54eee') }}</strong> {{ $upload->uploadedBy?->name ?? 'Onbekend' }}</p>
             <p><strong>{{ __('operations.generated.t_cf212c74452036f8') }}</strong> {{ $upload->created_at?->format('d-m-Y H:i:s') }}</p>
-            <p><strong>Status:</strong> <span style="color: #d97706; font-weight: bold;">{{ __('operations.generated.t_323f4dda332d8090') }}</span></p>
+            <p><strong>Status:</strong> <span style="color: var(--color-warning); font-weight: bold;">{{ __('operations.generated.t_323f4dda332d8090') }}</span></p>
             <p><strong>SHA-256:</strong> <code style="font-size: 0.75rem; word-break: break-all;">{{ $upload->detected_sha256 }}</code></p>
         </section>
 
         {{-- Bestaand dossier --}}
-        <section class="card" style="border: 2px solid #10b981;">
+        <section class="card" style="border: 2px solid var(--color-success);">
             <h2>{{ __('operations.generated.t_dd33982a8ff6a501') }}</h2>
             <p><strong>Nummer:</strong> <a href="{{ route('admin.assets.show', $targetAsset) }}" target="_blank"><strong>{{ $targetAsset->accession_number }}</strong></a></p>
             <p><strong>Titel:</strong> {{ $targetAsset->title }}</p>
