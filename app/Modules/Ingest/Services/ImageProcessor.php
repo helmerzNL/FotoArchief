@@ -7,6 +7,7 @@ namespace App\Modules\Ingest\Services;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\AssetVersion;
+use App\Modules\Ingest\Exceptions\UnreadablePdf;
 use App\Modules\Ingest\IngestStatus;
 use App\Modules\Ingest\Models\ProcessingJob;
 use App\Modules\Ingest\Models\QuarantineUpload;
@@ -18,9 +19,14 @@ use RuntimeException;
 
 class ImageProcessor
 {
-    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp'];
+    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp', IMAGETYPE_BMP => 'image/bmp'];
 
-    public function __construct(private readonly MalwareScanner $scanner) {}
+    private readonly PdfPageRenderer $pdfs;
+
+    public function __construct(private readonly MalwareScanner $scanner, ?PdfPageRenderer $pdfs = null)
+    {
+        $this->pdfs = $pdfs ?? new PdfPageRenderer;
+    }
 
     public function process(QuarantineUpload $upload): void
     {
@@ -39,6 +45,8 @@ class ImageProcessor
         }
         $writtenKeys = [];
         $committed = false;
+        $renderedPdf = null;
+        $pdfPages = null;
         try {
             $output = fopen($temporary, 'wb');
             if ($output === false) {
@@ -69,12 +77,23 @@ class ImageProcessor
                 $this->reject(__('shared.generated.t_bdbb01530c9e801f'));
             }
 
+            // A PDF is stored unchanged; its first page is rendered once and then runs through
+            // the same decoder, size limits and derivative steps as any other image.
+            if ($this->pdfs->isPdf($temporary)) {
+                try {
+                    ['path' => $renderedPdf, 'pages' => $pdfPages] = $this->pdfs->renderFirstPage($temporary);
+                } catch (UnreadablePdf $exception) {
+                    $this->reject($exception->getMessage());
+                }
+            }
+            $imagePath = $renderedPdf ?? $temporary;
+
             // Convert decoder warnings into explicit permanent rejection, not silent retry loops.
             set_error_handler(function (): never {
                 $this->reject(__('shared.generated.t_3c2421dae8c49b8b'));
             });
             try {
-                $info = getimagesize($temporary);
+                $info = getimagesize($imagePath);
                 if ($info === false || ! isset(self::TYPES[$info[2]]) || $info[0] < 1 || $info[1] < 1) {
                     $this->reject(__('shared.generated.t_212ba5faa17b76ed'));
                 }
@@ -85,15 +104,16 @@ class ImageProcessor
                     $this->reject(__('shared.generated.t_41c61553c32261d4'));
                 }
                 $orientation = 1;
-                if ($type === IMAGETYPE_JPEG && exif_imagetype($temporary) === IMAGETYPE_JPEG) {
-                    $exif = exif_read_data($temporary, 'IFD0', true);
+                if ($renderedPdf === null && $type === IMAGETYPE_JPEG && exif_imagetype($imagePath) === IMAGETYPE_JPEG) {
+                    $exif = exif_read_data($imagePath, 'IFD0', true);
                     $orientation = (int) ($exif['IFD0']['Orientation'] ?? 1);
                     unset($exif);
                 }
                 $source = match ($type) {
-                    IMAGETYPE_JPEG => imagecreatefromjpeg($temporary),
-                    IMAGETYPE_PNG => imagecreatefrompng($temporary),
-                    IMAGETYPE_WEBP => imagecreatefromwebp($temporary),
+                    IMAGETYPE_JPEG => imagecreatefromjpeg($imagePath),
+                    IMAGETYPE_PNG => imagecreatefrompng($imagePath),
+                    IMAGETYPE_WEBP => imagecreatefromwebp($imagePath),
+                    IMAGETYPE_BMP => imagecreatefrombmp($imagePath),
                 };
                 if ($source === false) {
                     $this->reject(__('shared.generated.t_7f3c2eb3b57d427d'));
@@ -149,7 +169,7 @@ class ImageProcessor
             }
             unset($source);
             try {
-                DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus): void {
+                DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus, $pdfPages): void {
                     $maxVersion = (int) (AssetVersion::query()->where('asset_id', $upload->asset_id)->max('version_number') ?? 0);
                     $nextVersion = $maxVersion + 1;
                     if ($nextVersion > 1) {
@@ -162,9 +182,9 @@ class ImageProcessor
                     $file = AssetFile::query()->create([
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,
                         'storage_key' => $upload->storage_key, 'sha256' => $sha,
-                        'media_type' => self::TYPES[$type], 'byte_size' => $upload->byte_size,
-                        'original_filename' => $upload->original_filename, 'pixel_width' => $width, 'pixel_height' => $height,
-                        'technical_metadata' => ['orientation' => $orientation, 'display_width' => $displayWidth, 'display_height' => $displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')],
+                        'media_type' => $pdfPages !== null ? 'application/pdf' : self::TYPES[$type], 'byte_size' => $upload->byte_size,
+                        'original_filename' => $upload->original_filename, 'original_path' => $upload->original_path, 'pixel_width' => $width, 'pixel_height' => $height,
+                        'technical_metadata' => ($pdfPages !== null ? ['page_count' => $pdfPages, 'preview_page' => 1] : []) + ['orientation' => $orientation, 'display_width' => $displayWidth, 'display_height' => $displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')],
                         'derivatives' => $derivatives, 'validated_at' => now(), 'processed_at' => now(),
                         'scanned_at' => $scannerStatus === 'clean' ? now() : null,
                         'ingest_status' => IngestStatus::ReadyPrivate->value, 'scanner_status' => $scannerStatus,
@@ -187,6 +207,9 @@ class ImageProcessor
         } finally {
             fclose($stream);
             unlink($temporary);
+            if ($renderedPdf !== null && is_file($renderedPdf)) {
+                unlink($renderedPdf);
+            }
             if (! $committed && $writtenKeys !== [] && ! $disk->delete($writtenKeys)) {
                 throw new RuntimeException(__('shared.generated.t_710e4e795d6e27cd'));
             }

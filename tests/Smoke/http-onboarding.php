@@ -25,7 +25,7 @@ try {
             'db_database' => getenv('SMOKE_DB_DATABASE') ?: 'fotoarchief',
             'db_username' => getenv('SMOKE_DB_USER') ?: 'fotoarchief',
             'db_password' => getenv('DB_PASSWORD') ?: 'ci-disposable-database', 'db_sslmode' => 'prefer',
-            'disk' => getenv('SMOKE_STORAGE_DISK') ?: 'local', 'path_style' => '1', 'name' => 'Release acceptance',
+            'disk' => getenv('SMOKE_STORAGE_DISK') ?: 'local', 'path_style' => '1', 'association_name' => 'Release acceptance society', 'name' => 'Release acceptance',
             'endpoint' => getenv('SMOKE_S3_ENDPOINT') ?: '',
             'region' => getenv('SMOKE_S3_REGION') ?: '',
             'bucket' => getenv('SMOKE_S3_BUCKET') ?: '',

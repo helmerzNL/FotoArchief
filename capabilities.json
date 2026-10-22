@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "product_version": "0.9.65",
+  "product_version": "0.9.66",
   "capabilities": [
     {"id":"onboarding","status":"shipped","evidence":["app/Modules/Installation/InstallationBootstrap.php","docs/ONBOARDING.md"]},
     {"id":"private-ingest","status":"shipped","evidence":["app/Modules/Ingest/Jobs/ProcessUpload.php","docs/PHOTO_WORKFLOW.md"]},
@@ -18,7 +18,9 @@
     {"id":"local-ai-provider","status":"conditional","requires":["administrator opt-in","approved provider/model"],"evidence":["app/Modules/Ai","docs/AI_PROVIDER_SETUP.md"]},
     {"id":"pgvector-semantic-search","status":"conditional","requires":["PostgreSQL pgvector extension","compatible text/image embedding space"],"evidence":["app/Modules/Ai/Services/PgvectorEmbeddingStore.php","docs/VECTOR_RECOVERY_DELIVERY.md"]},
     {"id":"quality-regression-gates","status":"shipped","evidence":["tests/Performance/budgets.v1.json","tests/Performance/relevance-dataset.v1.json","tests/Browser/acceptance.spec.ts","docs/QUALITY_ACCEPTANCE.md"]},
-    {"id":"vistora-identity","status":"shipped","evidence":["public/brand","docs/BRANDING.md"]}
+    {"id":"vistora-identity","status":"shipped","evidence":["public/brand","docs/BRANDING.md"]},
+    {"id":"folder-import","status":"experimental","evidence":["app/Console/Commands/ImportDirectoryCommand.php","app/Modules/Ingest/Support/OriginalPath.php","docs/PHOTO_WORKFLOW.md"]},
+    {"id":"pdf-documents","status":"conditional","requires":["poppler-utils (pdfinfo and pdftoppm) in the runtime image"],"evidence":["app/Modules/Ingest/Services/PdfPageRenderer.php","docs/PHOTO_WORKFLOW.md"]}
   ],
   "acceptance_boundaries": [
     {"id":"installation-environment","issue":"https://github.com/helmerzNL/FotoArchief/issues/15"},

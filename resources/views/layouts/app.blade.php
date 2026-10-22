@@ -22,6 +22,7 @@
     <a class="skip-link" href="#main">{{ __('shell.nav.skip') }}</a>
     <header class="site-header">
         <a class="brand" href="/" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span>{{ __('shell.brand.name') }}</span></a>
+        @if($archiveProfile)<p class="archive-sender">{{ $archiveProfile->name }}</p>@endif
         <nav class="public-nav" aria-label="{{ __('shell.nav.public') }}">
             <a href="{{ route('public.discover') }}" aria-current="{{ request()->routeIs('public.discover', 'public.home') ? 'page' : 'false' }}">{{ __('shell.nav.discover') }}</a>
             <a href="{{ route('public.collections.index') }}" aria-current="{{ request()->routeIs('public.collections.*') ? 'page' : 'false' }}">{{ __('shell.nav.collections') }}</a>
@@ -87,6 +88,6 @@
         @endif
         @yield('content')
     </main>
-    <footer class="site-footer"><strong>{{ __('shell.brand.name') }}</strong><span>{{ __('shell.brand.tagline') }}</span><small>{!! __('shell.footer') !!}</small></footer>
+    <footer class="site-footer"><strong>{{ __('shell.brand.name') }}</strong><span>{{ __('shell.brand.tagline') }}</span>@if($archiveProfile)<span>{{ __('shell.archive.footer', ['name' => $archiveProfile->name]) }}</span>@endif<small>{!! __('shell.footer') !!}</small></footer>
 </body>
 </html>

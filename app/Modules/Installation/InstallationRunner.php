@@ -6,6 +6,7 @@ namespace App\Modules\Installation;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Archive\Models\ArchiveProfile;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -37,9 +38,9 @@ class InstallationRunner
         }
     }
 
-    public function complete(InstallationSettings $settings, string $name, string $email, string $password): void
+    public function complete(InstallationSettings $settings, string $name, string $email, string $password, string $associationName): void
     {
-        $this->store->locked(function () use ($settings, $name, $email, $password): void {
+        $this->store->locked(function () use ($settings, $name, $email, $password, $associationName): void {
             $state = $this->store->read();
             if ($state === null || $state->phase === 'complete') {
                 throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.cannot_start'));
@@ -59,7 +60,7 @@ class InstallationRunner
             if (Artisan::call('migrate', ['--force' => true]) !== 0) {
                 throw new InstallationFailure(InstallationText::get('onboarding.setup.errors.migration_failed'));
             }
-            DB::transaction(function () use ($state, $name, $email, $password): void {
+            DB::transaction(function () use ($state, $name, $email, $password, $associationName): void {
                 // The receipt makes retry safe if the DB committed but the state-file write failed.
                 if (DB::table('installation_receipts')->where('id', $state->id)->exists()) {
                     return;
@@ -74,6 +75,10 @@ class InstallationRunner
                     'password' => Hash::make($password),
                 ]);
                 $user->roles()->attach(Role::query()->where('key', 'administrator')->firstOrFail());
+                ArchiveProfile::query()->create([
+                    'id' => ArchiveProfile::ID,
+                    'name' => $associationName,
+                ]);
                 DB::table('installation_receipts')->insert(['id' => $state->id, 'created_at' => now()]);
             });
             $state->phase = 'complete';

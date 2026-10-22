@@ -55,7 +55,9 @@ Repository, Composer-pakket, GHCR-image, releasebestanden, API-statusnaam,
 `APP_NAME`, sessie-/cookienamen, database en opslagpaden blijven FotoArchief.
 De bestaande passkey RP-ID, origin en ingestelde RP-weergavenaam veranderen
 niet. Verenigingsnamen, fototitels, bronvermelding en rechten blijven inhoud
-van de eigen installatie, geen vervangbaar merk.
+van de eigen installatie, geen vervangbaar merk. De verenigingsnaam wordt bij
+de eerste installatie vastgelegd en naast, niet in plaats van, het
+Vistora-merk getoond; zie [onboarding](ONBOARDING.md).
 
 Geen Compose- of environmenttemplatewijzigingen, nieuwe variabelen of
 migraties. Bestaande installaties blijven zonder configuratieaanpassing werken.

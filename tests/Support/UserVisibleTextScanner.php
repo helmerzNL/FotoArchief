@@ -40,12 +40,14 @@ final class UserVisibleTextScanner
      * @var list<string>
      */
     private const TECHNICAL_PHP_FILES = [
+        'app/Console/Commands/ImportDirectoryCommand.php',
         'app/Http/Controllers/RuntimeHealthController.php',
         'app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php',
         'app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php',
         'app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php',
         'app/Modules/ArchiveOperations/Services/StorageMigrationService.php',
         'app/Modules/Ingest/Services/TransactionalOutbox.php',
+        'app/Modules/Ingest/Support/OriginalPath.php',
     ];
 
     /**

@@ -3,6 +3,13 @@
 declare(strict_types=1);
 
 return [
+    'pdf' => [
+        'unreadable' => 'Dit PDF-bestand kan niet worden gelezen of is beschadigd.',
+        'encrypted' => 'Dit PDF-bestand is beveiligd met een wachtwoord en kan niet worden verwerkt.',
+        'no_pages' => 'Dit PDF-bestand bevat geen pagina’s.',
+        'timeout' => 'Het renderen van dit PDF-bestand duurde te lang en is afgebroken.',
+        'unavailable' => 'PDF-verwerking is op deze installatie niet beschikbaar: poppler-utils (pdfinfo en pdftoppm) ontbreekt.',
+    ],
     'title' => 'Hervatbare uploadbatches',
     'intro' => 'Bewaar ontvangstbewijzen en verstuur na een onderbreking alleen ontbrekende delen.',
     'limits' => 'JPEG, PNG of WebP; maximaal 250 bestanden, 100 MiB per bestand en 1 GiB per batch. Vier niet-opgeruimde batches per gebruiker; hervatten binnen zeven dagen.',

@@ -8,6 +8,7 @@ use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use App\Modules\Ingest\Support\OriginalPath;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -21,9 +22,16 @@ class QuarantineUploadService
         private readonly TransactionalOutbox $outbox,
     ) {}
 
-    public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null): QuarantineUpload
+    /** Types accepted from every caller. */
+    private const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+    /** Extra types only the server-side folder import offers; browsers keep the plain image list. */
+    private const EXTENDED_TYPES = ['image/bmp', 'image/x-ms-bmp', 'application/pdf'];
+
+    public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null, ?string $originalPath = null, bool $allowExtendedTypes = false): QuarantineUpload
     {
-        $this->validate($upload);
+        $this->validate($upload, $allowExtendedTypes);
+        $originalPath = $originalPath === null ? null : OriginalPath::normalize($originalPath);
         $diskName = (string) config('filesystems.default');
         $disk = Storage::disk($diskName);
         $storageKey = 'quarantine/'.str()->ulid().'/'.str()->random(32);
@@ -36,7 +44,7 @@ class QuarantineUploadService
                 throw new RuntimeException(__('shared.generated.t_7fe6a821c70aaab2'));
             }
 
-            return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey): QuarantineUpload {
+            return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey, $originalPath): QuarantineUpload {
                 $record = QuarantineUpload::query()->create([
                     'asset_id' => $asset->id,
                     'uploaded_by_user_id' => $userId,
@@ -44,6 +52,7 @@ class QuarantineUploadService
                     'storage_key' => $storageKey,
                     'byte_size' => $upload->getSize(),
                     'original_filename' => mb_substr(basename($upload->getClientOriginalName()), 0, 255),
+                    'original_path' => $originalPath,
                     'status' => 'queued',
                 ]);
                 $this->outbox->record(
@@ -65,14 +74,15 @@ class QuarantineUploadService
         }
     }
 
-    public function validate(UploadedFile $upload): void
+    public function validate(UploadedFile $upload, bool $allowExtendedTypes = false): void
     {
         $maxBytes = (int) config('ingest.max_upload_bytes');
         $size = $upload->getSize();
         if (! $upload->isValid() || $size === false || $size <= 0 || $size > $maxBytes) {
             throw ValidationException::withMessages(['files' => "De upload moet geldig zijn en tussen 1 en {$maxBytes} bytes bevatten."]);
         }
-        if (! in_array($upload->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        $allowed = $allowExtendedTypes ? [...self::IMAGE_TYPES, ...self::EXTENDED_TYPES] : self::IMAGE_TYPES;
+        if (! in_array($upload->getMimeType(), $allowed, true)) {
             throw ValidationException::withMessages(['files' => __('shared.generated.t_f92a35ba35c44c4b')]);
         }
     }
