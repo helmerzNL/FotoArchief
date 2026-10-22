@@ -95,7 +95,7 @@ test('index coverage and explicit text search work without an AI provider', asyn
   await expect(page.getByText('Vul een zoekopdracht in om te zoeken.', { exact: true })).toBeVisible();
   await page.getByLabel('Zoekmethode', { exact: true }).selectOption('text');
   await page.locator('input[name="q"]').fill(fixture.assets.review.title);
-  await page.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: 'Zoeken', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/assets\?q=/);
   await expect(page.getByRole('link', { name: fixture.assets.review.title, exact: true })).toBeVisible();
 });

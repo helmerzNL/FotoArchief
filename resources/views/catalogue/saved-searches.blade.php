@@ -6,7 +6,7 @@
         <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'collection']) }}"@if(request('missing') === 'collection') aria-current="true"@endif>{{ __('daily.collection_missing') }}</a></li>
         <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'rights']) }}"@if(request('missing') === 'rights') aria-current="true"@endif>{{ __('daily.rights_missing') }}</a></li>
     </ul>
-    <details class="saved-searches">
+    <details class="saved-searches"@if(session('status')) open @endif>
     <summary>{{ __('daily.searches') }}</summary>
     <form method="post" action="{{ route('catalogue.searches.store') }}">
         @csrf
