@@ -11,7 +11,6 @@ return [
         'select_photo' => 'Selecteer :title',
         'no_upload' => 'Geen upload',
         'more_filters' => 'Meer filters',
-        'saved_and_queue' => 'Opgeslagen zoekopdrachten',
         'pages' => 'pagina’s',
         'duplicate_paths' => 'Dezelfde foto is ook aangetroffen op',
         'bytes' => 'bytes',
