@@ -43,7 +43,13 @@ de zichtbaarheid volgt dezelfde rechten als de pagina's zelf.
 - De pagina's binnen de actieve bestemming staan als sectietabs boven de inhoud.
   Account, beveiliging, weergave en uitloggen zitten in het accountmenu.
 - Weergave en kleur: Systeem/Licht/Donker plus vijf accentkleuren (Archiefgroen is
-  standaard, daarnaast Terracotta, Blauw, Pruim en Oker), bewaard in `vistora.accent`.
+  standaard, daarnaast Terracotta, Blauw, Pruim en Oker). Wie is ingelogd bewaart
+  thema, accent en inklapstand van de zijbalk op het eigen account
+  (`users.interface_preferences`, `PUT /admin/identiteit/voorkeuren`), zodat de keuze
+  op elk apparaat terugkomt; bezoekers zonder account bewaren ze alleen in de browser
+  (`vistora.theme`, `vistora.accent`, `vistora.sidebar`). De browser houdt daarnaast
+  een kopie als cache en brengt een eerdere lokale keuze eenmalig over naar een
+  account dat nog niets heeft opgeslagen; de waarde van het account wint.
   Elke combinatie haalt WCAG AA (minstens 4,5:1) voor tekst op de knop en voor de
   accentkleur als tekst op de pagina, in licht en donker. Glas wordt alleen voor
   zwevende balken en menu's gebruikt en valt terug op een effen vlak bij
@@ -160,7 +166,13 @@ the pages themselves enforce.
 - The pages inside the active destination appear as section tabs above the content.
   Account, security, appearance and sign-out live in the account menu.
 - Appearance and colour: System/Light/Dark plus five accent colours (Archive green
-  by default, then Terracotta, Blue, Plum and Ochre), kept in `vistora.accent`. Every
+  by default, then Terracotta, Blue, Plum and Ochre). Signed-in people keep theme,
+  accent and the sidebar state on their own account (`users.interface_preferences`,
+  `PUT /admin/identiteit/voorkeuren`), so the choice follows them to every device;
+  visitors without an account keep them in the browser only (`vistora.theme`,
+  `vistora.accent`, `vistora.sidebar`). The browser also holds a copy as a cache and
+  uploads an earlier local choice once to an account that has stored nothing yet; the
+  account value wins. Every
   pair reaches WCAG AA (at least 4.5:1) for text on the button and for the accent as
   text on the page, in light and dark. Glass is used only for floating bars and
   menus and falls back to a solid surface under `prefers-reduced-transparency`.

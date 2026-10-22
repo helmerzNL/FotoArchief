@@ -3,32 +3,72 @@
     const root = document.documentElement;
     const system = window.matchMedia('(prefers-color-scheme: dark)');
     let storageUnavailable = false;
+    let saveFailed = false;
+    let report = () => {};
 
-    // Preferences live in this browser only (localStorage); a blocked store keeps the
-    // page fully usable and is reported next to the controls.
+    // Signed-in people have their choices on the account (the server renders them into
+    // data-user-prefs), so they follow the person across devices. localStorage stays as a
+    // per-browser cache and as the only store for visitors without an account; a blocked
+    // store or a failed save keeps the page fully usable and is reported next to the controls.
+    const readUserPrefs = () => {
+        try {
+            const parsed = JSON.parse(root.dataset.userPrefs || 'null');
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (error) {
+            return null;
+        }
+    };
+    const userPrefs = readUserPrefs();
+    const saveUrl = userPrefs ? (root.dataset.prefsUrl || null) : null;
+
     const prefs = {
         theme: { key: 'vistora.theme', valid: ['system', 'light', 'dark'], value: 'system', fallback: 'system' },
         accent: { key: 'vistora.accent', valid: ['groen', 'terracotta', 'blauw', 'pruim', 'oker'], value: 'groen', fallback: 'groen' },
         sidebar: { key: 'vistora.sidebar', valid: ['expanded', 'collapsed'], value: 'expanded', fallback: 'expanded' },
     };
     const accept = (pref, value) => pref.valid.includes(value) ? value : null;
-    for (const pref of Object.values(prefs)) {
+    const store = pref => {
         try {
-            const stored = accept(pref, localStorage.getItem(pref.key));
-            if (stored) pref.value = stored;
+            localStorage.setItem(pref.key, pref.value);
+            return true;
+        } catch (error) {
+            console.warn('Vistora preference could not be saved in this browser.', error);
+            return false;
+        }
+    };
+
+    // Choices this browser already had that the account has not seen yet; sent once.
+    const toSync = {};
+    for (const [name, pref] of Object.entries(prefs)) {
+        let local = null;
+        try {
+            local = accept(pref, localStorage.getItem(pref.key));
         } catch (error) {
             storageUnavailable = true;
             console.warn('Vistora preference storage is unavailable.', error);
         }
-    }
-    const save = pref => {
-        try {
-            localStorage.setItem(pref.key, pref.value);
-            storageUnavailable = false;
-        } catch (error) {
-            storageUnavailable = true;
-            console.warn('Vistora preference could not be saved.', error);
+        const account = userPrefs ? accept(pref, userPrefs[name]) : null;
+        if (account) {
+            pref.value = account;
+            if (local !== account) store(pref);
+        } else if (local) {
+            pref.value = local;
+            if (userPrefs) toSync[name] = local;
         }
+    }
+
+    const syncToServer = changes => {
+        if (!saveUrl) return;
+        fetch(saveUrl, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+            },
+            body: JSON.stringify(changes),
+        }).then(response => { saveFailed = !response.ok; report(); }).catch(() => { saveFailed = true; report(); });
     };
 
     const apply = () => {
@@ -67,24 +107,31 @@
         const status = document.getElementById('theme-status');
         if (control) control.hidden = false;
         apply();
-        const reportStorage = () => {
-            if (status) status.textContent = storageUnavailable ? status.dataset.storageError : '';
+        report = () => {
+            if (!status) return;
+            if (saveFailed) status.textContent = status.dataset.saveError;
+            else status.textContent = storageUnavailable && !saveUrl ? status.dataset.storageError : '';
         };
-        reportStorage();
-        const choose = (pref, value) => {
+        report();
+        const choose = (name, value) => {
+            const pref = prefs[name];
             if (!accept(pref, value)) return;
             pref.value = value;
             apply();
-            save(pref);
-            reportStorage();
+            storageUnavailable = !store(pref);
+            syncToServer({ [name]: value });
+            report();
         };
-        if (select) select.addEventListener('change', () => choose(prefs.theme, select.value));
+        if (select) select.addEventListener('change', () => choose('theme', select.value));
         document.querySelectorAll('[data-accent-choice]').forEach(button => {
-            button.addEventListener('click', () => choose(prefs.accent, button.dataset.accentChoice));
+            button.addEventListener('click', () => choose('accent', button.dataset.accentChoice));
         });
         const toggle = document.getElementById('sidebar-toggle');
-        if (toggle) toggle.hidden = false;
-        if (toggle) toggle.addEventListener('click', () => choose(prefs.sidebar, prefs.sidebar.value === 'collapsed' ? 'expanded' : 'collapsed'));
+        if (toggle) {
+            toggle.hidden = false;
+            toggle.addEventListener('click', () => choose('sidebar', prefs.sidebar.value === 'collapsed' ? 'expanded' : 'collapsed'));
+        }
+        if (Object.keys(toSync).length > 0) syncToServer(toSync);
 
         // Native <details> menus: close on outside click and on Escape, returning focus.
         const menus = [...document.querySelectorAll('details.menu')];

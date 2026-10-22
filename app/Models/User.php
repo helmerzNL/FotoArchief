@@ -46,6 +46,7 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'deactivated_at' => 'immutable_datetime',
             'session_revoked_at' => 'immutable_datetime',
+            'interface_preferences' => 'array',
         ];
     }
 

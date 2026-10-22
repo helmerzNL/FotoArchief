@@ -2,7 +2,7 @@
 
 > Generated from `capabilities.json`; run `php scripts/check-capabilities.php --write` after changing capabilities.
 
-Product version / Productversie: **0.9.67**
+Product version / Productversie: **0.9.68**
 
 | Capability | Status | Requirements / Vereisten | Evidence / Bewijs |
 | --- | --- | --- | --- |

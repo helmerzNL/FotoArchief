@@ -6,7 +6,7 @@
         <option value="light">{{ __('shell.theme.light') }}</option>
         <option value="dark">{{ __('shell.theme.dark') }}</option>
     </select>
-    <p id="theme-status" role="status" data-storage-error="{{ __('shell.theme.storage_error') }}"></p>
+    <p id="theme-status" role="status" data-storage-error="{{ __('shell.theme.storage_error') }}" data-save-error="{{ __('shell.theme.save_error') }}"></p>
     <fieldset class="accent-choices">
         <legend>{{ __('shell.accent.label') }}</legend>
         <button type="button" class="quiet swatch-button" data-accent-choice="groen" aria-pressed="true"><span class="swatch swatch-groen" aria-hidden="true"></span>{{ __('shell.accent.groen') }}</button>

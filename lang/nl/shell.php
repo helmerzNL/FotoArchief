@@ -98,6 +98,7 @@ return [
         'light' => 'Licht',
         'dark' => 'Donker',
         'storage_error' => 'Je weergavekeuze werkt op deze pagina, maar kan in deze browser niet worden bewaard.',
+        'save_error' => 'Je weergavekeuze werkt op deze pagina, maar kon niet op je account worden opgeslagen.',
     ],
     'discovery' => [
         'title' => 'Ontdek de collectie - Vistora',

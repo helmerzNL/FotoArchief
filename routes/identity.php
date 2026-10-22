@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\IdentityInvitationController;
 use App\Http\Controllers\IdentityPasskeyController;
+use App\Http\Controllers\IdentityPreferencesController;
 use App\Http\Controllers\IdentityRecoveryCodeController;
 use App\Http\Controllers\IdentitySecurityController;
 use App\Http\Controllers\IdentityUserController;
@@ -17,6 +18,7 @@ Route::post('/herstelcodes/login', [IdentityRecoveryCodeController::class, 'logi
 
 Route::middleware('auth')->prefix('admin/identiteit')->name('identity.')->group(function (): void {
     Route::get('/beveiliging', [IdentitySecurityController::class, 'show'])->name('security.show');
+    Route::put('/voorkeuren', [IdentityPreferencesController::class, 'update'])->middleware('throttle:60,1')->name('preferences.update');
     Route::post('/passkeys/options', [IdentityPasskeyController::class, 'enrollmentOptions'])->name('passkeys.options');
     Route::post('/passkeys', [IdentityPasskeyController::class, 'store'])->name('passkeys.store');
     Route::delete('/passkeys/{passkey}', [IdentityPasskeyController::class, 'destroy'])->name('passkeys.destroy');
