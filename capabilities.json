@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "product_version": "0.9.71",
+  "product_version": "0.9.72",
   "capabilities": [
     {"id":"onboarding","status":"shipped","evidence":["app/Modules/Installation/InstallationBootstrap.php","docs/ONBOARDING.md"]},
     {"id":"private-ingest","status":"shipped","evidence":["app/Modules/Ingest/Jobs/ProcessUpload.php","docs/PHOTO_WORKFLOW.md"]},

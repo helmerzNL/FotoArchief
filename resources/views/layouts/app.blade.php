@@ -23,6 +23,7 @@
     // public pages, login and setup keep a simple top bar.
     $workspace = auth()->check() && ! request()->routeIs('public.*') && ! request()->is('login', 'setup', 'setup/*');
     $activeGroup = collect($staffGroups ?? [])->firstWhere('active', true);
+    $showSubnav = $activeGroup && count($activeGroup['items']) > 1;
 @endphp
 <body class="{{ $workspace ? 'workspace-shell' : 'public-shell' }}">
     <a class="skip-link" href="#main">{{ __('shell.nav.skip') }}</a>
@@ -64,7 +65,7 @@
                         </details>
                     </div>
                 </header>
-                @if($activeGroup && count($activeGroup['items']) > 1)
+                @if($showSubnav)
                     <nav class="subnav" aria-label="{{ __('shell.nav.section', ['group' => $activeGroup['label']]) }}">
                         <ul>
                             @foreach($activeGroup['items'] as $item)

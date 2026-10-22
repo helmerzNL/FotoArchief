@@ -23,7 +23,8 @@
     <p>{{ $asset->description ?: 'Nog geen beschrijving.' }}</p>
     <p>{{ __('catalogue.fragments.dating') }}: {{ $asset->date_display ?: $asset->date_precision }} · {{ $asset->date_earliest?->format('Y-m-d') }} — {{ $asset->date_latest?->format('Y-m-d') }}</p>
     <p>Tags: {{ $asset->tags->pluck('name')->join(', ') ?: 'Geen' }}</p>
-    <p>{{ __('catalogue.fragments.rights_holder') }}: {{ $right?->rights_holder ?: 'Onbekend' }} · <x-status-badge :status="$right?->verification_status ?? 'unverified'" /></p>
+    @php($verification = $right?->verification_status ?? 'unverified')
+    <p>{{ __('catalogue.fragments.rights_holder') }}: {{ $right?->rights_holder ?: 'Onbekend' }} · <x-status-badge :status="$verification" /></p>
     <p>{{ $right?->note }}</p>
 </section>
 @can('update', $asset)
