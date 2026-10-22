@@ -39,7 +39,7 @@ final class StaffNavigation
                 }
                 $items[] = [
                     'key' => $item['key'],
-                    'href' => isset($item['route']) ? route($item['route']) : url($item['path']),
+                    'href' => isset($item['route']) ? route($item['route']) : url($item['path'] ?? '/'),
                     'label' => $item['label'],
                     'score' => $this->score($request, $item['match']),
                 ];

@@ -22,7 +22,8 @@
                 <tr>
                     <td>@if(auth()->user()->hasPermission('assets.publish'))<label><input type="checkbox" name="asset_ids[]" value="{{ $asset->id }}"> {{ $asset->accession_number }}</label>@endif</td>
                     <td>{{ $asset->title ?? $asset->accession_number }}</td>
-                    <td>@if($asset->publication)<x-status-badge :status="$asset->publication->status" />@else<span class="photo-meta">{{ __('shell.publication_none') }}</span>@endif @if($asset->publication?->needsReReview())<strong>{{ __('publication.generated.t_374b7b02d96b0e97') }}</strong>@endif</td>
+                    @php($publicationStatus = $asset->publication?->status)
+                    <td>@if($publicationStatus)<x-status-badge :status="$publicationStatus" />@else<span class="photo-meta">{{ __('shell.publication_none') }}</span>@endif @if($asset->publication?->needsReReview())<strong>{{ __('publication.generated.t_374b7b02d96b0e97') }}</strong>@endif</td>
                     <td class="wrap">{{ $asset->publication?->embargo_until?->format('Y-m-d') }}<ul>@foreach($reviews->checklist($asset) as $key => $passed)@if(!$passed)<li>{{ __('publishwork.checks')[$key] }}</li>@endif @endforeach</ul></td>
                     <td><a href="{{ route('admin.publications.show', $asset) }}">Openen</a></td>
                 </tr>

@@ -272,6 +272,8 @@ details.card[open] > summary { margin-bottom: 1rem; }
 .split-main > .button { align-self: flex-start; margin: 0; }
 .split:not(:has(.split-media)) { grid-template-columns: minmax(0, 1fr); }
 .split-media { background: var(--color-surface-subtle); border-radius: var(--radius-md); padding: .75rem; }
+/* Gedempte tekst haalt op deze ondergrond maar 4,44:1; hulp- en statustekst van de viewer gebruikt daarom de gewone tekstkleur. */
+.split-media .viewer-controls span { color: var(--color-text); }
 .split-media .preview { margin: 0; max-height: 75vh; width: 100%; object-fit: contain; }
 @media (min-width: 60rem) {
     .split { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
