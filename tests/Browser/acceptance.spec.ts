@@ -279,6 +279,7 @@ test('15 - narrow screen supports labelled keyboard editing, focus and real prev
 test('saved searches, confirmed bulk metadata and per-field conflict recovery retain current edits', async ({ page, context }) => {
   await login(page);
   await page.goto(url('/admin/assets?q=Browser%20mobiel%20toetsenbord'));
+  await page.getByText('Mijn opgeslagen zoekopdrachten', { exact: true }).click();
   await page.getByLabel('Naam zoekopdracht', { exact: true }).fill('Daily browser search');
   await page.getByRole('button', { name: 'Huidige filters opslaan', exact: true }).click();
   await page.getByRole('link', { name: 'Daily browser search', exact: true }).click();
@@ -434,4 +435,46 @@ test('embedded IIIF viewer loads its manifest and supports keyboard zoom pan and
   await expect(page.getByRole('link', { name: 'Open het IIIF-manifest' })).toHaveAttribute(
     'href', /\/iiif\/browser-public\/manifest\.json$/,
   );
+});
+
+test('theme and accent chosen while signed in follow the account to a fresh browser', async ({ browser }) => {
+  const saved = (page: Page, body: string) => page.waitForResponse(response =>
+    response.request().method() === 'PUT' && response.url().endsWith('/voorkeuren') && (response.request().postData() ?? '').includes(body));
+  const open = async (page: Page) => {
+    await page.locator('#appearance-menu > summary').click();
+    return page.getByLabel('Weergave', { exact: true });
+  };
+
+  const first = await browser.newContext();
+  const firstPage = await first.newPage();
+  try {
+    await login(firstPage);
+    const menu = await open(firstPage);
+    const accentSaved = saved(firstPage, 'terracotta');
+    await firstPage.locator('[data-accent-choice="terracotta"]').click();
+    expect((await accentSaved).ok()).toBe(true);
+    const themeSaved = saved(firstPage, 'dark');
+    await menu.selectOption('dark');
+    expect((await themeSaved).ok()).toBe(true);
+  } finally {
+    await first.close();
+  }
+
+  const second = await browser.newContext();
+  const secondPage = await second.newPage();
+  try {
+    await login(secondPage);
+    await expect(secondPage.locator('html')).toHaveAttribute('data-accent', 'terracotta');
+    await expect(secondPage.locator('html')).toHaveAttribute('data-theme', 'dark');
+  } finally {
+    // Leave the shared fixture account as found.
+    const menu = await open(secondPage);
+    const themeSaved = saved(secondPage, 'system');
+    await menu.selectOption('system');
+    await themeSaved;
+    const accentSaved = saved(secondPage, 'groen');
+    await secondPage.locator('[data-accent-choice="groen"]').click();
+    await accentSaved;
+    await second.close();
+  }
 });

@@ -17,6 +17,13 @@ async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
+// The appearance controls live in a menu (<details id="appearance-menu">); open it first.
+async function appearance(page: Page) {
+  const menu = page.locator('#appearance-menu');
+  if (!(await menu.evaluate(element => (element as HTMLDetailsElement).open))) await menu.locator('summary').click();
+  return page.getByLabel('Weergave', { exact: true });
+}
+
 test('Vistora theme follows the system, persists explicit preference and respects keyboard/reduced motion', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
   await page.goto(fixture.url);
@@ -27,17 +34,17 @@ test('Vistora theme follows the system, persists explicit preference and respect
   await expect(page.getByRole('link', { name: 'Ga naar de inhoud' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main')).toBeFocused();
-  await page.getByLabel('Weergave', { exact: true }).selectOption('light');
+  await (await appearance(page)).selectOption('light');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#f7f3ec');
-  await page.getByLabel('Weergave', { exact: true }).selectOption('system');
+  await (await appearance(page)).selectOption('system');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   const secondTab = await page.context().newPage();
   await secondTab.goto(fixture.url);
-  await secondTab.getByLabel('Weergave', { exact: true }).selectOption('dark');
+  await (await appearance(secondTab)).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.getByLabel('Weergave', { exact: true })).toHaveValue('dark');
   await secondTab.close();
@@ -56,7 +63,7 @@ test('storage denial is explained while theme controls remain usable', async ({ 
   });
   await page.goto(fixture.url);
   await expect(page.locator('#theme-status')).toContainText('kan in deze browser niet worden bewaard');
-  await page.getByLabel('Weergave', { exact: true }).selectOption('dark');
+  await (await appearance(page)).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
@@ -65,7 +72,7 @@ test('public, login and staff layouts reflow at 320px and desktop in both themes
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ['light', 'dark']) {
       await page.goto(fixture.url);
-      await page.getByLabel('Weergave', { exact: true }).selectOption(theme);
+      await (await appearance(page)).selectOption(theme);
       await noOverflow(page);
       await page.goto(fixture.url + '/collecties');
       await noOverflow(page);
@@ -80,7 +87,7 @@ test('public, login and staff layouts reflow at 320px and desktop in both themes
   for (const width of [320, 1280]) {
     await page.setViewportSize({ width, height: 900 });
     for (const theme of ['light', 'dark']) {
-      await page.getByLabel('Weergave', { exact: true }).selectOption(theme);
+      await (await appearance(page)).selectOption(theme);
       await noOverflow(page);
       await expect(page.getByRole('navigation', { name: 'Beheer', exact: true })).toBeVisible();
     }
@@ -113,7 +120,7 @@ test('branding stays available without JavaScript and install metadata fetches l
 test('light and dark semantic text, button and control colors meet AA contrast thresholds', async ({ page }) => {
   await page.goto(fixture.url);
   for (const theme of ['light', 'dark']) {
-    await page.getByLabel('Weergave', { exact: true }).selectOption(theme);
+    await (await appearance(page)).selectOption(theme);
     const colors = await page.evaluate(() => {
       const style = getComputedStyle(document.documentElement);
       return Object.fromEntries(['primary', 'on-primary', 'background', 'surface', 'text-primary', 'text-secondary',

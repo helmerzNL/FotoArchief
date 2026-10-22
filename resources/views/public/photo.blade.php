@@ -10,7 +10,9 @@
     @endif
     <p class="eyebrow">Foto</p>
     <h1>{{ $asset->title ?: $asset->accession_number }}</h1>
+    <div class="split">
     @if($file)
+        <div class="split-media">
         <figure class="viewer" data-viewer
                 @unless($staffPreview ?? false) data-manifest-url="{{ route('iiif.manifest', $publication) }}" @endunless>
             <div class="viewer-viewport" id="viewer-viewport" role="region" tabindex="0"
@@ -33,7 +35,9 @@
                 <noscript><p><a href="{{ route('iiif.manifest', $publication) }}">{{ __('publication.viewer.manifest_link') }}</a></p></noscript>
             @endunless
         </figure>
+        </div>
     @endif
+    <div class="split-main">
     @if($asset->description)<p class="intro">{{ $asset->description }}</p>@endif
     <dl class="meta">
         @if($publication->credit_line)<dt>Bronvermelding</dt><dd>{{ $publication->credit_line }}</dd>@endif
@@ -62,7 +66,11 @@
             @if($file)<li><a href="{{ route('iiif.manifest', $publication) }}">{{ __('publication.viewer.manifest_link') }}</a></li>@endif
         </ul>
     </section>
+    @endunless
+    </div>
+    </div>
 
+    @unless($staffPreview ?? false)
     <section class="card">
         <h2>{{ __('publication.generated.t_914eeb13f64d1644') }}</h2>
         <p class="intro">{{ __('publication.generated.t_74cad71eb639c329') }}</p>

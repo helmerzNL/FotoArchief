@@ -1,10 +1,17 @@
 @extends('layouts.app')
 @section('title', 'Publicatie - Vistora')
 @section('content')
-    <p class="eyebrow">Publicatieworkflow</p>
-    <h1>Publicatie</h1>
-    <p class="intro">{{ __('publication.generated.t_32e9b30a1690908d') }}</p>
-    <p><a href="{{ route('admin.publications.index', ['embargo' => 1]) }}">{{ __('publishwork.embargo_overview') }}</a> &middot; <a href="{{ route('admin.publications.index') }}">{{ __('daily.all') }}</a></p>
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Publicatieworkflow</p>
+            <h1>Publicatie</h1>
+            <p class="intro">{{ __('publication.generated.t_32e9b30a1690908d') }}</p>
+        </div>
+    </div>
+    <ul class="chips">
+        <li><a class="chip" href="{{ route('admin.publications.index') }}"@unless(request('embargo')) aria-current="true"@endunless>{{ __('daily.all') }}</a></li>
+        <li><a class="chip" href="{{ route('admin.publications.index', ['embargo' => 1]) }}"@if(request('embargo')) aria-current="true"@endif>{{ __('publishwork.embargo_overview') }}</a></li>
+    </ul>
     <form method="post" action="{{ route('admin.publications.bulk.preview') }}">
     @csrf
     <x-table-scroll label="Publicaties, horizontaal scrollbaar op smalle schermen">
@@ -15,8 +22,8 @@
                 <tr>
                     <td>@if(auth()->user()->hasPermission('assets.publish'))<label><input type="checkbox" name="asset_ids[]" value="{{ $asset->id }}"> {{ $asset->accession_number }}</label>@endif</td>
                     <td>{{ $asset->title ?? $asset->accession_number }}</td>
-                    <td>{{ $asset->publication?->status ?? 'geen' }}@if($asset->publication?->needsReReview()) &middot; <strong>{{ __('publication.generated.t_374b7b02d96b0e97') }}</strong>@endif</td>
-                    <td>{{ $asset->publication?->embargo_until?->format('Y-m-d') }}<ul>@foreach($reviews->checklist($asset) as $key => $passed)@if(!$passed)<li>{{ __('publishwork.checks')[$key] }}</li>@endif @endforeach</ul></td>
+                    <td>@if($asset->publication)<x-status-badge :status="$asset->publication->status" />@else<span class="photo-meta">{{ __('shell.publication_none') }}</span>@endif @if($asset->publication?->needsReReview())<strong>{{ __('publication.generated.t_374b7b02d96b0e97') }}</strong>@endif</td>
+                    <td class="wrap">{{ $asset->publication?->embargo_until?->format('Y-m-d') }}<ul>@foreach($reviews->checklist($asset) as $key => $passed)@if(!$passed)<li>{{ __('publishwork.checks')[$key] }}</li>@endif @endforeach</ul></td>
                     <td><a href="{{ route('admin.publications.show', $asset) }}">Openen</a></td>
                 </tr>
             @endforeach

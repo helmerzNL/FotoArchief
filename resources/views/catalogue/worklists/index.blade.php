@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_91012d8c6a8d01a6') }}</h1>
 
 @if(session('status'))
-    <div class="card" style="border-color: #16a34a; background-color: #f0fdf4;">
+    <div class="card" style="border-color: var(--color-success); background-color: var(--color-success-surface);">
         <p>{{ session('status') }}</p>
     </div>
 @endif
@@ -14,22 +14,22 @@
     <h2>{{ __('catalogue.generated.t_0341b28628a73af8') }}</h2>
     <p>{{ __('catalogue.generated.t_4e282598945e5d31') }}</p>
     <div class="grid">
-        <div class="card" style="border: 1px solid #e5e7eb;">
+        <div class="card" style="border: 1px solid var(--border);">
             <h3>{{ __('catalogue.generated.t_486e698d1540bafc') }}</h3>
             <p><strong>{{ $stats['missing_dates'] }}</strong> {{ __('catalogue.generated.t_baa09face9e5a506') }}</p>
             <a href="{{ route('catalogue.worklists.create', ['type' => 'missing_date']) }}" class="button secondary">{{ __('catalogue.generated.t_901561ca3190e58f') }}</a>
         </div>
-        <div class="card" style="border: 1px solid #e5e7eb;">
+        <div class="card" style="border: 1px solid var(--border);">
             <h3>{{ __('catalogue.generated.t_0bd7881e66d6d77d') }}</h3>
             <p><strong>{{ $stats['missing_rights'] }}</strong> {{ __('catalogue.generated.t_d93085f20725a163') }}</p>
             <a href="{{ route('catalogue.worklists.create', ['type' => 'missing_rights']) }}" class="button secondary">{{ __('catalogue.generated.t_12a76df6e43918f7') }}</a>
         </div>
-        <div class="card" style="border: 1px solid #e5e7eb;">
+        <div class="card" style="border: 1px solid var(--border);">
             <h3>{{ __('catalogue.generated.t_f7a3ccd61ab4f183') }}</h3>
             <p><strong>{{ $stats['missing_identification'] }}</strong> {{ __('catalogue.generated.t_832423faab3d68eb') }}</p>
             <a href="{{ route('catalogue.worklists.create', ['type' => 'missing_identification']) }}" class="button secondary">{{ __('catalogue.generated.t_55aed409b9150f81') }}</a>
         </div>
-        <div class="card" style="border: 1px solid #e5e7eb;">
+        <div class="card" style="border: 1px solid var(--border);">
             <h3>{{ __('catalogue.generated.t_c24fc63a164980ac') }}</h3>
             <p><strong>{{ $stats['missing_provenance'] }}</strong> {{ __('catalogue.generated.t_705e6bbd4be4a230') }}</p>
             <a href="{{ route('catalogue.worklists.create', ['type' => 'missing_provenance']) }}" class="button secondary">{{ __('catalogue.generated.t_ea854bc71d66f096') }}</a>

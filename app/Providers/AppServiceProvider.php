@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Modules\Archive\Models\ArchiveProfile;
+use App\Modules\Archive\StaffNavigation;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
+use App\Modules\Identity\InterfacePreferences;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessed;
@@ -22,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
     {
         View::composer(['layouts.app', 'admin.dashboard'], function (ViewContract $view): void {
             $view->with('archiveProfile', ArchiveProfile::current());
+        });
+        View::composer('layouts.app', function (ViewContract $view): void {
+            $user = auth()->user();
+            $view->with('staffGroups', $user !== null ? app(StaffNavigation::class)->groups(request()) : [])
+                ->with('interfacePreferences', $user instanceof User ? InterfacePreferences::for($user) : null);
         });
 
         Queue::before(function (JobProcessing $event): void {

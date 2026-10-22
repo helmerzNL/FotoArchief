@@ -7,23 +7,23 @@
     <p class="intro">{{ __('operations.generated.t_2858af285b10df1b') }}</p>
 
     {{-- Overzicht cards --}}
-    <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; margin-bottom: 2rem;">
         <div class="card">
             <h3>{{ __('operations.generated.t_74276349718c2e7d') }}</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #d97706; margin: 0.5rem 0;">{{ $summary['trashed_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_6372d61f13976e16') }}</p>
+            <p style="font-size: 2rem; font-weight: bold; color: var(--color-warning); margin: 0.5rem 0;">{{ $summary['trashed_count'] }}</p>
+            <p style="font-size: 0.875rem; color: var(--color-text-secondary);">{{ __('operations.generated.t_6372d61f13976e16') }}</p>
         </div>
 
         <div class="card">
             <h3>{{ __('operations.generated.t_e4b514c23d7e0bd0') }}</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #dc2626; margin: 0.5rem 0;">{{ $summary['expired_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_152216f6cc5e9382') }} {{ $summary['retention_days'] }} dagen</p>
+            <p style="font-size: 2rem; font-weight: bold; color: var(--color-error); margin: 0.5rem 0;">{{ $summary['expired_count'] }}</p>
+            <p style="font-size: 0.875rem; color: var(--color-text-secondary);">{{ __('operations.generated.t_152216f6cc5e9382') }} {{ $summary['retention_days'] }} dagen</p>
         </div>
 
         <div class="card">
             <h3>Wees-quarantaine</h3>
-            <p style="font-size: 2rem; font-weight: bold; color: #4b5563; margin: 0.5rem 0;">{{ $summary['orphan_uploads_count'] }}</p>
-            <p style="font-size: 0.875rem; color: #4b5563;">{{ __('operations.generated.t_4838f14e7bdbae3d') }}</p>
+            <p style="font-size: 2rem; font-weight: bold; color: var(--color-text-secondary); margin: 0.5rem 0;">{{ $summary['orphan_uploads_count'] }}</p>
+            <p style="font-size: 0.875rem; color: var(--color-text-secondary);">{{ __('operations.generated.t_4838f14e7bdbae3d') }}</p>
         </div>
     </div>
 
@@ -32,7 +32,7 @@
         <form method="post" action="{{ route('admin.operations.trash.purgeExpired') }}">
             @csrf
             <input type="hidden" name="retention_days" value="{{ $summary['retention_days'] }}">
-            <button type="submit" class="secondary" style="color: #dc2626;" onclick="return confirm('Weet je zeker dat je alle verlopen items ouder dan {{ $summary['retention_days'] }} dagen definitief wilt verwijderen?');">
+            <button type="submit" class="secondary" style="color: var(--color-error);" onclick="return confirm('Weet je zeker dat je alle verlopen items ouder dan {{ $summary['retention_days'] }} dagen definitief wilt verwijderen?');">
                 {{ __('operations.generated.t_353fed0e36ea7688') }}{{ $summary['expired_count'] }})
             </button>
         </form>
@@ -54,7 +54,7 @@
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
-                    <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
                         <th style="padding: 0.75rem;">{{ __('operations.generated.t_2afd5fba8c765d1d') }}</th>
@@ -65,12 +65,12 @@
                 </thead>
                 <tbody>
                     @foreach($trashedAssets as $asset)
-                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: 0.75rem;"><strong>{{ $asset->accession_number }}</strong></td>
                             <td style="padding: 0.75rem;">{{ $asset->title }}</td>
                             <td style="padding: 0.75rem; font-size: 0.875rem;">{{ $asset->deleted_at?->format('d-m-Y H:i') }}</td>
                             <td style="padding: 0.75rem; font-size: 0.875rem;">{{ $asset->deletedBy?->name ?? 'Onbekend' }}</td>
-                            <td style="padding: 0.75rem; font-size: 0.875rem; color: #4b5563;">{{ $asset->deletion_reason ?? '-' }}</td>
+                            <td style="padding: 0.75rem; font-size: 0.875rem; color: var(--color-text-secondary);">{{ $asset->deletion_reason ?? '-' }}</td>
                             <td style="padding: 0.75rem;">
                                 <div style="display: flex; gap: 0.5rem;">
                                     <form method="post" action="{{ route('admin.operations.trash.restore', $asset->id) }}">
@@ -83,7 +83,7 @@
                                         @method('DELETE')
                                         <input type="hidden" name="reason" value="Handmatige definitieve verwijdering via Prullenbak UI">
                                         <input type="hidden" name="confirm_purge" value="1">
-                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem; color: #dc2626;">{{ __('operations.generated.t_34dc19a47b213103') }}</button>
+                                        <button type="submit" class="secondary" style="padding: 4px 8px; font-size: 0.8rem; color: var(--color-error);">{{ __('operations.generated.t_34dc19a47b213103') }}</button>
                                     </form>
                                 </div>
                             </td>
@@ -107,7 +107,7 @@
             {{-- Tabellen mogen op een telefoon van 390 px de pagina niet zijwaarts laten schuiven. --}}
 <div class="ops-table-scroll" style="overflow-x: auto; max-width: 100%;"><table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                 <thead>
-                    <tr style="text-align: left; border-bottom: 2px solid #e5e7eb;">
+                    <tr style="text-align: left; border-bottom: 2px solid var(--border);">
                         <th style="padding: 0.75rem;">Datum</th>
                         <th style="padding: 0.75rem;">Aanwinstnr</th>
                         <th style="padding: 0.75rem;">Titel</th>
@@ -118,12 +118,12 @@
                 </thead>
                 <tbody>
                     @foreach($recentPurges as $log)
-                        <tr style="border-bottom: 1px solid #e5e7eb; font-size: 0.875rem;">
+                        <tr style="border-bottom: 1px solid var(--border); font-size: 0.875rem;">
                             <td style="padding: 0.75rem;">{{ $log->created_at?->format('d-m-Y H:i:s') }}</td>
                             <td style="padding: 0.75rem;"><strong>{{ $log->accession_number }}</strong></td>
                             <td style="padding: 0.75rem;">{{ $log->title }}</td>
                             <td style="padding: 0.75rem;">{{ $log->purgedBy?->name ?? 'Systeem' }}</td>
-                            <td style="padding: 0.75rem; color: #4b5563;">{{ $log->reason }}</td>
+                            <td style="padding: 0.75rem; color: var(--color-text-secondary);">{{ $log->reason }}</td>
                             <td style="padding: 0.75rem;">{{ $log->deleted_files_count }} bestanden</td>
                         </tr>
                     @endforeach

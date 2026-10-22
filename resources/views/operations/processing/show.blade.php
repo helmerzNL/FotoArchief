@@ -22,12 +22,12 @@
         <section class="card">
             <h2>{{ __('operations.generated.t_85cb3101caa26f65') }}</h2>
             @if($upload->failure_reason)
-                <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; margin-bottom: 1.5rem;">
+                <div style="background: var(--color-error-surface); border-left: 4px solid var(--color-error); padding: 1rem; margin-bottom: 1.5rem;">
                     <strong>Foutmelding:</strong>
-                    <p style="color: #991b1b; margin-top: 0.25rem;">{{ $upload->failure_reason }}</p>
+                    <p style="color: var(--color-error); margin-top: 0.25rem;">{{ $upload->failure_reason }}</p>
                 </div>
             @else
-                <p style="color: #059669;">{{ __('operations.generated.t_734c062961b1d1f0') }}</p>
+                <p style="color: var(--color-success);">{{ __('operations.generated.t_734c062961b1d1f0') }}</p>
             @endif
 
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
@@ -40,7 +40,7 @@
                 @if($upload->status === 'running')
                     <form method="post" action="{{ route('admin.operations.processing.cancel', $upload) }}">
                         @csrf
-                        <button type="submit" class="secondary" style="color: #dc2626;">{{ __('operations.generated.t_2c7c7652db3a0744') }}</button>
+                        <button type="submit" class="secondary" style="color: var(--color-error);">{{ __('operations.generated.t_2c7c7652db3a0744') }}</button>
                     </form>
                 @endif
             </div>

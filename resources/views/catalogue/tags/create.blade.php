@@ -5,7 +5,7 @@
 <h1>{{ __('catalogue.generated.t_8bc07be057f85631') }}</h1>
 
 @if($errors->any())
-    <div class="card" style="border-color: #b91c1c; background-color: #fef2f2;">
+    <div class="card" style="border-color: var(--color-error); background-color: var(--color-error-surface);">
         <h2>Invoerfouten</h2>
         <ul>
             @foreach($errors->all() as $error)

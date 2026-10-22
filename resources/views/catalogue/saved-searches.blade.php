@@ -1,12 +1,13 @@
 <section class="card">
     <h2>{{ __('daily.quality') }}</h2>
-    <div class="actions">
-        <a href="{{ route('admin.assets.index', ['missing' => 'description']) }}">{{ __('daily.description_missing') }}</a>
-        <a href="{{ route('admin.assets.index', ['missing' => 'dating']) }}">{{ __('daily.dating_missing') }}</a>
-        <a href="{{ route('admin.assets.index', ['missing' => 'collection']) }}">{{ __('daily.collection_missing') }}</a>
-        <a href="{{ route('admin.assets.index', ['missing' => 'rights']) }}">{{ __('daily.rights_missing') }}</a>
-    </div>
-    <h2>{{ __('daily.searches') }}</h2>
+    <ul class="chips">
+        <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'description']) }}"@if(request('missing') === 'description') aria-current="true"@endif>{{ __('daily.description_missing') }}</a></li>
+        <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'dating']) }}"@if(request('missing') === 'dating') aria-current="true"@endif>{{ __('daily.dating_missing') }}</a></li>
+        <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'collection']) }}"@if(request('missing') === 'collection') aria-current="true"@endif>{{ __('daily.collection_missing') }}</a></li>
+        <li><a class="chip" href="{{ route('admin.assets.index', ['missing' => 'rights']) }}"@if(request('missing') === 'rights') aria-current="true"@endif>{{ __('daily.rights_missing') }}</a></li>
+    </ul>
+    <details class="saved-searches">
+    <summary>{{ __('daily.searches') }}</summary>
     <form method="post" action="{{ route('catalogue.searches.store') }}">
         @csrf
         <input type="hidden" name="filters[q]" value="{{ $searchFilters['q'] ?? '' }}">
@@ -32,4 +33,5 @@
             </li>
         @endforeach
     </ul>
+    </details>
 </section>
