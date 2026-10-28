@@ -58,6 +58,19 @@ it('parses a successful OpenAI vision analysis response', function (): void {
         ->and($result['model_version'])->toBe('gpt-4.1-mini-2026-01-01');
 });
 
+it('reads per-tag confidences from object tags and still accepts plain string tags', function (): void {
+    configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
+    Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response([
+        'model' => 'gpt-4.1-mini-2026-01-01',
+        'choices' => [['message' => ['content' => '{"description":"Een dorpsplein.","tags":[{"name":"Dorpsplein","confidence":0.9},{"name":"fiets"},"kerk",{"confidence":0.4}],"confidence":0.8}']]],
+    ])]);
+
+    $result = app(OpenAiProvider::class)->analyzeImage('jpeg-bytes', ['model' => 'gpt-4.1-mini', 'timeout_seconds' => 10]);
+
+    expect($result['tags'])->toBe(['Dorpsplein', 'fiets', 'kerk'])
+        ->and($result['tag_confidences'])->toBe(['dorpsplein' => 0.9]);
+});
+
 it('maps OpenAI 401/403/429/5xx and malformed JSON to redacted AiProviderException', function (int $status, ?string $expected, array $headers = []): void {
     configureNativeProvider('openai', ['vision_model' => 'gpt-4.1-mini']);
     Http::fake(['https://api.openai.com/v1/chat/completions' => Http::response('geheime-header-inhoud', $status, $headers)]);

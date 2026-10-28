@@ -7,11 +7,11 @@ namespace App\Modules\Catalogue\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Tag;
-use App\Modules\Catalogue\Models\TagSynonym;
+use App\Modules\Catalogue\Services\TagMergeService;
+use App\Modules\Catalogue\Support\TagSlug;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -52,7 +52,7 @@ class TagController extends Controller
 
         $tag = Tag::query()->create([
             'name' => trim($validated['name']),
-            'slug' => Str::slug(trim($validated['name'])),
+            'slug' => TagSlug::for($validated['name']),
             'description' => $validated['description'] ?? null,
         ]);
 
@@ -102,7 +102,7 @@ class TagController extends Controller
 
         $tag->update([
             'name' => trim($validated['name']),
-            'slug' => Str::slug(trim($validated['name'])),
+            'slug' => TagSlug::for($validated['name']),
             'description' => $validated['description'] ?? null,
         ]);
 
@@ -111,7 +111,7 @@ class TagController extends Controller
         return redirect()->route('catalogue.tags.show', $tag)->with('status', __('catalogue.generated.t_89284071417da17c'));
     }
 
-    public function merge(Request $request, Tag $tag): RedirectResponse
+    public function merge(Request $request, Tag $tag, TagMergeService $merger): RedirectResponse
     {
         $validated = $request->validate([
             'target_tag_id' => ['required', 'string', 'exists:tags,id', Rule::notIn([$tag->id])],
@@ -120,33 +120,7 @@ class TagController extends Controller
         /** @var Tag $targetTag */
         $targetTag = Tag::query()->findOrFail($validated['target_tag_id']);
 
-        DB::transaction(function () use ($tag, $targetTag) {
-            // 1. Move all asset associations to target tag
-            $assetIds = $tag->assets()->pluck('assets.id');
-            foreach ($assetIds as $assetId) {
-                if (! $targetTag->assets()->where('assets.id', $assetId)->exists()) {
-                    $targetTag->assets()->attach($assetId, ['id' => (string) Str::ulid()]);
-                }
-            }
-            $tag->assets()->detach();
-
-            // 2. Move existing synonyms from source to target
-            foreach ($tag->synonyms as $synonym) {
-                $synonym->update(['tag_id' => $targetTag->id]);
-            }
-
-            // 3. Make the old source tag name a synonym of target tag if not duplicate
-            if (! TagSynonym::query()->where('name', $tag->name)->exists() && $targetTag->name !== $tag->name) {
-                TagSynonym::query()->create([
-                    'tag_id' => $targetTag->id,
-                    'name' => $tag->name,
-                    'slug' => Str::slug($tag->name),
-                ]);
-            }
-
-            // 4. Delete the source tag
-            $tag->delete();
-        });
+        $merger->merge($tag, $targetTag);
 
         return redirect()->route('catalogue.tags.show', $targetTag)->with('status', sprintf(__('catalogue.generated.t_964f41685fae46bb'), $tag->name, $targetTag->name));
     }
@@ -170,7 +144,7 @@ class TagController extends Controller
 
         // Check uniqueness across other tags
         foreach ($names as $name) {
-            $slug = Str::slug($name);
+            $slug = TagSlug::for($name);
             $conflictTag = Tag::query()->where('id', '!=', $tag->id)->where(function ($q) use ($name, $slug) {
                 $q->where('name', $name)->orWhere('slug', $slug);
             })->first();
@@ -187,7 +161,7 @@ class TagController extends Controller
         foreach ($names as $name) {
             $tag->synonyms()->firstOrCreate(
                 ['name' => $name],
-                ['slug' => Str::slug($name)]
+                ['slug' => TagSlug::for($name)]
             );
         }
     }

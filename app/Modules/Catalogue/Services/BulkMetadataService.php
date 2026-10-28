@@ -20,6 +20,8 @@ use Illuminate\Validation\ValidationException;
 
 class BulkMetadataService
 {
+    public function __construct(private readonly TagResolver $tags) {}
+
     /** @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -96,9 +98,9 @@ class BulkMetadataService
                     $asset->save();
                     $tagIds = [];
                     foreach ($after['tags'] as $name) {
-                        $tagIds[] = Tag::query()->firstOrCreate(['name' => $name], ['slug' => hash('sha256', $name)])->id;
+                        $tagIds[] = $this->tags->resolve($name)->id;
                     }
-                    $asset->tags()->sync($tagIds);
+                    $asset->tags()->sync(array_values(array_unique($tagIds)));
                     if (! empty($data['collection_id_to_add'])) {
                         $collection = Collection::query()->whereKey($data['collection_id_to_add'])->lockForUpdate()->firstOrFail();
                         if (! $asset->collections()->whereKey($collection->id)->exists()) {

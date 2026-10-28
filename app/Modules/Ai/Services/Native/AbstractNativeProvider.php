@@ -193,7 +193,10 @@ abstract class AbstractNativeProvider implements ConnectionProbe
      * to answer with strict JSON; a provider that fails to do so is treated
      * as a malformed response rather than silently guessed at.
      *
-     * @return array{description: string, tags: list<string>, confidence: float|null}
+     * A tag is either a plain string or {"name": string, "confidence": 0..1}; the
+     * confidences come back separately, keyed by the lower-case name.
+     *
+     * @return array{description: string, tags: list<string>, tag_confidences: array<string, float>, confidence: float|null}
      */
     protected function parseAnalysisJson(string $text): array
     {
@@ -206,9 +209,23 @@ abstract class AbstractNativeProvider implements ConnectionProbe
             throw new AiProviderException(__('ai.provider_errors.native_analysis_json', ['provider' => $this->providerLabel()]));
         }
 
+        $tags = [];
+        $tagConfidences = [];
+        foreach ($decoded['tags'] as $entry) {
+            $name = is_array($entry) ? ($entry['name'] ?? null) : $entry;
+            if (! is_string($name) || trim($name) === '') {
+                continue;
+            }
+            $tags[] = $name;
+            if (is_array($entry) && is_numeric($entry['confidence'] ?? null)) {
+                $tagConfidences[mb_strtolower(trim($name))] = (float) $entry['confidence'];
+            }
+        }
+
         return [
             'description' => $decoded['description'],
-            'tags' => array_values(array_filter($decoded['tags'], 'is_string')),
+            'tags' => $tags,
+            'tag_confidences' => $tagConfidences,
             'confidence' => is_numeric($decoded['confidence'] ?? null) ? (float) $decoded['confidence'] : null,
         ];
     }
@@ -216,7 +233,8 @@ abstract class AbstractNativeProvider implements ConnectionProbe
     protected const string ANALYSIS_PROMPT = <<<'PROMPT'
         Beschrijf deze afbeelding voor een archiefcatalogus in het Nederlands.
         Antwoord uitsluitend met geldig JSON zonder toelichting, in dit exacte formaat:
-        {"description": "korte neutrale beschrijving", "tags": ["max", "20", "losse", "trefwoorden"], "confidence": 0.0}
+        {"description": "korte neutrale beschrijving", "tags": [{"name": "dorpsplein", "confidence": 0.0}], "confidence": 0.0}
+        Tags: maximaal 8 concrete Nederlandse zelfstandige naamwoorden in kleine letters (gebouwen, voorwerpen, plaatsen, activiteiten), geen losse bijvoeglijke naamwoorden. Geef per tag een zekerheid tussen 0 en 1.
         Beschrijf alleen wat zichtbaar is. Benoem geen personen bij naam, doe geen gezichtsherkenning en geef geen gevoelige persoonsinferenties (gezondheid, etniciteit, geaardheid, religie, politieke overtuiging).
         PROMPT;
 }

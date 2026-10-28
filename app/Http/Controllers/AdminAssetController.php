@@ -14,6 +14,7 @@ use App\Modules\Catalogue\Models\SavedAssetSearch;
 use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Catalogue\Services\AssetSearchFilters;
 use App\Modules\Catalogue\Services\ReviewReceipt;
+use App\Modules\Catalogue\Services\TagResolver;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\QuarantineUploadService;
@@ -236,7 +237,7 @@ class AdminAssetController extends Controller
             $locked->fill(Arr::only($data, self::METADATA));
             $locked->lock_version++;
             $locked->save();
-            $locked->tags()->sync($tagNames->map(fn ($name) => Tag::query()->firstOrCreate(['name' => $name], ['slug' => hash('sha256', $name)])->id));
+            $locked->tags()->sync($tagNames->map(fn ($name) => app(TagResolver::class)->resolve($name)->id)->unique()->values());
             $rightData = ['rights_holder' => $data['rights_holder'] ?? null, 'verification_status' => $data['rights_status'], 'note' => $data['rights_note'] ?? null];
             if ($right === null) {
                 $locked->rights()->create($rightData);

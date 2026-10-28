@@ -274,6 +274,19 @@ it('accepts a tag suggestion without duplicating existing metadata', function ()
         ->and($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_ACCEPTED);
 });
 
+it('attaches the existing tag when a suggested tag is one of its synonyms', function (): void {
+    $tag = Tag::query()->create(['name' => 'Kerk', 'slug' => 'kerk']);
+    $tag->synonyms()->create(['name' => 'Godshuis', 'slug' => 'godshuis']);
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, 'godshuis');
+
+    $this->actingAs($this->user)->post("/admin/operations/ai/suggestions/{$suggestion->id}/accept", [
+        'lock_version' => $this->asset->lock_version,
+    ])->assertSessionHasNoErrors();
+
+    expect(Tag::query()->where('slug', 'godshuis')->exists())->toBeFalse()
+        ->and($this->asset->fresh()->tags()->pluck('tags.id')->all())->toBe([$tag->id]);
+});
+
 it('rejects suggestions without changing asset metadata', function (): void {
     $suggestion = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Niet gebruiken.');
 

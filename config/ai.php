@@ -36,6 +36,12 @@ return [
         'embeddings_model' => null,
         'embeddings_native_consent' => false,
     ],
+    // Tag suggestions are proposals a person reviews; these limits keep that review short.
+    // min_confidence applies only when a provider reports a confidence for the tag.
+    'tag_suggestions' => [
+        'max_per_image' => 8,
+        'min_confidence' => 0.5,
+    ],
     // Native provider adapters call these first-party APIs directly, with no
     // required intermediary gateway/container. base_url is intentionally
     // NOT admin-UI-editable (unlike the custom local/external endpoints,
