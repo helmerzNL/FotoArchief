@@ -22,8 +22,9 @@ class AiDispatchService
 
     /**
      * @param  list<string>  $assetIds
+     * @param  array<string, mixed>  $extraPayload
      */
-    public function dispatchImageAnalysis(array $assetIds, string $provider, User $user): OperationRun
+    public function dispatchImageAnalysis(array $assetIds, string $provider, User $user, array $extraPayload = []): OperationRun
     {
         $settings = $this->configuration->effective();
         $limit = (int) ($settings['max_assets_per_batch'] ?? 25);
@@ -48,13 +49,13 @@ class AiDispatchService
 
         $assetIds = $this->batches->normalize($assetIds, $user)['asset_ids'];
 
-        return $this->runs->dispatchRun(ProcessAiAnalysisJob::class, ProcessAiAnalysisJob::TYPE, $user, [
+        return $this->runs->dispatchRun(ProcessAiAnalysisJob::class, ProcessAiAnalysisJob::TYPE, $user, array_merge($extraPayload, [
             'asset_ids' => $assetIds,
             'asset_id_format' => AiAssetBatchService::INTERNAL_FORMAT,
             'provider' => $provider,
             'model' => (string) ($settings['image_analysis_model'] ?? ''),
             'cursor' => 0,
-        ], count($assetIds));
+        ]), count($assetIds));
     }
 
     /**

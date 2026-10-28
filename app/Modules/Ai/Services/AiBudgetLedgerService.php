@@ -20,6 +20,25 @@ class AiBudgetLedgerService
     public function __construct(private readonly AiProviderConfigService $providerConfigs) {}
 
     /**
+     * Cents still available this month (UTC) for a provider, or null when no cap is configured.
+     */
+    public function remainingCents(string $providerKind, string $capability): ?int
+    {
+        $limitCents = $this->providerConfigs->monthlyBudget($providerKind);
+        if ($limitCents <= 0) {
+            return null;
+        }
+        $ledger = AiBudgetLedger::query()
+            ->where('period_key', now('UTC')->format('Y-m'))
+            ->where('provider_kind', $providerKind)
+            ->where('capability', $capability)
+            ->first();
+        $committed = $ledger === null ? 0 : $ledger->cents_reserved + $ledger->cents_consumed;
+
+        return max(0, $limitCents - $committed);
+    }
+
+    /**
      * @throws AiProviderException when the reservation would exceed the configured monthly cap.
      */
     public function reserve(string $providerKind, string $capability, int $cents): AiBudgetLedger

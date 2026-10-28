@@ -35,6 +35,12 @@ return [
         'embeddings_provider' => null,
         'embeddings_model' => null,
         'embeddings_native_consent' => false,
+        // Automatic analysis: off until an administrator switches it on with
+        // consent; it only ever proposes, a person approves every tag.
+        'auto_analysis_enabled' => false,
+        'auto_analysis_backfill' => false,
+        'auto_analysis_user_id' => null,
+        'auto_analysis_enabled_at' => null,
     ],
     // Tag suggestions are proposals a person reviews; these limits keep that review short.
     // min_confidence applies only when a provider reports a confidence for the tag.
@@ -43,6 +49,23 @@ return [
         'min_confidence' => 0.5,
         // Most tags one confirmed bulk action may accept.
         'bulk_accept_max' => 200,
+    ],
+    // Limits for the scheduled sweep (ai:sweep) and the explicit archive run
+    // (ai:analyse-archive). Providers are never called from ingest.
+    'auto_analysis' => [
+        // Photos per sweep; never above the AI setting max_assets_per_batch.
+        'batch_size' => 25,
+        // Most photos analysed per calendar day (UTC), counted from ai_runs.
+        'daily_max' => 1000,
+        // Spacing between provider calls inside a run: 3 s keeps it at <= 20 per minute.
+        'min_seconds_between_requests' => 3,
+        // A photo that failed is left alone for this many days.
+        'failure_cooldown_days' => 7,
+        // Most photos one ai:analyse-archive call may queue.
+        'archive_max_per_command' => 1000,
+        // Seconds after which a chunk stops starting new photos; null derives it
+        // from the job timeout minus the provider timeout.
+        'chunk_deadline_seconds' => null,
     ],
     // Native provider adapters call these first-party APIs directly, with no
     // required intermediary gateway/container. base_url is intentionally
