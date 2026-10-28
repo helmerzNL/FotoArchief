@@ -9,6 +9,7 @@ use App\Modules\Ingest\Jobs\ProcessUpload;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Support\OriginalPath;
+use Closure;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -30,6 +31,27 @@ class QuarantineUploadService
 
     public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null, ?string $originalPath = null, bool $allowExtendedTypes = false): QuarantineUpload
     {
+        return $this->store($upload, $userId, $originalPath, $allowExtendedTypes, static fn (): Asset => $asset);
+    }
+
+    /**
+     * Quarantines a file for an asset that does not exist yet. The bytes are written
+     * first and the asset, upload record and outbox entry are then created in one short
+     * transaction, so a slow or failing object store never holds a database transaction
+     * open and never leaves an asset without a file.
+     *
+     * @param  array<string, mixed>  $assetAttributes
+     */
+    public function quarantineNewAsset(array $assetAttributes, UploadedFile $upload, ?string $userId = null, ?string $originalPath = null, bool $allowExtendedTypes = false): QuarantineUpload
+    {
+        return $this->store($upload, $userId, $originalPath, $allowExtendedTypes, static fn (): Asset => Asset::query()->create($assetAttributes));
+    }
+
+    /**
+     * @param  Closure(): Asset  $resolveAsset  runs inside the transaction that records the upload
+     */
+    private function store(UploadedFile $upload, ?string $userId, ?string $originalPath, bool $allowExtendedTypes, Closure $resolveAsset): QuarantineUpload
+    {
         $this->validate($upload, $allowExtendedTypes);
         $originalPath = $originalPath === null ? null : OriginalPath::normalize($originalPath);
         $diskName = (string) config('filesystems.default');
@@ -44,7 +66,8 @@ class QuarantineUploadService
                 throw new RuntimeException(__('shared.generated.t_7fe6a821c70aaab2'));
             }
 
-            return DB::transaction(function () use ($asset, $upload, $userId, $diskName, $storageKey, $originalPath): QuarantineUpload {
+            return DB::transaction(function () use ($resolveAsset, $upload, $userId, $diskName, $storageKey, $originalPath): QuarantineUpload {
+                $asset = $resolveAsset();
                 $record = QuarantineUpload::query()->create([
                     'asset_id' => $asset->id,
                     'uploaded_by_user_id' => $userId,

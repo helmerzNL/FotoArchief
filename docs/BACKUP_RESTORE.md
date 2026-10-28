@@ -340,6 +340,14 @@ Required behavior:
 - freeze application and external writers for the matching database,
   installation-state and object snapshot.
 
+**Eenmalige verhuizing naar een bucket / One-time move to a bucket.** Nederlands: een bucket is na de
+import één kopie. Maak een tweede kopie (replicatie bij de aanbieder, of een periodieke
+`rclone sync` naar een tweede aanbieder buiten Compose), laat versiebeheer aan staan en houd de
+oorspronkelijke bron (bijvoorbeeld OneDrive) tot een herstelproef uit de bucket is geslaagd. English: after
+an import the bucket is a single copy. Make a second copy (provider replication, or a periodic
+`rclone sync` to a second provider outside Compose), keep versioning on, and keep the original source
+(for example OneDrive) until a restore drill from the bucket has succeeded.
+
 ## Restore test steps
 
 Run a restore drill into an empty test environment:
