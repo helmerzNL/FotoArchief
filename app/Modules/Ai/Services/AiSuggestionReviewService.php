@@ -6,7 +6,7 @@ namespace App\Modules\Ai\Services;
 
 use App\Models\User;
 use App\Modules\Ai\Models\AiSuggestion;
-use App\Modules\Catalogue\Models\Tag;
+use App\Modules\Catalogue\Services\TagResolver;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -15,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class AiSuggestionReviewService
 {
+    public function __construct(private readonly TagResolver $tags) {}
+
     public function accept(AiSuggestion $suggestion, User $user, int $expectedLockVersion, ?string $editedDescription = null): AiSuggestion
     {
         $accepted = DB::transaction(function () use ($suggestion, $user, $expectedLockVersion, $editedDescription): ?AiSuggestion {
@@ -41,13 +43,12 @@ class AiSuggestionReviewService
                     throw ValidationException::withMessages(['edited_description' => __('review.invalid_description')]);
                 }
             } elseif ($suggestion->suggestion_type === AiSuggestion::TYPE_TAG) {
+                // An AI tag is a word with letters or digits; a bare symbol would only
+                // get the hash fallback slug and never describe a photo.
                 if (Str::slug($suggestion->value) === '') {
                     throw ValidationException::withMessages(['suggestion' => __('review.invalid_tag')]);
                 }
-                $tag = Tag::query()->firstOrCreate(
-                    ['slug' => Str::slug($suggestion->value)],
-                    ['name' => $suggestion->value],
-                );
+                $tag = $this->tags->resolve($suggestion->value);
                 if (! $asset->tags()->whereKey($tag->id)->exists()) {
                     $asset->tags()->attach($tag->id, ['id' => (string) Str::ulid()]);
                     $receipt['tag_added'] = true;

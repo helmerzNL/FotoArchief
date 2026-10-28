@@ -7,7 +7,7 @@ namespace App\Modules\DataExchange\Services;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetRight;
-use App\Modules\Catalogue\Models\Tag;
+use App\Modules\Catalogue\Services\TagResolver;
 use App\Modules\DataExchange\Jobs\RunMetadataImport;
 use App\Modules\DataExchange\Models\MetadataImport;
 use App\Modules\DataExchange\Models\MetadataImportRow;
@@ -294,9 +294,9 @@ class MetadataImportService
             if (array_key_exists('tags', $plan)) {
                 $tagIds = [];
                 foreach ($this->stringList($plan['tags']['after']) as $name) {
-                    $tagIds[] = Tag::query()->firstOrCreate(['name' => $name], ['slug' => hash('sha256', $name)])->id;
+                    $tagIds[] = app(TagResolver::class)->resolve($name)->id;
                 }
-                $asset->tags()->sync($tagIds);
+                $asset->tags()->sync(array_values(array_unique($tagIds)));
             }
             if (array_key_exists('rights', $plan)) {
                 $right = $asset->rights()->latest('id')->first();

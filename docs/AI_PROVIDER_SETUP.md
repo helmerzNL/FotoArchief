@@ -72,6 +72,20 @@ acceptatie ongewijzigd is. Een bestaande tagkoppeling wordt niet verwijderd.
 Het oorspronkelijke voorstel, herstelbewijs en auditgebeurtenissen blijven behouden.
 Oudere acceptaties zonder herstelbewijs worden niet onveilig gereconstrueerd.
 
+Tagvoorstellen volgen vaste regels (vanaf `0.9.74`). Een voorstel is een kleine-letter
+woord van maximaal 60 tekens; dubbele schrijfwijzen tellen als één voorstel en tags die
+de foto al heeft (ook via een synoniem) worden niet voorgesteld. Per foto worden hoogstens
+8 tags voorgesteld (`ai.tag_suggestions.max_per_image`). Meldt de provider een zekerheid per
+tag, dan wordt die bij het voorstel bewaard en vervalt een tag onder 0,5
+(`ai.tag_suggestions.min_confidence`); providers zonder zekerheid (lokaal, extern) behouden
+al hun tags binnen het maximum. Bij acceptatie hoort een tag bij de bestaande tag met
+dezelfde slug, hetzelfde synoniem of dezelfde naam in andere hoofdletters; alleen als die
+ontbreekt ontstaat een nieuwe tag. Dit geldt ook voor bulkbewerking, CSV-import, het
+fotoformulier en het samenvoegen van duplicaten: ze gebruiken allemaal dezelfde slugregel.
+De upgrade voegt bestaande tags samen die alleen verschilden in schrijfwijze (foto's en
+namen blijven behouden; de oude naam wordt synoniem) en vereist een back-up volgens de
+gebruikelijke upgradeprocedure.
+
 Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
 **AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
 beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
@@ -290,6 +304,18 @@ filter only while the photo revision remains unchanged since that acceptance.
 An existing tag link is not removed. The original proposal, recovery receipt
 and audit events remain stored. Older acceptances without recovery receipts
 are not reconstructed unsafely.
+
+Tag suggestions follow fixed rules (from `0.9.74`). A suggestion is a lower-case word of
+at most 60 characters; duplicate spellings count as one suggestion and tags the photo already
+has (also through a synonym) are not suggested. At most 8 tags are suggested per photo
+(`ai.tag_suggestions.max_per_image`). When the provider reports a confidence per tag, it is
+stored with the suggestion and a tag below 0.5 is dropped (`ai.tag_suggestions.min_confidence`);
+providers that report none (local, external) keep all their tags within the maximum. On
+acceptance a tag belongs to the existing tag with the same slug, the same synonym or the same
+name in different capitals; a new tag is created only when none exists. This also applies to
+bulk edit, CSV import, the photo form and duplicate merging: they all use the same slug
+rule. The upgrade merges existing tags that differed only in spelling (photos and names are
+kept; the old name becomes a synonym) and needs a backup under the usual upgrade procedure.
 
 From `0.9.51`, every private photo page has an **AI results** link and panel,
 before the metadata form. It shows the stored description and tags, provider,

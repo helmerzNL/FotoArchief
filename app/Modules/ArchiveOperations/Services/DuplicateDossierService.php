@@ -7,7 +7,7 @@ namespace App\Modules\ArchiveOperations\Services;
 use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
-use App\Modules\Catalogue\Models\Tag;
+use App\Modules\Catalogue\Services\TagResolver;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -86,10 +86,7 @@ class DuplicateDossierService
                 ->values();
 
             if ($newTagNames->isNotEmpty()) {
-                $tagIds = $newTagNames->map(fn ($name) => Tag::query()->firstOrCreate(
-                    ['name' => $name],
-                    ['slug' => hash('sha256', $name)]
-                )->id);
+                $tagIds = $newTagNames->map(fn ($name) => app(TagResolver::class)->resolve($name)->id)->unique()->values();
 
                 $lockedTarget->tags()->syncWithoutDetaching($tagIds);
             }

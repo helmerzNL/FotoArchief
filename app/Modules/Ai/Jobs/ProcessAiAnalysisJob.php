@@ -12,12 +12,12 @@ use App\Modules\Ai\Services\AiOperationAuditService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\Ai\Services\AiProviderResolver;
 use App\Modules\Ai\Services\AiSourceImageService;
+use App\Modules\Ai\Services\AiTagSuggestionSelector;
 use App\Modules\ArchiveOperations\Jobs\OperationJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -187,16 +187,17 @@ class ProcessAiAnalysisJob extends OperationJob
             ]);
             $count++;
         }
-        foreach (array_slice(array_filter($analysis['tags'] ?? [], 'is_string'), 0, 20) as $tag) {
+        foreach (app(AiTagSuggestionSelector::class)->select($asset, $analysis) as $tag) {
             AiSuggestion::query()->firstOrCreate([
                 'ai_run_id' => $run->id,
                 'suggestion_type' => AiSuggestion::TYPE_TAG,
-                'value' => Str::lower($tag),
+                'value' => $tag['value'],
             ], [
                 'asset_id' => $asset->id,
                 'asset_file_id' => $file->id,
                 'source_asset_lock_version' => $sourceLock,
                 'source_file_sha256' => $sourceSha,
+                'confidence' => $tag['confidence'],
                 'evidence' => ['source' => 'image-analysis'],
             ]);
             $count++;
