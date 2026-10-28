@@ -48,7 +48,28 @@
         <label>{{ __('review.provider') }} <input name="provider" value="{{ $filters['provider'] ?? '' }}" maxlength="100"></label>
         <label>{{ __('review.from') }} <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"></label>
         <label>{{ __('review.until') }} <input type="date" name="until" value="{{ $filters['until'] ?? '' }}"></label>
+        <label>{{ __('ai.review_tools.type') }} <select name="type">
+            <option value="">{{ __('ai.review_tools.type_all') }}</option>
+            <option value="tag" @selected(($filters['type'] ?? '') === 'tag')>{{ __('ai.review_tools.type_tag') }}</option>
+            <option value="description" @selected(($filters['type'] ?? '') === 'description')>{{ __('ai.review_tools.type_description') }}</option>
+        </select></label>
+        <label>{{ __('ai.review_tools.min_confidence') }} <input type="number" name="min_confidence_filter" min="0" max="1" step="0.05" value="{{ $filters['min_confidence_filter'] ?? '' }}"></label>
+        <label>{{ __('ai.review_tools.sort') }} <select name="sort">
+            <option value="newest" @selected(($filters['sort'] ?? 'newest') === 'newest')>{{ __('ai.review_tools.sort_newest') }}</option>
+            <option value="confidence" @selected(($filters['sort'] ?? 'newest') === 'confidence')>{{ __('ai.review_tools.sort_confidence') }}</option>
+        </select></label>
         <button>{{ __('review.apply') }}</button>
+    </form>
+    <form method="GET" action="{{ route('admin.operations.ai.suggestions.tags.confirm') }}" class="card">
+        <h2>{{ __('ai.review_tools.accept_confident') }}</h2>
+        <p>{{ __('ai.review_tools.accept_confident_hint') }}</p>
+        @foreach($filters as $filterName => $filterValue)
+            @if($filterValue !== null && $filterValue !== '')
+                <input type="hidden" name="{{ $filterName }}" value="{{ $filterValue }}">
+            @endif
+        @endforeach
+        <label>{{ __('ai.review_tools.threshold') }} <input type="number" name="min_confidence" min="0" max="1" step="0.05" value="0.8" required></label>
+        <button type="submit">{{ __('ai.review_tools.show') }}</button>
     </form>
     @if(session('review_results'))
         <section class="card" role="status"><h2>{{ __('review.results') }}</h2><ul>
@@ -74,6 +95,9 @@
                 <p>{{ $suggestion->asset?->tags->pluck('name')->join(', ') }}</p>
                 <h4>{{ __('review.proposed') }}</h4>
                 <p>{{ $suggestion->value }}</p>
+                @if($suggestion->confidence !== null)
+                    <p>{{ __('ai.review_tools.confidence', ['percent' => round($suggestion->confidence * 100)]) }}</p>
+                @endif
                 <p>{{ __('ai.suggestions.source', ['version' => $suggestion->source_asset_lock_version, 'checksum' => $suggestion->source_file_sha256]) }}</p>
                 @if($suggestion->canReview())
                 <label><input form="bulk-review" type="checkbox" name="selected[]" value="{{ $suggestion->id }}"> {{ __('review.select', ['id' => $suggestion->id]) }}</label>

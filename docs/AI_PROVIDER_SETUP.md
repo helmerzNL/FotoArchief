@@ -86,6 +86,15 @@ De upgrade voegt bestaande tags samen die alleen verschilden in schrijfwijze (fo
 namen blijven behouden; de oude naam wordt synoniem) en vereist een back-up volgens de
 gebruikelijke upgradeprocedure.
 
+Vanaf `0.9.76` kan de reviewlijst ook gefilterd worden op soort voorstel (beschrijving of
+tag) en op een minimale zekerheid, en gesorteerd op zekerheid (zekerste eerst); de zekerheid
+staat bij ieder voorstel. Voor veel zekere tags is er **Zekere tags bekijken en accepteren**:
+je kiest een drempel (standaard 80%), ziet eerst exact welke tags bij welke foto's worden
+toegevoegd en bevestigt dan expliciet. Alleen tagvoorstellen met een bekende zekerheid vanaf
+de drempel doen mee, nooit beschrijvingen; hoogstens 200 per keer (`ai.tag_suggestions.bulk_accept_max`).
+Foto's die intussen zijn gewijzigd, worden overgeslagen en gemeld. Iedere toevoeging blijft
+terug te draaien en er wordt één batchregel vastgelegd. Er wordt geen provider aangeroepen.
+
 Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
 **AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
 beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
@@ -316,6 +325,15 @@ name in different capitals; a new tag is created only when none exists. This als
 bulk edit, CSV import, the photo form and duplicate merging: they all use the same slug
 rule. The upgrade merges existing tags that differed only in spelling (photos and names are
 kept; the old name becomes a synonym) and needs a backup under the usual upgrade procedure.
+
+From `0.9.76`, the review list can also be filtered by kind of proposal (description or tag)
+and by a minimum confidence, and sorted by confidence (most certain first); the confidence is
+shown on each proposal. For highly confident tags there is **Review and accept confident
+tags**: you choose a threshold (default 80%), first see exactly which tags would be added to
+which photos, and then confirm explicitly. Only tag proposals with a known confidence at or
+above the threshold take part, never descriptions, at most 200 at a time
+(`ai.tag_suggestions.bulk_accept_max`). Photos that changed in the meantime are skipped and
+reported. Every addition remains undoable and one batch record is written. No provider is called.
 
 From `0.9.51`, every private photo page has an **AI results** link and panel,
 before the metadata form. It shows the stored description and tags, provider,

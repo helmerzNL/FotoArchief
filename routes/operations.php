@@ -51,6 +51,8 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/ai/index-workbench/{generation}/activate', [AiIndexWorkbenchController::class, 'activate'])->name('ai.workbench.activate');
     Route::get('/ai/suggestions', [AiSuggestionReviewController::class, 'index'])->name('ai.suggestions.index');
     Route::post('/ai/suggestions/bulk', [AiSuggestionReviewController::class, 'bulk'])->name('ai.suggestions.bulk');
+    Route::get('/ai/suggestions/tags/confirm', [AiSuggestionReviewController::class, 'confirmTags'])->name('ai.suggestions.tags.confirm');
+    Route::post('/ai/suggestions/tags/accept', [AiSuggestionReviewController::class, 'acceptTags'])->name('ai.suggestions.tags.accept');
     Route::post('/ai/suggestions/{suggestion}/undo', [AiSuggestionReviewController::class, 'undo'])->name('ai.suggestions.undo');
     Route::post('/ai/suggestions/{suggestion}/accept', [AiSuggestionReviewController::class, 'accept'])->name('ai.suggestions.accept');
     Route::post('/ai/suggestions/{suggestion}/reject', [AiSuggestionReviewController::class, 'reject'])->name('ai.suggestions.reject');

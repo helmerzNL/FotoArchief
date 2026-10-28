@@ -14,6 +14,7 @@ use App\Modules\Catalogue\Models\Tag;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
@@ -525,4 +526,89 @@ it('rejects arbitrary review redirect targets without changing the suggestion', 
         'lock_version' => 1, 'return_to' => 'https://example.test',
     ])->assertSessionHasErrors('return_to');
     expect($suggestion->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING);
+});
+
+function confidentTag(string $value, ?float $confidence): AiSuggestion
+{
+    $suggestion = aiSuggestion(AiSuggestion::TYPE_TAG, $value);
+    $suggestion->update(['confidence' => $confidence]);
+
+    return $suggestion;
+}
+
+it('filters the queue by type and minimum confidence and shows the most certain first', function (): void {
+    confidentTag('fietsenrek', 0.7);
+    confidentTag('havenkade', 0.95);
+    confidentTag('mistbank', 0.4);
+    confidentTag('onbekendtag', null);
+    aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Een beschrijving zonder zekerheid');
+
+    $this->actingAs($this->user)
+        ->get(route('admin.operations.ai.suggestions.index', ['type' => 'tag', 'min_confidence_filter' => 0.6, 'sort' => 'confidence']))
+        ->assertOk()
+        ->assertSeeInOrder(['havenkade', 'Zekerheid: 95%', 'fietsenrek', 'Zekerheid: 70%'])
+        ->assertDontSee('mistbank')
+        ->assertDontSee('onbekendtag')
+        ->assertDontSee('Een beschrijving zonder zekerheid');
+});
+
+it('shows exactly which confident tags would be accepted and changes nothing', function (): void {
+    $confident = confidentTag('havenkade', 0.95);
+    $unsure = confidentTag('fietsenrek', 0.7);
+
+    $this->actingAs($this->user)
+        ->get(route('admin.operations.ai.suggestions.tags.confirm', ['min_confidence' => 0.8]))
+        ->assertOk()
+        ->assertSee('havenkade')
+        ->assertDontSee('fietsenrek');
+
+    expect($confident->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($unsure->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($this->asset->fresh()->tags()->count())->toBe(0);
+});
+
+it('accepts exactly the confirmed confident tags and records one bulk operation', function (): void {
+    $confident = confidentTag('havenkade', 0.95);
+    $unsure = confidentTag('fietsenrek', 0.7);
+
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.tags.accept'), [
+        'confirm' => 1,
+        'min_confidence' => 0.8,
+        'selected' => [$confident->id],
+        'versions' => [$confident->id => $this->asset->lock_version],
+    ])->assertRedirect(route('admin.operations.ai.suggestions.index'))->assertSessionHasNoErrors();
+
+    expect($confident->fresh()->review_status)->toBe(AiSuggestion::REVIEW_ACCEPTED)
+        ->and($unsure->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($this->asset->fresh()->tags()->where('slug', 'havenkade')->exists())->toBeTrue()
+        ->and(DB::table('bulk_operations')->where('operation_type', 'ai_tag_bulk_accept')->value('affected_count'))->toBe(1);
+});
+
+it('refuses a tag below the threshold, a description and a missing confirmation', function (): void {
+    $unsure = confidentTag('fietsenrek', 0.7);
+    $description = aiSuggestion(AiSuggestion::TYPE_DESCRIPTION, 'Een beschrijving');
+    $payload = fn (string $id): array => ['confirm' => 1, 'min_confidence' => 0.8, 'selected' => [$id], 'versions' => [$id => $this->asset->lock_version]];
+
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.tags.accept'), $payload($unsure->id))->assertSessionHasErrors('selected');
+    $this->post(route('admin.operations.ai.suggestions.tags.accept'), $payload($description->id))->assertSessionHasErrors('selected');
+    $this->post(route('admin.operations.ai.suggestions.tags.accept'), [...$payload($unsure->id), 'confirm' => 0])->assertSessionHasErrors('confirm');
+
+    expect($unsure->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($description->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($this->asset->fresh()->tags()->count())->toBe(0);
+});
+
+it('reports a photo that changed after the preview instead of accepting its tag', function (): void {
+    $confident = confidentTag('havenkade', 0.95);
+    $this->asset->update(['lock_version' => 2]);
+
+    $this->actingAs($this->user)->post(route('admin.operations.ai.suggestions.tags.accept'), [
+        'confirm' => 1,
+        'min_confidence' => 0.8,
+        'selected' => [$confident->id],
+        'versions' => [$confident->id => 1],
+    ])->assertRedirect(route('admin.operations.ai.suggestions.index'));
+
+    expect($confident->fresh()->review_status)->toBe(AiSuggestion::REVIEW_PENDING)
+        ->and($this->asset->fresh()->tags()->count())->toBe(0);
 });
