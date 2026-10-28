@@ -121,7 +121,7 @@ class AiSettingsController extends Controller
         $validated = $request->validate([
             'auto_analysis_enabled' => ['nullable', 'boolean'],
             'auto_analysis_backfill' => ['nullable', 'boolean'],
-            'auto_analysis_consent' => ['required_if:auto_analysis_enabled,1', 'nullable', 'accepted'],
+            'auto_analysis_consent' => ['accepted_if:auto_analysis_enabled,1'],
         ]);
         $enabled = (bool) ($validated['auto_analysis_enabled'] ?? false);
         $this->automatic->update([
