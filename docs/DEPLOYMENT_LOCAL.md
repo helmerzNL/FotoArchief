@@ -191,13 +191,12 @@ The wizard stores selected storage settings privately outside `public/`.
 Deployment environment `FILESYSTEM_DISK` and `AWS_*` values are intentionally
 not required for first start and should not be used to bypass onboarding.
 
-Create private prefixes or buckets for:
-
-- immutable originals: `ARCHIVE_ORIGINALS_PREFIX`
-- rebuildable derivatives: `ARCHIVE_DERIVATIVES_PREFIX`
-- non-public quarantine uploads: `ARCHIVE_QUARANTINE_PREFIX`
-- temporary exports: `ARCHIVE_EXPORTS_PREFIX`
-- backup copies: `ARCHIVE_BACKUPS_PREFIX`
+Create one private bucket (or private directory) for the app. Nothing needs to be
+configured per prefix: the app writes uploads and their immutable originals under
+`quarantine/<id>/` and rebuildable derivatives under `derivatives/<upload>/`, and it
+always reads the bucket through its private credentials. Earlier `ARCHIVE_*_PREFIX`
+variables in `.env.example` were never read by the application and have been removed;
+a leftover value in an existing `.env` is harmless.
 
 The app stores object keys and checksums in PostgreSQL. It must not depend on
 provider-specific object URLs or store photo binaries in PostgreSQL.

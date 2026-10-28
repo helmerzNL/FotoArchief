@@ -196,6 +196,31 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   (zie het duplicatendossier). Het pad van die tweede locatie blijft op het afgewezen
   uploadrecord staan en wordt op de fotopagina getoond onder "Dezelfde foto is ook
   aangetroffen op".
+- **Grote archieven (honderden GB) naar S3.** Het commando schrijft elk bestand eerst naar
+  de opslag en legt daarna in één korte databasetransactie foto, uploadrecord en
+  wachtrijbericht vast; een traag objectopslag houdt dus geen transactie open en laat geen
+  foto zonder bestand achter. Een schrijffout wordt na 2, 10 en 30 seconden opnieuw
+  geprobeerd (`ingest.import.retry_delays`), daarna telt het bestand als mislukt. Opties om
+  de import te doseren, zodat scan en afgeleiden kunnen bijblijven:
+  `--time-limit=<minuten>` en `--max-gib=<GiB>` stoppen na die tijd of hoeveelheid;
+  `--max-pending=<aantal>` (standaard 200, `0` = uit) pauzeert zolang zoveel uploads nog niet
+  verwerkt zijn (status wachtend of bezig) en stopt na `--wait=<seconden>` (standaard 600)
+  met een melding dat de workers moeten draaien. Elke 100 bestanden verschijnt een
+  voortgangsregel met MiB/s. Alles is hervatbaar: draai hetzelfde commando opnieuw.
+- **Aanpak voor OneDrive naar een bucket (eenmalig), zonder 500 GB lokaal te hoeven staan.**
+  Zet eerst de bucket in de installatiewizard. Kopieer daarna in batches van enkele tientallen
+  GB naar een tijdelijke map op de server, bijvoorbeeld met
+  `rclone lsf -R --files-only onedrive:Foto > lijst.txt`, `split -l 5000 lijst.txt batch-` en per
+  batch `rclone copy onedrive:Foto /srv/import --files-from batch-aa --transfers 4 --tpslimit 4`
+  (gebruik altijd `copy`, nooit `move`: de bron blijft onaangeroerd). Draai daarna
+  `ingest:import-directory /srv/import --user=… --max-pending=200`, wacht tot de wachtrij leeg
+  is, controleer de uitkomst en leeg de tijdelijke map voor de volgende batch. Een
+  `rclone mount` kan als noodoplossing, maar is bij uren durende runs kwetsbaar.
+  Meet eerst: aantal bestanden per extensie en gemiddelde grootte (`rclone size`), de
+  downloadsnelheid van OneDrive (bij 50–100 Mbit/s kost 500 GB ruwweg 11–22 uur, plus
+  throttling) en vrije ruimte in de tijdelijke map van de workers (minimaal 2 GiB plus
+  200 MiB per worker). Verwijder de OneDrive-originelen pas nadat een herstelproef uit de
+  bucket is geslaagd (zie `docs/BACKUP_RESTORE.md`).
 - De app moet de map kunnen lezen. Bij Docker is dat een extra, read-only volume op de
   `app`- en `worker`-container; dat is een eigen wijziging in de Compose-bestanden van de
   operator. Deze functie wijzigt geen Compose- of omgevingsbestand.
@@ -208,7 +233,17 @@ is kept as provenance and shown as "Oorspronkelijk pad" on the photo page. Re-ru
 paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP, BMP and PDF are
 supported (BMP and PDF originals are kept unchanged, previews are JPEG; a PDF's previews come from page 1 only and the page count is recorded; it requires `poppler-utils`); TIFF and HEIC are counted and skipped for now. A photo present in
 two folders is rejected as a duplicate the second time, but the second path stays on the
-rejected upload record. For Docker, mounting the folder read-only into `app` and `worker`
+rejected upload record. For very large archives the command writes each file to storage first and
+then records photo, upload and queue message in one short database transaction, retries a failed store
+write after 2, 10 and 30 seconds (`ingest.import.retry_delays`), and can pace itself:
+`--time-limit=<minutes>`, `--max-gib=<GiB>`, and `--max-pending=<count>` (default 200, `0` = off) which
+pauses while that many uploads are still queued or running and stops after `--wait=<seconds>` (default
+600). A progress line with MiB/s appears every 100 files, and every run is resumable. A one-time
+OneDrive-to-bucket move needs no 500 GB of local space: copy in batches with `rclone copy --files-from`
+(never `move`), import each batch, wait for the queue to drain, then clear the staging folder. Measure
+first (file counts per extension, OneDrive download speed, free temporary space of the workers: at least
+2 GiB plus 200 MiB per worker) and keep the OneDrive originals until a restore drill from the bucket
+has succeeded. For Docker, mounting the folder read-only into `app` and `worker`
 is an operator change to their own Compose files; this feature changes none.
 
 ### Autorisatie

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Models\QuarantineUpload;
+use App\Modules\Ingest\Services\QuarantineUploadService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -151,4 +152,61 @@ it('offers PDF documents for import next to photos', function (): void {
         ->expectsOutputToContain('Nieuw te importeren: 4')
         ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .tif')
         ->assertExitCode(0);
+});
+
+it('stops after the byte limit and reports that more remain', function (): void {
+    $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test', '--max-gib' => 0.00000001])
+        ->expectsOutputToContain('De bytelimiet is bereikt')
+        ->assertExitCode(0);
+
+    expect(Asset::query()->count())->toBe(1);
+});
+
+it('stops instead of piling up work when the processing queue stays full', function (): void {
+    Artisan::call('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test', '--limit' => 1]);
+
+    $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test', '--max-pending' => 1, '--wait' => 0])
+        ->expectsOutputToContain('De wachtrij bleef 0 seconden vol')
+        ->assertExitCode(0);
+
+    expect(Asset::query()->count())->toBe(1);
+});
+
+it('retries an object-store write and still imports the file', function (): void {
+    config(['ingest.import.retry_delays' => [0, 0, 0]]);
+    $calls = 0;
+    $this->mock(QuarantineUploadService::class, function ($mock) use (&$calls): void {
+        $mock->shouldReceive('quarantineNewAsset')->andReturnUsing(function () use (&$calls): QuarantineUpload {
+            $calls++;
+            if ($calls < 3) {
+                throw new RuntimeException('Object store hiccup');
+            }
+
+            return new QuarantineUpload;
+        });
+    });
+
+    $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test', '--limit' => 1])
+        ->expectsOutputToContain('In quarantaine geplaatst: 1')
+        ->assertExitCode(0);
+
+    expect($calls)->toBe(3);
+});
+
+it('counts a file as failed after the last retry and fails the run', function (): void {
+    config(['ingest.import.retry_delays' => [0, 0]]);
+    $calls = 0;
+    $this->mock(QuarantineUploadService::class, function ($mock) use (&$calls): void {
+        $mock->shouldReceive('quarantineNewAsset')->andReturnUsing(function () use (&$calls): QuarantineUpload {
+            $calls++;
+
+            throw new RuntimeException('Object store down');
+        });
+    });
+
+    $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test', '--limit' => 1])
+        ->expectsOutputToContain('Mislukt: 1')
+        ->assertExitCode(1);
+
+    expect($calls)->toBe(3);
 });
