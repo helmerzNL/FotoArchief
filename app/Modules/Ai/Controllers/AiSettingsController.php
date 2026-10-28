@@ -6,6 +6,7 @@ namespace App\Modules\Ai\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Modules\Ai\Services\AiAutoAnalysisService;
 use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiConnectionTestService;
 use App\Modules\Ai\Services\AiDispatchService;
@@ -22,6 +23,7 @@ class AiSettingsController extends Controller
         private readonly AiDispatchService $dispatch,
         private readonly AiConnectionTestService $connectionTest,
         private readonly AiProviderConfigService $providerConfigs,
+        private readonly AiAutoAnalysisService $automatic,
     ) {}
 
     public function edit(Request $request): View
@@ -31,6 +33,7 @@ class AiSettingsController extends Controller
 
         return view('ai.settings', [
             'settings' => $this->configuration->effective(),
+            'automatic' => $this->automatic->status(),
             'providerStatuses' => array_map(fn (string $provider): array => $this->providerConfigs->status($provider), AiProviderConfigService::PROVIDERS),
         ]);
     }
@@ -108,6 +111,27 @@ class AiSettingsController extends Controller
         return redirect()
             ->route('admin.operations.ai.edit')
             ->with('status', __('ai.settings.settings_saved'));
+    }
+
+    public function updateAutomatic(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        abort_unless($user instanceof User && $user->hasPermission('users.manage'), 403);
+
+        $validated = $request->validate([
+            'auto_analysis_enabled' => ['nullable', 'boolean'],
+            'auto_analysis_backfill' => ['nullable', 'boolean'],
+            'auto_analysis_consent' => ['accepted_if:auto_analysis_enabled,1'],
+        ]);
+        $enabled = (bool) ($validated['auto_analysis_enabled'] ?? false);
+        $this->automatic->update([
+            'enabled' => $enabled,
+            'backfill' => (bool) ($validated['auto_analysis_backfill'] ?? false),
+        ], $user);
+
+        return redirect()
+            ->route('admin.operations.ai.edit')
+            ->with('status', $enabled ? __('ai.auto.saved_on') : __('ai.auto.saved_off'));
     }
 
     public function dispatchAnalysis(Request $request): RedirectResponse

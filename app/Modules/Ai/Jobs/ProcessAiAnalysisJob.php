@@ -46,6 +46,12 @@ class ProcessAiAnalysisJob extends OperationJob
         $audit = app(AiOperationAuditService::class);
         $isNative = in_array($provider, self::NATIVE_PROVIDERS, true);
         $costCents = $isNative ? $providerConfigs->cost($provider, 'image_analysis') : 0;
+        $startedAt = microtime(true);
+        $deadline = $this->deadlineSeconds();
+        $spacing = in_array($payload['source'] ?? null, ['auto', 'archive'], true)
+            ? max(0, (int) config('ai.auto_analysis.min_seconds_between_requests', 3))
+            : 0;
+        $lastRequestAt = null;
 
         if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
             return ['processed' => 0, 'processed_total' => $run->processed_items, 'failed' => 0, 'finished' => true, 'result' => ['provider' => $provider, 'cancelled' => true]];
@@ -53,6 +59,11 @@ class ProcessAiAnalysisJob extends OperationJob
 
         foreach ($slice as $assetId) {
             if ($this->shouldPause($run)) {
+                break;
+            }
+            // Stop before the job timeout can cut a provider call short; the rest
+            // continues in the next chunk. At least one photo always goes first.
+            if ($processed > 0 && microtime(true) - $startedAt >= $deadline) {
                 break;
             }
             if (! app(AiConfigurationService::class)->cancelQueuedRunIfUnavailable($run, 'image_analysis', $provider)) {
@@ -70,6 +81,14 @@ class ProcessAiAnalysisJob extends OperationJob
 
                 $sourceLock = (int) $asset->lock_version;
                 $sourceSha = (string) $file->sha256;
+
+                if ($spacing > 0 && $lastRequestAt !== null) {
+                    $wait = $spacing - (microtime(true) - $lastRequestAt);
+                    if ($wait > 0) {
+                        usleep((int) ($wait * 1_000_000));
+                    }
+                }
+                $lastRequestAt = microtime(true);
 
                 $ledger = $isNative && $costCents > 0 ? $ledgerService->reserve($provider, 'image_analysis', $costCents) : null;
                 try {
@@ -159,6 +178,20 @@ class ProcessAiAnalysisJob extends OperationJob
             'finished' => $nextCursor >= count($assetIds),
             'result' => ['provider' => $provider],
         ];
+    }
+
+    /**
+     * Seconds after which a chunk starts no new photo: the job timeout minus one
+     * provider call (at most 60 s) and a margin for storing the result.
+     */
+    private function deadlineSeconds(): int
+    {
+        $configured = config('ai.auto_analysis.chunk_deadline_seconds');
+        if (is_numeric($configured)) {
+            return max(0, (int) $configured);
+        }
+
+        return max(10, self::MAX_JOB_TIMEOUT_SECONDS - 60 - 10);
     }
 
     private function idempotencyKey(string $provider, AssetFile $file): string

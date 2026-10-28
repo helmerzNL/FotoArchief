@@ -37,6 +37,7 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/audit', OperationAuditController::class)->name('audit');
     Route::get('/ai', [AiSettingsController::class, 'edit'])->name('ai.edit');
     Route::post('/ai', [AiSettingsController::class, 'update'])->name('ai.update');
+    Route::post('/ai/automatic', [AiSettingsController::class, 'updateAutomatic'])->name('ai.automatic.update');
     Route::post('/ai/analyze', [AiSettingsController::class, 'dispatchAnalysis'])->name('ai.analyze');
     Route::post('/ai/index', [AiSettingsController::class, 'dispatchIndex'])->name('ai.index');
     Route::post('/ai/test-connection', [AiSettingsController::class, 'testConnection'])->name('ai.test-connection');

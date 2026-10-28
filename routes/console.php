@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\User;
+use App\Modules\Ai\Services\AiAutoAnalysisService;
 use App\Modules\Ai\Services\ExternalAiProvider;
 use App\Modules\Ai\Services\LocalAiProvider;
 use App\Modules\ArchiveOperations\Models\BackupRecord;
@@ -24,6 +26,7 @@ use App\Modules\Installation\InstallationStore;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+use Illuminate\Validation\ValidationException;
 
 Artisan::command('uploads:prune', function (UploadSessionService $sessions): void {
     $this->line((string) $sessions->prune());
@@ -259,6 +262,41 @@ Artisan::command('ai:probe-external', function (ExternalAiProvider $provider): i
     return 0;
 })->purpose('Probe the explicitly configured external AI service');
 
+Artisan::command('ai:sweep', function (AiAutoAnalysisService $auto): int {
+    $this->line(json_encode($auto->sweep(), JSON_THROW_ON_ERROR));
+
+    return 0;
+})->purpose('Queue one bounded image-analysis run for unanalysed photos when automatic analysis is on and consent, budget and daily limits allow it');
+
+Artisan::command('ai:analyse-archive {--dry-run : Report the estimate without queueing} {--limit=100 : Most photos to queue} {--max-cost-cents= : Refuse when the estimate is higher} {--as= : Email of an administrator; defaults to the automatic-analysis administrator}', function (AiAutoAnalysisService $auto): int {
+    $email = $this->option('as');
+    $actor = is_string($email) && $email !== ''
+        ? User::query()->where('email', $email)->first()
+        : User::query()->find((string) ($auto->actorId() ?? ''));
+    $ceiling = $this->option('max-cost-cents');
+
+    try {
+        $report = $auto->archiveRun(
+            (int) $this->option('limit'),
+            is_numeric($ceiling) ? (int) $ceiling : null,
+            $actor instanceof User ? $actor : null,
+            (bool) $this->option('dry-run'),
+        );
+    } catch (ValidationException $exception) {
+        foreach ($exception->errors() as $messages) {
+            foreach ($messages as $message) {
+                $this->error($message);
+            }
+        }
+
+        return 1;
+    }
+    $this->line(json_encode($report, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT));
+
+    return 0;
+})->purpose('Estimate or queue image analysis for photos that have none yet; the cost ceiling is explicit and nothing is written without review');
+
+Schedule::command('ai:sweep')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();

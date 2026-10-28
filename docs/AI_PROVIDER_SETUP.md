@@ -95,6 +95,46 @@ de drempel doen mee, nooit beschrijvingen; hoogstens 200 per keer (`ai.tag_sugge
 Foto's die intussen zijn gewijzigd, worden overgeslagen en gemeld. Iedere toevoeging blijft
 terug te draaien en er wordt één batchregel vastgelegd. Er wordt geen provider aangeroepen.
 
+#### Automatische beeldanalyse (vanaf `0.9.77`)
+
+Onder **AI-instellingen** staat de kaart **Automatische beeldanalyse**. Standaard is die uit.
+Een beheerder zet hem aan met een expliciete toestemming; de beheerder die dat doet wordt
+vastgelegd als de uitvoerder. Daarna controleert de scheduler elke vijf minuten (`ai:sweep`) of er
+foto's wachten en zet hoogstens één klein pakket in de wachtrij. Het resultaat zijn alleen
+voorstellen: tags en beschrijvingen worden pas toegepast nadat iemand ze goedkeurt (zie hierboven).
+Het uploaden, scannen en zoeken blijft ongemoeid; de ingest roept nooit een AI-provider aan.
+
+Vaste grenzen (`config/ai.php`, sleutel `auto_analysis`): hoogstens 25 foto's per pakket (nooit
+meer dan *Maximum aantal foto's per batch*), 1000 foto's per dag (UTC), één analyse tegelijk,
+hoogstens 20 providerverzoeken per minuut (3 seconden tussen verzoeken) en nooit meer dan het
+maandbudget van de provider: het pakket wordt zo klein gemaakt dat de kosten binnen het
+resterende budget blijven. Een foto die mislukte, wordt 7 dagen met rust gelaten zodat één
+kapot bestand de rest niet blokkeert. Een pakket stopt met nieuwe foto's te starten ruim vóór
+de jobtime-out van 120 seconden en gaat in een volgend pakket verder. De sweep werkt alleen met
+de lokale provider of een native provider met maandbudget; de externe provider telt niet mee
+omdat de uitgaven daar niet worden bijgehouden. De sweep stopt bij de noodstop, als AI uit
+staat, als de beheerder niet meer actief is of geen `users.manage` meer heeft, en bij een
+pauze van de run.
+
+Zonder de optie *Ook foto's analyseren die al in het archief staan* doen alleen foto's mee die
+na het aanzetten zijn toegevoegd. Voor het bestaande archief kun je die optie aanzetten, of een
+eigen proef draaien:
+
+```bash
+# Schatting zonder iets in de wachtrij te zetten
+docker compose exec --user www-data app php artisan ai:analyse-archive --dry-run --limit=200
+# Daadwerkelijk 200 foto's, met een uitdrukkelijk kostenplafond in eurocenten
+docker compose exec --user www-data app php artisan ai:analyse-archive --limit=200 --max-cost-cents=300 --as=beheerder@example.org
+```
+
+De schatting toont het aantal wachtende foto's, de kosten per foto, de verwachte kosten en het
+resterende maandbudget. Bij een betaalde provider is `--max-cost-cents` verplicht; een schatting
+boven het plafond of boven het resterende budget wordt geweigerd. Hoogstens 1000 foto's per
+aanroep. De kaart toont wachtende foto's, de kostenschatting, de dagtelling, het resterende
+budget en de laatste controle. Let op: voor iedere foto wordt het origineel uit de opslag
+gelezen om de checksum te controleren; bij een S3-bucket buiten de serverregio kost dat
+dataverkeer.
+
 Vanaf `0.9.51` heeft iedere private fotopagina een link en een paneel
 **AI-resultaten**, vóór het metadataformulier. Hier zie je de opgeslagen
 beschrijving en tags, provider, model, tijdstip, bronrevisie en beoordelingsstatus.
@@ -334,6 +374,43 @@ which photos, and then confirm explicitly. Only tag proposals with a known confi
 above the threshold take part, never descriptions, at most 200 at a time
 (`ai.tag_suggestions.bulk_accept_max`). Photos that changed in the meantime are skipped and
 reported. Every addition remains undoable and one batch record is written. No provider is called.
+
+#### Automatic image analysis (from `0.9.77`)
+
+**AI settings** has an **Automatic image analysis** card. It is off by default. An administrator
+switches it on with an explicit consent; that administrator is recorded as the actor. From then on
+the scheduler checks every five minutes (`ai:sweep`) whether photos are waiting and queues at most
+one small batch. The outcome is suggestions only: tags and descriptions are applied only after a
+person approves them (see above). Upload, scanning and search are untouched; ingest never calls
+an AI provider.
+
+Fixed limits (`config/ai.php`, key `auto_analysis`): at most 25 photos per batch (never above
+*Maximum photos per batch*), 1000 photos per day (UTC), one analysis at a time, at most 20
+provider requests per minute (3 seconds between requests) and never more than the provider's
+monthly budget: the batch is sized so that its cost stays within the remaining budget. A photo
+that failed is left alone for 7 days so one broken file cannot block the rest. A batch stops
+starting new photos well before the 120 second job timeout and continues in the next batch. The
+sweep works only with the local provider or a native provider with a monthly budget; the
+external provider is excluded because its spend is not tracked. The sweep stops on the emergency
+stop, when AI is off, when the administrator is no longer active or no longer has `users.manage`,
+and when the run is paused.
+
+Without the option *Also analyse photos already in the archive*, only photos added after
+switching on take part. For the existing archive you can turn that option on, or run a trial of your own:
+
+```bash
+# Estimate without queueing anything
+docker compose exec --user www-data app php artisan ai:analyse-archive --dry-run --limit=200
+# Actually queue 200 photos, with an explicit cost ceiling in euro cents
+docker compose exec --user www-data app php artisan ai:analyse-archive --limit=200 --max-cost-cents=300 --as=admin@example.org
+```
+
+The estimate shows the number of waiting photos, the cost per photo, the expected cost and the
+remaining monthly budget. With a paid provider `--max-cost-cents` is required; an estimate above
+the ceiling or above the remaining budget is refused. At most 1000 photos per call. The card shows
+waiting photos, the cost estimate, the daily count, the remaining budget and the last check. Note
+that for every photo the original is read from storage to verify its checksum; with an S3 bucket
+outside the server's region that costs egress.
 
 From `0.9.51`, every private photo page has an **AI results** link and panel,
 before the metadata form. It shows the stored description and tags, provider,

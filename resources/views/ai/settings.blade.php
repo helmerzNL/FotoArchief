@@ -132,6 +132,76 @@
         </form>
     </section>
 
+    <form method="POST" action="{{ route('admin.operations.ai.automatic.update') }}" class="card">
+        @csrf
+        @php
+            $stateLabels = [
+                'disabled' => __('ai.auto.state.disabled'),
+                'not_ready' => __('ai.auto.state.not_ready'),
+                'actor' => __('ai.auto.state.actor'),
+                'busy' => __('ai.auto.state.busy'),
+                'daily_limit' => __('ai.auto.state.daily_limit'),
+                'budget' => __('ai.auto.state.budget'),
+                'ready' => __('ai.auto.state.ready'),
+                'dispatched' => __('ai.auto.state.dispatched'),
+                'idle' => __('ai.auto.state.idle'),
+            ];
+            $blockers = [
+                'inactive' => __('ai.auto.blocked.inactive'),
+                'not_ready' => __('ai.auto.blocked.not_ready'),
+                'provider' => __('ai.auto.blocked.provider'),
+            ];
+            $stateLabel = $stateLabels[$automatic['state']] ?? $automatic['state'];
+            $costLabel = '€'.number_format($automatic['cost_cents'] / 100, 2, ',', '.');
+            $estimateLabel = '€'.number_format($automatic['estimated_cents'] / 100, 2, ',', '.');
+            $budgetLabel = $automatic['budget_remaining'] === null ? __('ai.auto.status.no_budget') : '€'.number_format($automatic['budget_remaining'] / 100, 2, ',', '.');
+            $todayLabel = $automatic['analysed_today'].' / '.$automatic['daily_max'];
+            $lastSweep = $automatic['last_sweep'];
+            $lastSweepLabel = $lastSweep === null ? __('ai.auto.status.never') : \Illuminate\Support\Carbon::parse($lastSweep['at'])->format('d-m-Y H:i').' — '.($stateLabels[$lastSweep['status']] ?? $lastSweep['status']);
+            $enabledNow = old('auto_analysis_enabled', $automatic['enabled']) === true || old('auto_analysis_enabled', $automatic['enabled']) === '1';
+            $backfillNow = old('auto_analysis_backfill', $automatic['backfill']) === true || old('auto_analysis_backfill', $automatic['backfill']) === '1';
+        @endphp
+        <h2>{{ __('ai.auto.title') }}</h2>
+        <p>{{ __('ai.auto.intro') }}</p>
+        <p>{{ __('ai.auto.limits', ['batch' => config('ai.auto_analysis.batch_size'), 'daily' => $automatic['daily_max']]) }}</p>
+        @if($automatic['blocker'] !== null)
+            <p role="alert">{{ $blockers[$automatic['blocker']] }}</p>
+        @endif
+        <dl>
+            <dt>{{ __('ai.auto.status.enabled') }}</dt>
+            <dd>{{ $automatic['enabled'] ? __('ai.common.yes') : __('ai.common.no') }}</dd>
+            <dt>{{ __('ai.auto.status.state') }}</dt>
+            <dd>{{ $stateLabel }}</dd>
+            <dt>{{ __('ai.auto.status.provider') }}</dt>
+            <dd>{{ $automatic['provider'] === '' ? __('ai.common.none') : ucfirst($automatic['provider']) }}</dd>
+            <dt>{{ __('ai.auto.status.backlog') }}</dt>
+            <dd>{{ $automatic['backlog'] }}</dd>
+            <dt>{{ __('ai.auto.status.cost') }}</dt>
+            <dd>{{ $costLabel }}</dd>
+            <dt>{{ __('ai.auto.status.estimate') }}</dt>
+            <dd>{{ $estimateLabel }}</dd>
+            <dt>{{ __('ai.auto.status.today') }}</dt>
+            <dd>{{ $todayLabel }}</dd>
+            <dt>{{ __('ai.auto.status.budget_left') }}</dt>
+            <dd>{{ $budgetLabel }}</dd>
+            <dt>{{ __('ai.auto.status.last_sweep') }}</dt>
+            <dd>{{ $lastSweepLabel }}</dd>
+        </dl>
+        <label style="display:block;margin:0.5rem 0;">
+            <input type="checkbox" name="auto_analysis_enabled" value="1" @checked($enabledNow)>
+            {{ __('ai.auto.enabled') }}
+        </label>
+        <label style="display:block;margin:0.5rem 0;">
+            <input type="checkbox" name="auto_analysis_backfill" value="1" @checked($backfillNow)>
+            {{ __('ai.auto.backfill') }}
+        </label>
+        <label style="display:block;margin:0.5rem 0;">
+            <input type="checkbox" name="auto_analysis_consent" value="1" @checked(old('auto_analysis_consent') === '1')>
+            {{ __('ai.auto.consent') }}
+        </label>
+        <button type="submit">{{ __('ai.auto.save') }}</button>
+    </form>
+
     <form method="POST" action="{{ route('admin.operations.ai.update') }}" class="card">
         @csrf
         <h2>{{ __('ai.settings.features.title') }}</h2>
