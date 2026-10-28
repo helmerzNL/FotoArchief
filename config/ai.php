@@ -41,6 +41,8 @@ return [
     'tag_suggestions' => [
         'max_per_image' => 8,
         'min_confidence' => 0.5,
+        // Most tags one confirmed bulk action may accept.
+        'bulk_accept_max' => 200,
     ],
     // Native provider adapters call these first-party APIs directly, with no
     // required intermediary gateway/container. base_url is intentionally
