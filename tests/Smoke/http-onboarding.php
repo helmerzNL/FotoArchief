@@ -65,7 +65,13 @@ try {
     $detailPath = parse_url($url, PHP_URL_PATH);
     check(is_string($detailPath) && str_starts_with($detailPath, '/admin/assets/'), 'Unexpected asset link.');
     $media = null;
-    for ($attempt = 0; $attempt < 60; $attempt++) {
+    // The upload waits in the transactional outbox until the scheduler's next
+    // outbox:dispatch (every minute). The scheduler itself only starts after
+    // onboarding (polled every 10 s) and the migration check, so the first dispatch
+    // can come almost a full minute plus that start-up later. 180 s covers one missed
+    // minute, the worker's poll and one scan retry with margin; 60 s did not.
+    $deadline = microtime(true) + 180;
+    while (microtime(true) < $deadline) {
         [$status, $body] = smokeRequest('GET', $detailPath);
         check($status === 200, 'Uploaded asset not accessible to owner.');
         if (preg_match('~(?:src|href)="([^"]+/media/preview1200)"~', $body, $matches)) {
@@ -74,7 +80,7 @@ try {
         }
         sleep(1);
     }
-    check(is_string($media), 'Worker did not generate a private preview within 60 seconds.');
+    check(is_string($media), 'Worker did not generate a private preview within 180 seconds.');
     [$status, $body] = smokeRequest('GET', $media);
     check($status === 200 && str_starts_with($body, "\xff\xd8"), 'Private preview is not a JPEG.');
     if (! $restoring) {
