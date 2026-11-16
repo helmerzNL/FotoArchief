@@ -93,8 +93,8 @@ jobs:
           docker tag "fotoarchief-ci:$GITHUB_SHA" "$latest_image"
           docker push "$latest_image"
           docker inspect --format '{{index .RepoDigests 0}}' "$image" > dist/IMAGE-DIGEST.txt
-          printf 'APP_IMAGE=%s\n' "$image" > dist/IMAGE.txt
-          printf 'APP_IMAGE=%s\n' "$latest_image" > dist/IMAGE-LATEST.txt
+          printf 'FOTOARCHIEF_TAG=%s\n' "$RELEASE_TAG" > dist/IMAGE.txt
+          printf 'FOTOARCHIEF_TAG=latest\n' > dist/IMAGE-LATEST.txt
           docker logout ghcr.io
       - name: Create the stable release
         shell: bash
