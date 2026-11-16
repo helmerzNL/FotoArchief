@@ -196,8 +196,15 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   laders van libvips (zoals ImageMagick) uitgeschakeld. Hiervoor is `libvips-tools` (`vips`,
   `vipsheader`) met HEIC-decoder (libheif met libde265) nodig. Het Docker-image bevat het; bij
   PHP-webhosting moet de host het installeren. Ontbreekt het, dan blijft de upload in de wachtrij
-  met een fout (herstelbaar), in plaats van afgewezen te worden. "Weergaven opnieuw maken" bij
-  Bestandsversies werkt nog niet voor BMP, PDF, TIFF en HEIC.
+  met een fout (herstelbaar), in plaats van afgewezen te worden.
+- **Weergaven opnieuw maken** (bij Bestandsversies, en het herstellen van ontbrekende weergaven
+  bij de integriteitscontrole) werkt voor elk formaat dat de import accepteert: JPEG, PNG, WebP,
+  BMP, PDF, TIFF en HEIC. Het gebruikt dezelfde omzetting als de import (pagina 1 van een PDF via
+  poppler, TIFF en HEIC via libvips, EXIF-oriëntatie alleen bij een echt JPEG-origineel) en
+  dezelfde pixellimiet. Het origineel wordt eerst tegen de opgeslagen sha256 gecontroleerd en
+  blijft ongewijzigd. Is het origineel beschadigd of te groot, dan verschijnt een foutmelding en
+  blijven de bestaande weergaven staan; ontbreekt `poppler-utils` of `libvips-tools`, dan mislukt
+  het met een technische fout die na installatie opnieuw kan.
 - **PDF** wordt behandeld als document: de weergaven zijn van **pagina 1**, het aantal pagina's
   staat bij het bestand, en meerdere pagina's bekijken in de portal bestaat nog niet. Wachtwoord-
   beveiligde, beschadigde of te trage PDF's worden afgewezen; het renderen heeft een tijdslimiet
@@ -254,8 +261,13 @@ about unknown private scanner tags are not), and the conversion has a time limit
 default 60 s), runs without a shell and with libvips' untrusted loaders (such as ImageMagick) blocked. It
 requires `libvips-tools` (`vips`, `vipsheader`) with a HEIC decoder (libheif with libde265); the Docker image
 includes it, PHP hosting must provide it, and when it is missing the upload stays queued with a retryable
-error instead of being rejected. "Regenerate previews" under file versions does not yet work for BMP, PDF,
-TIFF and HEIC. A photo present in
+error instead of being rejected. "Regenerate previews" under file versions (and rebuilding missing
+previews from the integrity check) works for every format the import accepts: JPEG, PNG, WebP, BMP, PDF,
+TIFF and HEIC. It uses the same conversion as the import (page 1 of a PDF via poppler, TIFF and HEIC via
+libvips, EXIF orientation only for a real JPEG original) and the same pixel limit; the original is first
+checked against its stored sha256 and stays unchanged. A damaged or oversized original shows an error
+message and keeps the existing previews; a missing `poppler-utils` or `libvips-tools` fails with a technical
+error that can be retried once installed. A photo present in
 two folders is rejected as a duplicate the second time, but the second path stays on the
 rejected upload record. For very large archives the command writes each file to storage first and
 then records photo, upload and queue message in one short database transaction, retries a failed store

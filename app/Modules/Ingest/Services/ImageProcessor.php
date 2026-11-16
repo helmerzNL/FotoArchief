@@ -7,6 +7,7 @@ namespace App\Modules\Ingest\Services;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\AssetVersion;
+use App\Modules\Ingest\Exceptions\UnreadableImage;
 use App\Modules\Ingest\Exceptions\UnreadablePdf;
 use App\Modules\Ingest\Exceptions\UnreadableRasterImage;
 use App\Modules\Ingest\IngestStatus;
@@ -20,16 +21,15 @@ use RuntimeException;
 
 class ImageProcessor
 {
-    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp', IMAGETYPE_BMP => 'image/bmp'];
+    private readonly OriginalImageDecoder $decoder;
 
-    private readonly PdfPageRenderer $pdfs;
-
-    private readonly RasterImageConverter $rasters;
-
-    public function __construct(private readonly MalwareScanner $scanner, ?PdfPageRenderer $pdfs = null, ?RasterImageConverter $rasters = null)
+    /**
+     * $pdfs and $rasters configure the default decoder (tests point them at missing
+     * binaries); pass $decoder to replace it entirely.
+     */
+    public function __construct(private readonly MalwareScanner $scanner, ?PdfPageRenderer $pdfs = null, ?RasterImageConverter $rasters = null, ?OriginalImageDecoder $decoder = null)
     {
-        $this->pdfs = $pdfs ?? new PdfPageRenderer;
-        $this->rasters = $rasters ?? new RasterImageConverter;
+        $this->decoder = $decoder ?? new OriginalImageDecoder($pdfs, $rasters);
     }
 
     public function process(QuarantineUpload $upload): void
@@ -49,10 +49,6 @@ class ImageProcessor
         }
         $writtenKeys = [];
         $committed = false;
-        $rendered = null;
-        $pdfPages = null;
-        $sourceType = null;
-        $originalSize = null;
         try {
             $output = fopen($temporary, 'wb');
             if ($output === false) {
@@ -83,103 +79,13 @@ class ImageProcessor
                 $this->reject(__('shared.generated.t_bdbb01530c9e801f'));
             }
 
-            // A PDF is stored unchanged; its first page is rendered once and then runs through
-            // the same decoder, size limits and derivative steps as any other image.
-            if ($this->pdfs->isPdf($temporary)) {
-                try {
-                    ['path' => $rendered, 'pages' => $pdfPages] = $this->pdfs->renderFirstPage($temporary);
-                    $sourceType = 'application/pdf';
-                } catch (UnreadablePdf $exception) {
-                    $this->reject($exception->getMessage());
-                }
-            } elseif (($rasterType = $this->rasters->detect($temporary)) !== null) {
-                // TIFF and HEIC are kept unchanged too; the pixel limit applies to the
-                // original before it is decoded, then one JPEG feeds the same steps.
-                try {
-                    $originalSize = $this->rasters->dimensions($temporary);
-                    if ((int) config('ingest.max_image_pixels') < $originalSize['width'] * $originalSize['height']) {
-                        $this->reject(__('shared.generated.t_41c61553c32261d4'));
-                    }
-                    $rendered = $this->rasters->toJpeg($temporary);
-                    $sourceType = $rasterType;
-                } catch (UnreadableRasterImage $exception) {
-                    $this->reject($exception->getMessage());
-                }
-            }
-            $imagePath = $rendered ?? $temporary;
-
-            // Convert decoder warnings into explicit permanent rejection, not silent retry loops.
-            set_error_handler(function (): never {
-                $this->reject(__('shared.generated.t_3c2421dae8c49b8b'));
-            });
             try {
-                $info = getimagesize($imagePath);
-                if ($info === false || ! isset(self::TYPES[$info[2]]) || $info[0] < 1 || $info[1] < 1) {
-                    $this->reject(__('shared.generated.t_212ba5faa17b76ed'));
-                }
-                [$width, $height, $type] = $info;
-                $memoryLimit = ini_parse_quantity((string) ini_get('memory_limit'));
-                $budget = ($memoryLimit < 0 ? 536870912 : $memoryLimit) - memory_get_usage(true) - 67108864;
-                if ($width * $height > (int) config('ingest.max_image_pixels') || $width * $height * 12 > $budget) {
-                    $this->reject(__('shared.generated.t_41c61553c32261d4'));
-                }
-                $orientation = 1;
-                if ($rendered === null && $type === IMAGETYPE_JPEG && exif_imagetype($imagePath) === IMAGETYPE_JPEG) {
-                    $exif = exif_read_data($imagePath, 'IFD0', true);
-                    $orientation = (int) ($exif['IFD0']['Orientation'] ?? 1);
-                    unset($exif);
-                }
-                $source = match ($type) {
-                    IMAGETYPE_JPEG => imagecreatefromjpeg($imagePath),
-                    IMAGETYPE_PNG => imagecreatefrompng($imagePath),
-                    IMAGETYPE_WEBP => imagecreatefromwebp($imagePath),
-                    IMAGETYPE_BMP => imagecreatefrombmp($imagePath),
-                };
-                if ($source === false) {
-                    $this->reject(__('shared.generated.t_7f3c2eb3b57d427d'));
-                }
-            } finally {
-                restore_error_handler();
+                $decoded = $this->decoder->decode($temporary);
+            } catch (UnreadableImage|UnreadablePdf|UnreadableRasterImage $exception) {
+                $this->reject($exception->getMessage());
             }
-            if (in_array($orientation, [2, 4, 5, 7], true)) {
-                imageflip($source, $orientation === 4 ? IMG_FLIP_VERTICAL : IMG_FLIP_HORIZONTAL);
-            }
-            $angle = match ($orientation) {
-                3 => 180, 5, 8 => 90, 6, 7 => -90, default => 0
-            };
-            if ($angle !== 0) {
-                $rotated = imagerotate($source, $angle, 0);
-                if ($rotated === false) {
-                    $this->reject(__('shared.generated.t_46e60e460378face'));
-                }
-                $source = $rotated;
-            }
-            $displayWidth = imagesx($source);
-            $displayHeight = imagesy($source);
             $derivatives = [];
-            foreach ([300, 1200, 2000] as $limit) {
-                $ratio = min(1, $limit / max($displayWidth, $displayHeight));
-                $targetW = max(1, (int) round($displayWidth * $ratio));
-                $targetH = max(1, (int) round($displayHeight * $ratio));
-                $target = imagecreatetruecolor($targetW, $targetH);
-                if ($target === false) {
-                    throw new RuntimeException(__('shared.generated.t_a3bee48f77a8380c'));
-                }
-                imagefill($target, 0, 0, 16777215);
-                imagecopyresampled($target, $source, 0, 0, 0, 0, $targetW, $targetH, $displayWidth, $displayHeight);
-                ob_start();
-                try {
-                    if (! imagejpeg($target, null, 85)) {
-                        throw new RuntimeException(__('shared.generated.t_e1dcbebc736a4b37'));
-                    }
-                    $encoded = ob_get_contents();
-                } finally {
-                    ob_end_clean();
-                }
-                unset($target);
-                if ($encoded === false) {
-                    throw new RuntimeException(__('shared.generated.t_42bc35733ae3201a'));
-                }
+            foreach ($this->decoder->previews($decoded->image) as $limit => $encoded) {
                 $key = 'derivatives/'.$upload->id.'/preview-'.$limit.'.jpg';
                 $writtenKeys[] = $key;
                 if (! $disk->put($key, $encoded, ['visibility' => 'private', 'ContentType' => 'image/jpeg'])) {
@@ -187,12 +93,14 @@ class ImageProcessor
                 }
                 $derivatives['preview'.$limit] = $key;
             }
-            unset($source);
-            if ($originalSize !== null) {
-                ['width' => $width, 'height' => $height] = $originalSize;
-            }
+            $mediaType = $decoded->mediaType ?? OriginalImageDecoder::TYPES[$decoded->type];
+            $width = $decoded->width;
+            $height = $decoded->height;
+            $technicalMetadata = ($decoded->pdfPages !== null ? ['page_count' => $decoded->pdfPages, 'preview_page' => 1] : [])
+                + ['orientation' => $decoded->orientation, 'display_width' => $decoded->displayWidth, 'display_height' => $decoded->displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')];
+            unset($decoded);
             try {
-                DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus, $pdfPages, $sourceType): void {
+                DB::transaction(function () use ($upload, $sha, $mediaType, $width, $height, $technicalMetadata, $derivatives, $scannerStatus): void {
                     $maxVersion = (int) (AssetVersion::query()->where('asset_id', $upload->asset_id)->max('version_number') ?? 0);
                     $nextVersion = $maxVersion + 1;
                     if ($nextVersion > 1) {
@@ -205,9 +113,9 @@ class ImageProcessor
                     $file = AssetFile::query()->create([
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,
                         'storage_key' => $upload->storage_key, 'sha256' => $sha,
-                        'media_type' => $sourceType ?? self::TYPES[$type], 'byte_size' => $upload->byte_size,
+                        'media_type' => $mediaType, 'byte_size' => $upload->byte_size,
                         'original_filename' => $upload->original_filename, 'original_path' => $upload->original_path, 'pixel_width' => $width, 'pixel_height' => $height,
-                        'technical_metadata' => ($pdfPages !== null ? ['page_count' => $pdfPages, 'preview_page' => 1] : []) + ['orientation' => $orientation, 'display_width' => $displayWidth, 'display_height' => $displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')],
+                        'technical_metadata' => $technicalMetadata,
                         'derivatives' => $derivatives, 'validated_at' => now(), 'processed_at' => now(),
                         'scanned_at' => $scannerStatus === 'clean' ? now() : null,
                         'ingest_status' => IngestStatus::ReadyPrivate->value, 'scanner_status' => $scannerStatus,
@@ -230,9 +138,6 @@ class ImageProcessor
         } finally {
             fclose($stream);
             unlink($temporary);
-            if ($rendered !== null && is_file($rendered)) {
-                unlink($rendered);
-            }
             if (! $committed && $writtenKeys !== [] && ! $disk->delete($writtenKeys)) {
                 throw new RuntimeException(__('shared.generated.t_710e4e795d6e27cd'));
             }
