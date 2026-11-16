@@ -93,12 +93,18 @@ recent only after a worker invocation or processed job.
 
 On first web access, or through `php artisan installation:prepare`, the app
 creates a private installation directory in `storage/app/installation`.
-The command displays the code while installation is pending.
-Use `--quiet-code` in startup automation.
+The command displays the code while installation is pending; `--quiet-code`
+suppresses it. The Docker image prints it in the app container's log on every
+start while setup is pending, so the owner finds it in Dockhand, Komodo or
+`docker compose logs app`; `FOTOARCHIEF_LOG_SETUP_CODE=false` turns that off.
+With Docker the file is on the host at
+`DATA_PATH/storage/app/installation/setup-code.txt`.
 
 Without terminal access, the owner can retrieve `setup-code.txt` through their
 host's **private** file manager. The code is never sent by a public HTTP route.
-Do not share terminal output, this file or the installation state.
+Until setup is complete, anyone who can read the log or the file can claim the
+installation: complete setup promptly and do not share the log, this file or
+the installation state.
 
 The code grants 20 minutes of installer access in a regenerated session.
 Unlock is limited to five attempts per IP per minute and thirty attempts

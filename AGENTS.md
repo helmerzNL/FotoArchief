@@ -82,6 +82,12 @@ FotoArchief follows the `beta` → `main` model of App-Guidance
   the container, and a tag containing `beta` shows a **beta** label in the app
   (`App\Support\ReleaseChannel`, `tests/Feature/ReleaseChannelTest.php`).
   `APP_IMAGE` is no longer read by the deployment stack.
+- `DATA_PATH` (App-Guidance baseline §21): both Compose files keep everything under one
+  absolute host folder, never Docker volumes (`storage`, `postgres`, `valkey`, `clamav`,
+  and `backups` in the root file). Compose requires it, the entrypoint warns when it is
+  missing or relative, and `scripts/migrate-data.sh` moves an old volume installation
+  (`tests/Feature/DeploymentDataPathTest.php`). The app log prints the setup code while
+  setup is pending unless `FOTOARCHIEF_LOG_SETUP_CODE=false`.
 - The update check follows App-Guidance
   [`shared/guidelines/update-check.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/update-check.md):
   `UpdateCheckService` reads the latest stable release from the github.com redirect

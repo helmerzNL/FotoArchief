@@ -15,9 +15,58 @@ artifacts rather than inferring a registry tag from an example; see the
 [acceptance ledger](RELEASE_ACCEPTANCE.md). The template supports the
 implemented first-start onboarding contract: the web container boots without an
 environment `APP_KEY`, application database credentials, Redis/Valkey, or S3
-credentials. It quietly prepares private installation state on the shared
-storage volume and the wizard owns the app key, PostgreSQL settings and storage
+credentials. It prepares private installation state in the shared storage
+folder under `DATA_PATH`, prints the setup code in the app log while setup is
+pending, and the wizard owns the app key, PostgreSQL settings and storage
 settings after completion. Both Compose templates also pass the Compose parser.
+
+## Gegevensmap / Data folder (`DATA_PATH`)
+
+**Nederlands.** FotoArchief bewaart alles wat niet verloren mag gaan in gewone mappen onder één
+absolute map op de host, `DATA_PATH`, nooit in Docker-volumes (App-Guidance baseline §21). Zo
+staan de bestanden fysiek op de NAS en raakt `docker compose down -v` of een prune ze niet:
+
+| Map | Inhoud |
+|---|---|
+| `DATA_PATH/storage` | foto's, weergaven, exports, en `app/installation/` met `state.json` en `setup-code.txt` |
+| `DATA_PATH/postgres` | de PostgreSQL-database (alleen de databasecontainer koppelt deze map) |
+| `DATA_PATH/valkey` | Valkey (cache/wachtrij als je die gebruikt) |
+| `DATA_PATH/clamav` | ClamAV-handtekeningen (alleen met het profiel `clamav`) |
+
+Compose start niet zonder `DATA_PATH`. Gebruik op **Unraid** `/mnt/user/appdata/fotoarchief`
+(de array- of cacheshare; nooit `/appdata/...` of `/data`, die staan in het RAM), op Synology
+bijvoorbeeld `/volume1/docker/fotoarchief`, op een Linux-server `/srv/fotoarchief`. Nooit een
+relatief pad zoals `./data`: dan bepaalt de tool die de stack start waar dat is (Dockhand op
+Unraid maakte er een map in de RAM-disk van). De container waarschuwt in zijn log als
+`DATA_PATH` ontbreekt of relatief is. Docker maakt de mappen bij de eerste start aan; de app
+zet zelf de rechten van `storage` goed. Maak een back-up van de hele map met de stack gestopt,
+of gebruik `scripts/backup-compose.sh`. Een tweede stack (bijvoorbeeld beta) krijgt een eigen
+`DATA_PATH`.
+
+**Bestaande installatie met Docker-volumes verhuizen:** zet `DATA_PATH` in de stackomgeving en
+voer vóór de volgende deploy uit, in de map van de stack: `sh scripts/migrate-data.sh --check`
+(laat zien wat er verhuist, verandert niets) en daarna `sh scripts/migrate-data.sh`. Het script
+stopt de stack, kopieert de volumes `<project>_app-storage`, `_postgres-data`, `_valkey-data` en
+`_clamav-data` naar de mappen hierboven, controleert elke kopie, verwijdert de oude volumes
+**nooit** en weigert als `DATA_PATH/postgres` al een database bevat. Daarna de stack opnieuw
+deployen. `scripts/upgrade-compose.sh` roept het script bij elke update aan (zonder werk als
+alles al verhuisd is). Dockhand en Komodo voeren dat script niet zelf uit: draai het daar één keer
+met de hand vóór de deploy met de nieuwe Compose-file.
+
+**English.** Everything FotoArchief must not lose lives in plain folders under one absolute host
+folder, `DATA_PATH`, never in Docker volumes (App-Guidance baseline §21): `storage` (photos,
+previews, exports, `app/installation/` with `state.json` and `setup-code.txt`), `postgres` (the
+database, mounted by the database service only), `valkey` and `clamav`. Compose refuses to start
+without it. Use `/mnt/user/appdata/fotoarchief` on Unraid (array or cache share, never `/appdata`
+or `/data`, which are in RAM), for example `/volume1/docker/fotoarchief` on Synology, or
+`/srv/fotoarchief` on a Linux server; never a relative path. The container warns in its log when
+`DATA_PATH` is missing or relative. Back up the whole folder with the stack stopped, or use
+`scripts/backup-compose.sh`; give a second (beta) stack its own `DATA_PATH`. To move an existing
+installation out of Docker volumes, set `DATA_PATH` and run `sh scripts/migrate-data.sh --check`,
+then `sh scripts/migrate-data.sh` before the next deploy: it stops the stack, copies and checks
+each volume, never deletes the old volumes and refuses when `DATA_PATH/postgres` already holds a
+database. `scripts/upgrade-compose.sh` runs it on every update; Dockhand and Komodo do not, so run
+it once by hand there.
 
 ## Import contract
 
@@ -28,8 +77,8 @@ Use a file/repository stack with `deploy/compose.yaml` as its Compose path, or
 paste the YAML into the UI-managed Compose definition. Set the interpolation
 variables from `deploy/.env.example` in that stack's private environment.
 Review the resolved Compose, then deploy the stack. Do not create three separate
-application deployments: app, worker and scheduler must share the same named
-`app-storage` volume and image.
+application deployments: app, worker and scheduler must share the same
+`DATA_PATH/storage` folder and image.
 The placeholder-only `deploy/komodo-stack.example.toml` mirrors Komodo's
 documented Stack fields (`server`, `run_directory`, `file_paths`,
 `project_name`, `environment`, `poll_for_updates`, `auto_update` and
@@ -66,7 +115,7 @@ rebuilt on every change to the `beta` branch) or a version such as `v0.9.79`.
 `FOTOARCHIEF_TAG` (a version number pins a release; a digest can no longer be
 pinned through the stack variable). A beta build shows a **beta** label next to
 the name and in the browser title. Run a beta in its own stack with its own
-`COMPOSE_PROJECT_NAME`, so it has its own database and storage volumes. A loaded
+`COMPOSE_PROJECT_NAME` and its own `DATA_PATH`, so it has its own database and storage. A loaded
 offline image is tagged `ghcr.io/helmerznl/fotoarchief:vX.Y.Z` and works with
 `FOTOARCHIEF_TAG=vX.Y.Z` on that same Docker daemon without registry credentials. For deployment to other
 servers, distribute/load the saved image or publish it to your own registry;
@@ -81,10 +130,11 @@ Relying Party origin and reject a browser ceremony from any other origin.
 HTTPS. Physical or phone passkey acceptance still requires a real authenticator
 on the final origin and must be recorded separately from automated tests.
 
-After deployment, open the web service, retrieve the private setup code through
-the app's terminal, connect to `postgres:5432` and complete onboarding. Upload a
-photo, wait for the worker and verify its private preview. Redeploy the same
-stack without deleting volumes and verify that setup stays closed and the photo
+After deployment, open the web service, take the setup code from the app
+container's log (`Private installatiecode: …`) or from
+`DATA_PATH/storage/app/installation/setup-code.txt`, connect to `postgres:5432` and
+complete onboarding. Upload a photo, wait for the worker and verify its private
+preview. Redeploy the same stack and verify that setup stays closed and the photo
 remains. Use the empty-target restore drill before updating an existing archive.
 
 References: [Komodo introduction](https://komo.do/docs/intro) and
@@ -171,8 +221,8 @@ EXCHANGE_STALE_CLAIM_SECONDS: ${EXCHANGE_STALE_CLAIM_SECONDS:-150}
 EXCHANGE_ABANDONED_CLAIM_SECONDS: ${EXCHANGE_ABANDONED_CLAIM_SECONDS:-1800}
 ```
 
-No port or volume mapping changes are required. Preserve the existing
-`app-storage` and `postgres-data` volumes and database password.
+No port or volume mapping changes are required. Keep the existing `DATA_PATH`
+and database password.
 
 ### Manager update checks
 
@@ -182,12 +232,12 @@ change without redeploying unexpectedly. Leave `auto_update=false` unless a
 human has accepted the exact backup, migration and restore procedure for a
 rolling tag. Dockhand does not replace FotoArchief's own release gate; set
 the stack's `FOTOARCHIEF_TAG` to the tested version (or keep `latest`) and
-redeploy without deleting volumes.
+redeploy; the data stays in `DATA_PATH`.
 
 For either manager, the acceptance evidence is the same as direct Compose:
 the stack is created by the manager, onboarding completes, a photo is processed
-by the worker, a redeploy preserves volumes, and an upgrade run preserves the
-installer lock, administrator, photo files, shared storage volume and
+by the worker, a redeploy preserves the data, and an upgrade run preserves the
+installer lock, administrator, photo files, shared storage folder and
 application key. A Compose parse alone is only a template syntax check.
 
 ### Safe Compose upgrade helper
@@ -206,7 +256,9 @@ The helper refuses to run without a backup directory containing valid
 `SHA256SUMS`, validates the resolved Compose file, stops only worker and
 scheduler services, starts the new web image, checks that installation is still
 complete, runs the coordinated `php artisan installation:migrate-ready` gate,
-then restarts workers/scheduler. It does not delete volumes, regenerate keys,
+then restarts workers/scheduler. Before that it runs `scripts/migrate-data.sh`, which
+moves an installation that still uses Docker volumes into `DATA_PATH` (a no-op once it
+is there). It does not delete data or volumes, regenerate keys,
 reopen setup or run `docker compose down --volumes`. If any command fails,
 stopped background services are started again so the operator can restore from
 the verified backup.
@@ -260,8 +312,8 @@ change from the PHP development server to Apache, also see
   `postgres`, port `5432`, database `fotoarchief`, user `fotoarchief` and the
   same `DB_PASSWORD` value unless you changed `POSTGRES_DB` or `POSTGRES_USER`.
 - Do not set `APP_KEY` for the container. The first-start wizard generates and
-  persists the key under `storage/app/installation`; retain the `app-storage`
-  volume across redeployments.
+  persists the key under `DATA_PATH/storage/app/installation`; keep that folder
+  across redeployments.
 - Do not set `AWS_*` or `FILESYSTEM_DISK` to force storage before onboarding.
   Select private local disk or S3-compatible storage in the wizard. Stored
   installation settings override environment database and storage values after
@@ -278,13 +330,18 @@ change from the PHP development server to Apache, also see
   select the test server's LAN address and firewall it appropriately.
   A reverse proxy in another container cannot reach the host's loopback as its
   own loopback; configure its host reachability or a shared network separately.
-- Keep `COMPOSE_PROJECT_NAME` stable (default `fotoarchief`) so redeployments
-  reuse the named volumes. Use different names and ports for separate instances.
-- Retrieve the pending setup code only through a private shell:
+- Keep `COMPOSE_PROJECT_NAME` and `DATA_PATH` stable (default project
+  `fotoarchief`). Use a different name, `DATA_PATH` and port for a separate instance.
+- While setup is pending, the app container prints the setup code in its log on
+  every start (`Private installatiecode: …`), so you find it in Dockhand, Komodo or
+  `docker compose -f deploy/compose.yaml logs app`. It is also in
+  `DATA_PATH/storage/app/installation/setup-code.txt` and through
   `docker compose -f deploy/compose.yaml exec --user www-data app php artisan installation:prepare`.
-  Startup automation uses `--quiet-code`, so the code is not printed on every
-  restart. Completed installations no longer reveal the code. Treat the code,
-  `storage/app/installation/state.json` and `setup-code.txt` as confidential.
+  Set `FOTOARCHIEF_LOG_SETUP_CODE=false` to keep it out of the log, for example when
+  logs are shipped elsewhere. Completed installations no longer reveal the code.
+  Until setup is complete, anyone who can read the log or the folder can claim the
+  installation: complete onboarding promptly and treat the code,
+  `state.json` and `setup-code.txt` as confidential.
 - The file ceiling remains `APP_MAX_UPLOAD_BYTES=104857600` (100 MiB).
   The image uses PHP `upload_max_filesize=100M`, `post_max_size=110M`
   (115343360 bytes per HTTP request) and a 300-second PHP execution limit.
@@ -302,9 +359,9 @@ change from the PHP development server to Apache, also see
   mode, but custom Compose copies do need the updated command and mappings.
 
 Only persist secrets in the private stack environment or the wizard-owned
-private installation state, never the Git repository. App storage, PostgreSQL
-and Valkey use named volumes. Object storage needs its own backup; named volumes
-are persistence, not backups. Follow [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+private installation state, never the Git repository. App storage, PostgreSQL,
+Valkey and ClamAV use folders under `DATA_PATH`. Object storage needs its own backup;
+the data folder is persistence, not a backup. Follow [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
 before upgrading or moving a stack.
 
 ## Onboarding delivery gate

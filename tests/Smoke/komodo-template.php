@@ -14,6 +14,7 @@ $required = [
     'poll_for_updates = true',
     'auto_update = false',
     'FOTOARCHIEF_TAG=latest',
+    'DATA_PATH=/',
     'APP_URL=https://fotoarchief.example.org',
     'TRUSTED_PROXIES=',
     'SESSION_SECURE_COOKIE=true',

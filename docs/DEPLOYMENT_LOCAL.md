@@ -16,11 +16,15 @@ tests still require a Docker engine or CI runner.
 The image starts the first-start onboarding flow without an environment
 `APP_KEY`, application database credentials, Redis/Valkey, or S3 credentials.
 Those settings are collected by the wizard and stored privately in the shared
-`app-storage` volume under `storage/app/installation`.
+storage folder, `DATA_PATH/storage/app/installation` on the host.
 
 ## Operator changes
 
 1. Copy `.env.example` to `.env`.
+1. Set `DATA_PATH` to an absolute folder of the host, for example
+   `/mnt/user/appdata/fotoarchief` on Unraid. Storage, the database and Valkey
+   live in plain sub-folders there, never in Docker volumes; see
+   [DEPLOYMENT_STACKS.md](DEPLOYMENT_STACKS.md#gegevensmap--data-folder-data_path).
 2. Set `DB_PASSWORD` for the PostgreSQL container. Keep `POSTGRES_DB` and
    `POSTGRES_USER` stable unless you intentionally want different values in the
    wizard.
@@ -60,15 +64,15 @@ For an existing source-build deployment:
 - Rebuild/recreate web, worker and scheduler from the same image. The
   entrypoint repairs `storage/` and `bootstrap/cache` ownership when it starts
   as root, runs installation preparation as `www-data`, then starts workers and
-  scheduler as `www-data`. Ensure an existing app-storage volume is writable by
-  UID 33. Never delete that volume to fix permissions because it contains the
-  generated app key and installation state.
+  scheduler as `www-data`. `DATA_PATH/storage` must be writable by UID 33 (the
+  entrypoint fixes it when it starts as root). Never delete that folder to fix
+  permissions because it contains the generated app key and installation state.
 
 ## Run locally
 
 After setting `DB_PASSWORD`, start the web and supporting database containers.
-The web container prepares the private installation state quietly and serves the
-wizard. Valkey is started so it is available for operators who switch runtime
+The web container prepares the private installation state, prints the setup
+code in its log and serves the wizard. Valkey is started so it is available for operators who switch runtime
 queue/cache/session settings after setup, but it is not required for the
 default onboarding path:
 
@@ -76,12 +80,14 @@ default onboarding path:
 docker compose up -d --build app postgres valkey
 ```
 
-Retrieve the one-time setup code through a private terminal. Treat this output
-as confidential and do not paste it into tickets, logs or chat. Startup uses
-`--quiet-code`, so it does not print the code, and completed installations no
-longer reveal it:
+Take the one-time setup code from the app log (`Private installatiecode: …`),
+from `DATA_PATH/storage/app/installation/setup-code.txt`, or through a private
+terminal. Treat it as confidential and do not paste it into tickets or chat.
+`FOTOARCHIEF_LOG_SETUP_CODE=false` keeps it out of the log; completed
+installations no longer reveal it:
 
 ```powershell
+docker compose logs app
 docker compose exec --user www-data app php artisan installation:prepare
 ```
 
@@ -136,16 +142,18 @@ defaults `database`, `file` and `file`.
 
 ## Stop locally
 
-Stop containers while keeping persistent volumes:
+Stop containers; the data stays in `DATA_PATH`:
 
 ```powershell
 docker compose down
 ```
 
 Remove local persistent data only when intentionally resetting the environment:
+stop the stack and delete the `DATA_PATH` folder yourself. `docker compose down
+--volumes` no longer removes it.
 
 ```powershell
-docker compose down --volumes
+docker compose down
 ```
 
 ## Health verification

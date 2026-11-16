@@ -37,6 +37,11 @@ if [ -z "$image" ]; then
 fi
 printf '%s\n' "Upgrading to $image (FOTOARCHIEF_TAG=${FOTOARCHIEF_TAG:-latest, from the Compose default or the stack .env})."
 
+# An installation from before DATA_PATH keeps its data in Docker volumes; move it into
+# DATA_PATH first (a no-op once it is there), then make sure the database runs on it.
+sh "$(dirname "$0")/migrate-data.sh"
+docker compose -f "$compose_file" up -d --wait postgres
+
 running=$(docker compose -f "$compose_file" ps --status running --services | grep -E '^(worker|scheduler)$' || true)
 
 resume() {
