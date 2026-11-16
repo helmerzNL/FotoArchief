@@ -9,6 +9,7 @@
         <input id="passkey-name" value="{{ php_uname('n') ?: __('identity.security.default_passkey_name') }}" maxlength="100">
         <button id="passkey-enroll" type="button">{{ __('identity.security.register_passkey') }}</button>
         <p id="passkey-status" role="status"></p>
+        @include('identity.partials.passkey-environment')
     </section>
 
     <section class="card">
@@ -50,14 +51,18 @@
         };
         document.getElementById('passkey-enroll').addEventListener('click', async () => {
             try {
+                assertPasskeyEnvironment();
                 if (!navigator.credentials) {
                     throw new Error(@json(__('identity.security.passkey_messages.unsupported')));
                 }
                 status.textContent = @json(__('identity.security.passkey_messages.started'));
-                const optionsResponse = await fetch('{{ route('identity.passkeys.options') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+                const optionsResponse = await passkeyFetch(@json(route('identity.passkeys.options', [], false)), { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+                if (!optionsResponse.ok) {
+                    throw new Error(@json(__('identity.security.passkey_messages.failed')));
+                }
                 const options = decodeCreateOptions(await optionsResponse.json());
                 const credential = await navigator.credentials.create(options);
-                const storeResponse = await fetch('{{ route('identity.passkeys.store') }}', {
+                const storeResponse = await passkeyFetch(@json(route('identity.passkeys.store', [], false)), {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({

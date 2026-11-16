@@ -2,7 +2,7 @@
 @php
     $betaChannel = config('app.channel') === \App\Support\ReleaseChannel::BETA;
 @endphp
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($interfacePreferences !== null) data-prefs-url="{{ route('identity.preferences.update') }}" data-user-prefs="{{ json_encode($interfacePreferences, JSON_FORCE_OBJECT) }}"@endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($interfacePreferences !== null) data-prefs-url="{{ route('identity.preferences.update', [], false) }}" data-user-prefs="{{ json_encode($interfacePreferences, JSON_FORCE_OBJECT) }}"@endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -100,7 +100,7 @@
     <main id="main" tabindex="-1">
         @if($updateNotice !== null)
             {{-- Update check (App-Guidance update-check.md): administrators only, filled by update-check.js. --}}
-            <div class="notice update-banner" role="status" hidden data-update-banner data-status-url="{{ route('admin.operations.system.update-status') }}" data-template="{{ __('operations.update.banner', ['latest' => ':latest', 'current' => ':current']) }}" data-latest="{{ $updateNotice['latest'] ?? '' }}" data-current="{{ $updateNotice['current'] }}" data-available="{{ $updateNotice['available'] ? '1' : '0' }}">
+            <div class="notice update-banner" role="status" hidden data-update-banner data-status-url="{{ route('admin.operations.system.update-status', [], false) }}" data-template="{{ __('operations.update.banner', ['latest' => ':latest', 'current' => ':current']) }}" data-latest="{{ $updateNotice['latest'] ?? '' }}" data-current="{{ $updateNotice['current'] }}" data-available="{{ $updateNotice['available'] ? '1' : '0' }}">
                 <span data-update-text></span>
                 <a class="button secondary" href="{{ route('admin.operations.system') }}">{{ __('operations.update.banner_view') }}</a>
                 <button type="button" class="quiet" data-update-later>{{ __('operations.update.banner_later') }}</button>

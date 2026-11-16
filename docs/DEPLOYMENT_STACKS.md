@@ -130,6 +130,28 @@ Relying Party origin and reject a browser ceremony from any other origin.
 HTTPS. Physical or phone passkey acceptance still requires a real authenticator
 on the final origin and must be recorded separately from automated tests.
 
+**Passkeys achter een reverse proxy (bijvoorbeeld Nginx Proxy Manager of SWAG op Unraid).**
+Een passkey hoort bij één adres. Zet daarom:
+
+- `APP_URL` op precies het adres in de adresbalk, bijvoorbeeld `https://foto.example.nl`
+  (geen IP-adres: browsers accepteren een IP niet als passkeydomein; `http://localhost`
+  alleen om lokaal te testen);
+- `TRUSTED_PROXIES` op het adres van de proxy zoals de app-container het ziet, bijvoorbeeld
+  het IP van de proxycontainer of het Docker-netwerk (`172.16.0.0/12`). Zonder deze waarde
+  denkt de app dat het verzoek via `http://` binnenkomt;
+- `SESSION_SECURE_COOKIE=true`, en herstart de stack.
+
+Opent iemand FotoArchief via een ander adres (bijvoorbeeld `http://192.168.1.10:8080`), dan
+zegt de passkeyknop dat passkeys alleen op `APP_URL` werken, in plaats van een onduidelijke
+fout. Inloggen met wachtwoord of herstelcode werkt op elk adres.
+
+**Passkeys behind a reverse proxy.** A passkey belongs to one origin: set `APP_URL` to exactly
+the address in the browser (an `https://` domain, never an IP address), `TRUSTED_PROXIES` to the
+proxy as the app container sees it (its container IP or the Docker network, for example
+`172.16.0.0/12`), and `SESSION_SECURE_COOKIE=true`, then restart the stack. Opened from another
+address, the passkey button now says that passkeys only work on `APP_URL` instead of failing
+with "Failed to fetch"; password and recovery-code login work on any address.
+
 After deployment, open the web service, take the setup code from the app
 container's log (`Private installatiecode: …`) or from
 `DATA_PATH/storage/app/installation/setup-code.txt`, connect to `postgres:5432` and

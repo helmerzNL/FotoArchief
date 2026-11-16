@@ -9,7 +9,7 @@
     <p>{{ __('uploads.expires') }}: {{ $session->expires_at }}</p>
     @if($session->closed_at === null && $session->purged_at === null && $session->expires_at->isFuture())
         <p>{{ __('uploads.reselect') }}</p>
-        @php($endpoint = route('admin.uploads.show', $session))
+        @php($endpoint = route('admin.uploads.show', $session, false))
         @php($existing = true)
         @include('admin.uploads.form')
         <form method="post" action="{{ route('admin.uploads.close', $session) }}">@csrf
