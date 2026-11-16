@@ -96,6 +96,11 @@ Username: fotoarchief
 Password: the DB_PASSWORD value from your private .env
 ```
 
+Port 5432 is the port inside the private Compose network. PostgreSQL and
+Valkey publish no port on the host, so they do not conflict with another stack
+that uses 5432 or 6379. To inspect the database from the host, use
+`docker compose exec postgres psql -U fotoarchief -d fotoarchief`.
+
 The PostgreSQL database must be empty. The wizard creates the schema and first
 administrator; do not replace it with manual `migrate` or `db:seed` commands.
 Choose either private local disk storage or S3-compatible storage in the wizard.
