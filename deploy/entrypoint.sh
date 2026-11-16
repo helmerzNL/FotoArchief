@@ -26,9 +26,39 @@ ensure_writable_paths() {
     fi
 }
 
+# A deploy tool that injects its own variables bypasses .env.example and Compose's
+# required-variable check, so the container itself says when DATA_PATH is unsafe
+# (App-Guidance baseline §21). It warns and continues: refusing would leave an operator
+# without a running app and without the message.
+check_data_path() {
+    case "${DATA_PATH:-}" in
+        "")
+            echo "WARNING: DATA_PATH is not set. FotoArchief keeps its data in DATA_PATH on the host; without it the database and photos may live where a redeploy or reboot loses them. Set DATA_PATH to an absolute folder, for example /mnt/user/appdata/fotoarchief." >&2
+            ;;
+        /*)
+            ;;
+        *)
+            echo "WARNING: DATA_PATH '$DATA_PATH' is relative. The tool that starts the stack decides what it points to, which can be an empty or temporary folder. Use an absolute folder of the host, for example /mnt/user/appdata/fotoarchief, and see docs/DEPLOYMENT_STACKS.md to move existing data." >&2
+            ;;
+    esac
+}
+
+# The setup code is printed while the first-start wizard is pending, so the owner finds it
+# in the container log. FOTOARCHIEF_LOG_SETUP_CODE=false keeps it only in the private file.
+log_setup_code_enabled() {
+    case "$(printf '%s' "${FOTOARCHIEF_LOG_SETUP_CODE:-true}" | tr '[:upper:]' '[:lower:]')" in
+        false|0|no|off) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
 prepare_installation() {
     echo "Preparing private installation state."
-    run_as_app_user php artisan installation:prepare --quiet-code
+    if log_setup_code_enabled; then
+        run_as_app_user php artisan installation:prepare
+    else
+        run_as_app_user php artisan installation:prepare --quiet-code
+    fi
 }
 
 wait_for_installation() {
@@ -87,6 +117,7 @@ exec_as_app_user() {
 }
 
 ensure_writable_paths
+check_data_path
 
 if [ "${1:-}" = "apache2-foreground" ]; then
     prepare_installation

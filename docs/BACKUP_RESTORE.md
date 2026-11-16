@@ -15,7 +15,12 @@ FotoArchief must back up PostgreSQL metadata, S3-compatible object storage,
 deployment configuration and required secrets separately. A backup is not a
 recovery control until a restore has been tested.
 
-## Consistent local-volume backup scripts
+## Consistent local-storage backup scripts
+
+With Docker all data lives in plain folders under `DATA_PATH` (see
+[DEPLOYMENT_STACKS.md](DEPLOYMENT_STACKS.md#gegevensmap--data-folder-data_path)).
+Copying that folder with the stack stopped is a valid file-level copy; the
+scripts below make a consistent backup while the database runs.
 
 On a Linux Docker host, from the application checkout:
 
@@ -150,7 +155,8 @@ command does not replace full release acceptance.
   `.env` values from a secure secret store, reverse-proxy configuration and
   release/version identifiers.
 - Private installation state: the complete `storage/app/installation`
-  directory from the shared application storage volume. It contains the
+  directory from the shared application storage folder (`DATA_PATH/storage`
+  with Docker). It contains the
   generated Laravel app key, installation lock/status, setup code material while
   pending, and the submitted database/storage settings after completion.
 - Required secrets: database password, S3 access keys when S3 is selected,
@@ -313,7 +319,8 @@ untrusted backup source.
 
 ## Database backup
 
-Example local PostgreSQL dump into the persistent `postgres-backups` volume:
+Example local PostgreSQL dump into `DATA_PATH/backups` (mounted as `/backups` in
+the root `docker-compose.yml`):
 
 ```powershell
 docker compose exec postgres sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f "/backups/fotoarchief.dump"'
@@ -354,7 +361,7 @@ Run a restore drill into an empty test environment:
 
 1. Create a fresh `.env` with test-only secrets and S3-compatible restore
    credentials.
-2. Restore the application storage volume, including
+2. Restore the application storage folder (`DATA_PATH/storage`), including
    `storage/app/installation`, from the matching backup. Do not run
    `key:generate`, delete the installation directory or start a fresh wizard
    against a restored database.

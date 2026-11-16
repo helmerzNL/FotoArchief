@@ -7,11 +7,15 @@ x-app: &app
   image: ghcr.io/helmerznl/fotoarchief:${FOTOARCHIEF_TAG:-latest}
   restart: unless-stopped
   volumes:
-    - app-storage:/var/www/html/storage
+    # Everything FotoArchief must not lose lives in plain folders under DATA_PATH on the
+    # host, never in Docker volumes (App-Guidance baseline §21).
+    - ${DATA_PATH:?Set DATA_PATH in .env to an absolute folder of the host}/storage:/var/www/html/storage
   environment: &app-environment
     APP_NAME: FotoArchief
     FOTOARCHIEF_TAG: ${FOTOARCHIEF_TAG:-latest}
+    DATA_PATH: ${DATA_PATH:?Set DATA_PATH in .env to an absolute folder of the host}
     FOTOARCHIEF_UPDATE_CHECK: ${FOTOARCHIEF_UPDATE_CHECK:-true}
+    FOTOARCHIEF_LOG_SETUP_CODE: ${FOTOARCHIEF_LOG_SETUP_CODE:-true}
     FOTOARCHIEF_DEPLOYMENT: ${FOTOARCHIEF_DEPLOYMENT:-compose}
     APP_ENV: production
     APP_DEBUG: "false"
@@ -135,7 +139,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-fotoarchief}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - ${DATA_PATH:?Set DATA_PATH}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
@@ -147,7 +151,7 @@ services:
     restart: unless-stopped
     command: ["valkey-server", "--appendonly", "yes"]
     volumes:
-      - valkey-data:/data
+      - ${DATA_PATH:?Set DATA_PATH}/valkey:/data
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
@@ -163,16 +167,10 @@ services:
       CLAMD_CONF_MaxFileSize: ${CLAMAV_MAX_FILE_SIZE:-110M}
       CLAMD_CONF_StreamMaxLength: ${CLAMAV_STREAM_MAX_LENGTH:-110M}
     volumes:
-      - clamav-data:/var/lib/clamav
+      - ${DATA_PATH:?Set DATA_PATH}/clamav:/var/lib/clamav
     healthcheck:
       test: ["CMD-SHELL", "clamdscan --version >/dev/null 2>&1 && clamdscan --no-summary /etc/hosts >/dev/null 2>&1"]
       interval: 30s
       timeout: 10s
       retries: 20
       start_period: 120s
-
-volumes:
-  app-storage:
-  postgres-data:
-  valkey-data:
-  clamav-data:

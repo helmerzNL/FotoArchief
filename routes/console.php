@@ -82,6 +82,7 @@ Artisan::command('installation:prepare {--quiet-code : Do not print the private 
             return 1;
         }
         $this->line('Private installatiecode: '.trim($code));
+        $this->line('Open /setup in de browser en voer deze code in. De code staat ook in storage/app/installation/setup-code.txt (bij Docker: DATA_PATH/storage/app/installation/setup-code.txt) en vervalt zodra de installatie is voltooid.');
     }
 
     return 0;
