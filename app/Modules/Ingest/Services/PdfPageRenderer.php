@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Ingest\Services;
 
 use App\Modules\Ingest\Exceptions\UnreadablePdf;
+use App\Modules\Ingest\Support\BoundedProcess;
 use RuntimeException;
 
 /**
@@ -17,8 +18,6 @@ use RuntimeException;
  */
 class PdfPageRenderer
 {
-    private const OUTPUT_LIMIT = 1_048_576;
-
     private const RENDER_LONG_SIDE = 2000;
 
     public function __construct(
@@ -99,49 +98,14 @@ class PdfPageRenderer
      */
     private function run(array $command): array
     {
-        $timeout = $this->timeoutSeconds ?? (int) config('ingest.pdf.timeout_seconds', 60);
-        $process = @proc_open($command, [0 => ['file', '/dev/null', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
-        if (! is_resource($process)) {
+        $result = BoundedProcess::run($command, $this->timeoutSeconds ?? (int) config('ingest.pdf.timeout_seconds', 60));
+        if ($result['missing']) {
             throw new RuntimeException(__('uploads.pdf.unavailable'));
         }
-        stream_set_blocking($pipes[1], false);
-        stream_set_blocking($pipes[2], false);
-        $stdout = '';
-        $deadline = microtime(true) + $timeout;
-        $exit = null;
-        while (true) {
-            $read = [$pipes[1], $pipes[2]];
-            $write = $except = null;
-            if (stream_select($read, $write, $except, 0, 200_000) > 0) {
-                foreach ($read as $stream) {
-                    $chunk = (string) fread($stream, 65536);
-                    if ($stream === $pipes[1] && strlen($stdout) < self::OUTPUT_LIMIT) {
-                        $stdout .= $chunk;
-                    }
-                }
-            }
-            $status = proc_get_status($process);
-            if (! $status['running']) {
-                $exit = $status['exitcode'];
-                break;
-            }
-            if (microtime(true) > $deadline) {
-                proc_terminate($process, 9);
-                break;
-            }
-        }
-        $stdout .= (string) stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        $closed = proc_close($process);
-        if ($exit === null) {
+        if ($result['timedOut'] || $result['exit'] === null) {
             throw new UnreadablePdf(__('uploads.pdf.timeout'));
         }
-        // 127 is "command not found" from the exec step: the tool is not installed.
-        if ($exit === 127 || ($exit === -1 && $closed === 127)) {
-            throw new RuntimeException(__('uploads.pdf.unavailable'));
-        }
 
-        return ['exit' => $exit, 'stdout' => substr($stdout, 0, self::OUTPUT_LIMIT)];
+        return ['exit' => $result['exit'], 'stdout' => $result['stdout']];
     }
 }

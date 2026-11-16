@@ -35,7 +35,7 @@ beforeEach(function (): void {
     importFolder($this->folder, 'Straten/Havenstraat/haven-1.jpg');
     importFolder($this->folder, 'Gebeurtenissen/Koninginnedag 1950/optocht.jpg');
     importFolder($this->folder, 'Straten/scan.bmp');
-    File::put($this->folder.'/Straten/kaart.tif', 'II*');
+    File::put($this->folder.'/Straten/kaart.avif', 'avif');
     File::put($this->folder.'/Straten/Thumbs.db', 'x');
 });
 
@@ -46,7 +46,7 @@ afterEach(function (): void {
 it('imports a folder into quarantine and keeps each relative path as provenance', function (): void {
     $this->artisan('ingest:import-directory', ['path' => $this->folder, '--user' => 'archivist@example.test'])
         ->expectsOutputToContain('Nieuw aangeboden: 3')
-        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .tif')
+        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .avif')
         ->assertExitCode(0);
 
     expect(Asset::query()->count())->toBe(3)
@@ -145,12 +145,14 @@ it('keeps the folder path of a duplicate and shows it on the surviving photo', f
         ->assertOk()->assertSee('Dezelfde foto is ook aangetroffen op')->assertSee($kept->original_path);
 });
 
-it('offers PDF documents for import next to photos', function (): void {
+it('offers PDF, TIFF and HEIC files for import next to photos', function (): void {
     File::put($this->folder.'/Straten/brief.pdf', '%PDF-1.4');
+    File::copy(base_path('tests/Fixtures/raster/oranje-64x48.tif'), $this->folder.'/Straten/kaart.TIFF');
+    File::copy(base_path('tests/Fixtures/raster/oranje-64x48.heic'), $this->folder.'/Straten/telefoon.heic');
 
     $this->artisan('ingest:import-directory', ['path' => $this->folder, '--dry-run' => true])
-        ->expectsOutputToContain('Nieuw te importeren: 4')
-        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .tif')
+        ->expectsOutputToContain('Nieuw te importeren: 6')
+        ->expectsOutputToContain('Nog niet ondersteund en overgeslagen: 1 × .avif')
         ->assertExitCode(0);
 });
 

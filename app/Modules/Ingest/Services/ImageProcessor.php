@@ -8,6 +8,7 @@ use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\AssetVersion;
 use App\Modules\Ingest\Exceptions\UnreadablePdf;
+use App\Modules\Ingest\Exceptions\UnreadableRasterImage;
 use App\Modules\Ingest\IngestStatus;
 use App\Modules\Ingest\Models\ProcessingJob;
 use App\Modules\Ingest\Models\QuarantineUpload;
@@ -23,9 +24,12 @@ class ImageProcessor
 
     private readonly PdfPageRenderer $pdfs;
 
-    public function __construct(private readonly MalwareScanner $scanner, ?PdfPageRenderer $pdfs = null)
+    private readonly RasterImageConverter $rasters;
+
+    public function __construct(private readonly MalwareScanner $scanner, ?PdfPageRenderer $pdfs = null, ?RasterImageConverter $rasters = null)
     {
         $this->pdfs = $pdfs ?? new PdfPageRenderer;
+        $this->rasters = $rasters ?? new RasterImageConverter;
     }
 
     public function process(QuarantineUpload $upload): void
@@ -45,8 +49,10 @@ class ImageProcessor
         }
         $writtenKeys = [];
         $committed = false;
-        $renderedPdf = null;
+        $rendered = null;
         $pdfPages = null;
+        $sourceType = null;
+        $originalSize = null;
         try {
             $output = fopen($temporary, 'wb');
             if ($output === false) {
@@ -81,12 +87,26 @@ class ImageProcessor
             // the same decoder, size limits and derivative steps as any other image.
             if ($this->pdfs->isPdf($temporary)) {
                 try {
-                    ['path' => $renderedPdf, 'pages' => $pdfPages] = $this->pdfs->renderFirstPage($temporary);
+                    ['path' => $rendered, 'pages' => $pdfPages] = $this->pdfs->renderFirstPage($temporary);
+                    $sourceType = 'application/pdf';
                 } catch (UnreadablePdf $exception) {
                     $this->reject($exception->getMessage());
                 }
+            } elseif (($rasterType = $this->rasters->detect($temporary)) !== null) {
+                // TIFF and HEIC are kept unchanged too; the pixel limit applies to the
+                // original before it is decoded, then one JPEG feeds the same steps.
+                try {
+                    $originalSize = $this->rasters->dimensions($temporary);
+                    if ((int) config('ingest.max_image_pixels') < $originalSize['width'] * $originalSize['height']) {
+                        $this->reject(__('shared.generated.t_41c61553c32261d4'));
+                    }
+                    $rendered = $this->rasters->toJpeg($temporary);
+                    $sourceType = $rasterType;
+                } catch (UnreadableRasterImage $exception) {
+                    $this->reject($exception->getMessage());
+                }
             }
-            $imagePath = $renderedPdf ?? $temporary;
+            $imagePath = $rendered ?? $temporary;
 
             // Convert decoder warnings into explicit permanent rejection, not silent retry loops.
             set_error_handler(function (): never {
@@ -104,7 +124,7 @@ class ImageProcessor
                     $this->reject(__('shared.generated.t_41c61553c32261d4'));
                 }
                 $orientation = 1;
-                if ($renderedPdf === null && $type === IMAGETYPE_JPEG && exif_imagetype($imagePath) === IMAGETYPE_JPEG) {
+                if ($rendered === null && $type === IMAGETYPE_JPEG && exif_imagetype($imagePath) === IMAGETYPE_JPEG) {
                     $exif = exif_read_data($imagePath, 'IFD0', true);
                     $orientation = (int) ($exif['IFD0']['Orientation'] ?? 1);
                     unset($exif);
@@ -168,8 +188,11 @@ class ImageProcessor
                 $derivatives['preview'.$limit] = $key;
             }
             unset($source);
+            if ($originalSize !== null) {
+                ['width' => $width, 'height' => $height] = $originalSize;
+            }
             try {
-                DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus, $pdfPages): void {
+                DB::transaction(function () use ($upload, $sha, $type, $width, $height, $orientation, $displayWidth, $displayHeight, $derivatives, $scannerStatus, $pdfPages, $sourceType): void {
                     $maxVersion = (int) (AssetVersion::query()->where('asset_id', $upload->asset_id)->max('version_number') ?? 0);
                     $nextVersion = $maxVersion + 1;
                     if ($nextVersion > 1) {
@@ -182,7 +205,7 @@ class ImageProcessor
                     $file = AssetFile::query()->create([
                         'asset_id' => $upload->asset_id, 'storage_disk' => $upload->storage_disk,
                         'storage_key' => $upload->storage_key, 'sha256' => $sha,
-                        'media_type' => $pdfPages !== null ? 'application/pdf' : self::TYPES[$type], 'byte_size' => $upload->byte_size,
+                        'media_type' => $sourceType ?? self::TYPES[$type], 'byte_size' => $upload->byte_size,
                         'original_filename' => $upload->original_filename, 'original_path' => $upload->original_path, 'pixel_width' => $width, 'pixel_height' => $height,
                         'technical_metadata' => ($pdfPages !== null ? ['page_count' => $pdfPages, 'preview_page' => 1] : []) + ['orientation' => $orientation, 'display_width' => $displayWidth, 'display_height' => $displayHeight, 'exif_policy' => __('shared.generated.t_b6a2b3d49e20c8e8')],
                         'derivatives' => $derivatives, 'validated_at' => now(), 'processed_at' => now(),
@@ -207,8 +230,8 @@ class ImageProcessor
         } finally {
             fclose($stream);
             unlink($temporary);
-            if ($renderedPdf !== null && is_file($renderedPdf)) {
-                unlink($renderedPdf);
+            if ($rendered !== null && is_file($rendered)) {
+                unlink($rendered);
             }
             if (! $committed && $writtenKeys !== [] && ! $disk->delete($writtenKeys)) {
                 throw new RuntimeException(__('shared.generated.t_710e4e795d6e27cd'));

@@ -181,10 +181,23 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   `asset_files.original_path`) en staat op de fotopagina onder "Oorspronkelijk pad".
 - Een herhaalde run slaat paden over die al zijn geïmporteerd; gebruik `--limit` om in
   porties te werken. De scheduler (`outbox:dispatch`) en een worker verwerken de rij.
-- Ondersteund: JPEG, PNG, WebP, BMP en PDF. BMP- en PDF-originelen blijven ongewijzigd
-  bewaard; de weergaven zijn JPEG. TIFF en HEIC worden geteld en **overgeslagen** tot daarvoor
-  ondersteuning is gebouwd. Symbolische koppelingen worden niet gevolgd. BMP en PDF kunnen
-  alleen via dit commando worden aangeboden; de uploadschermen in de browser accepteren ze niet.
+- Ondersteund: JPEG, PNG, WebP, BMP, PDF, TIFF (`.tif`, `.tiff`) en HEIC (`.heic`, `.heif`).
+  BMP-, PDF-, TIFF- en HEIC-originelen blijven ongewijzigd bewaard; de weergaven zijn JPEG.
+  AVIF wordt geteld en **overgeslagen**. Symbolische koppelingen worden niet gevolgd. BMP, PDF,
+  TIFF en HEIC kunnen alleen via dit commando worden aangeboden; de uploadschermen in de
+  browser accepteren ze niet.
+- **TIFF en HEIC** worden met libvips omgezet naar één JPEG waaruit de gewone weergaven worden
+  gemaakt. Het formaat wordt herkend aan de eerste bytes, niet aan de bestandsnaam. Bij een TIFF
+  met meerdere pagina's wordt pagina 1 gebruikt. De pixellimiet (`APP_MAX_IMAGE_PIXELS`) geldt
+  voor het origineel en wordt gecontroleerd vóór het decoderen; de opgeslagen afmetingen zijn die
+  van het origineel. Beschadigde of afgebroken bestanden worden afgewezen; meldingen over
+  onbekende eigen tags van scansoftware niet. Het omzetten heeft een tijdslimiet
+  (`RASTER_CONVERT_TIMEOUT`, standaard 60 s), draait zonder shell en met de onbetrouwbare
+  laders van libvips (zoals ImageMagick) uitgeschakeld. Hiervoor is `libvips-tools` (`vips`,
+  `vipsheader`) met HEIC-decoder (libheif met libde265) nodig. Het Docker-image bevat het; bij
+  PHP-webhosting moet de host het installeren. Ontbreekt het, dan blijft de upload in de wachtrij
+  met een fout (herstelbaar), in plaats van afgewezen te worden. "Weergaven opnieuw maken" bij
+  Bestandsversies werkt nog niet voor BMP, PDF, TIFF en HEIC.
 - **PDF** wordt behandeld als document: de weergaven zijn van **pagina 1**, het aantal pagina's
   staat bij het bestand, en meerdere pagina's bekijken in de portal bestaat nog niet. Wachtwoord-
   beveiligde, beschadigde of te trage PDF's worden afgewezen; het renderen heeft een tijdslimiet
@@ -232,8 +245,17 @@ or sync the folder to the server and let the app read it **read-only** with
 `ingest:import-directory`. Run `--dry-run` first. Each file enters the normal pipeline
 (quarantine, scan, checksum, derivatives); nothing is published. The relative folder path
 is kept as provenance and shown as "Oorspronkelijk pad" on the photo page. Re-runs skip
-paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP, BMP and PDF are
-supported (BMP and PDF originals are kept unchanged, previews are JPEG; a PDF's previews come from page 1 only and the page count is recorded; it requires `poppler-utils`); TIFF and HEIC are counted and skipped for now. A photo present in
+paths already imported; use `--limit` to work in batches. JPEG, PNG, WebP, BMP, PDF, TIFF and HEIC are
+supported (BMP, PDF, TIFF and HEIC originals are kept unchanged, previews are JPEG; a PDF's previews come from page 1 only and the page count is recorded; it requires `poppler-utils`); AVIF is counted and skipped.
+TIFF and HEIC are converted by libvips into one JPEG that feeds the normal previews: the format is detected
+from the first bytes, a multi-page TIFF uses page 1, the pixel limit is checked on the original before
+decoding and the stored dimensions are the original's, damaged or truncated files are rejected (warnings
+about unknown private scanner tags are not), and the conversion has a time limit (`RASTER_CONVERT_TIMEOUT`,
+default 60 s), runs without a shell and with libvips' untrusted loaders (such as ImageMagick) blocked. It
+requires `libvips-tools` (`vips`, `vipsheader`) with a HEIC decoder (libheif with libde265); the Docker image
+includes it, PHP hosting must provide it, and when it is missing the upload stays queued with a retryable
+error instead of being rejected. "Regenerate previews" under file versions does not yet work for BMP, PDF,
+TIFF and HEIC. A photo present in
 two folders is rejected as a duplicate the second time, but the second path stays on the
 rejected upload record. For very large archives the command writes each file to storage first and
 then records photo, upload and queue message in one short database transaction, retries a failed store

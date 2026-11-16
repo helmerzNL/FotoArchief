@@ -10,6 +10,11 @@ return [
         'timeout' => 'Rendering this PDF file took too long and was stopped.',
         'unavailable' => 'PDF processing is not available on this installation: poppler-utils (pdfinfo and pdftoppm) is missing.',
     ],
+    'raster' => [
+        'unreadable' => 'This TIFF or HEIC file cannot be read or is damaged.',
+        'timeout' => 'Converting this TIFF or HEIC file took too long and was stopped.',
+        'unavailable' => 'TIFF and HEIC processing is not available on this installation: libvips-tools (vips and vipsheader) is missing.',
+    ],
     'title' => 'Resumable upload batches',
     'intro' => 'Keep receipts and send only missing chunks after an interruption.',
     'limits' => 'JPEG, PNG or WebP; at most 250 files, 100 MiB per file and 1 GiB per batch. Four unpurged batches per user; resume within seven days.',

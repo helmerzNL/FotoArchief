@@ -11,6 +11,12 @@ return [
         'render_binary' => env('PDFTOPPM_BINARY', 'pdftoppm'),
         'timeout_seconds' => (int) env('PDF_RENDER_TIMEOUT', 60),
     ],
+    // TIFF and HEIC previews come from libvips (libvips-tools in the runtime image).
+    'raster' => [
+        'vips_binary' => env('VIPS_BINARY', 'vips'),
+        'vipsheader_binary' => env('VIPSHEADER_BINARY', 'vipsheader'),
+        'timeout_seconds' => (int) env('RASTER_CONVERT_TIMEOUT', 60),
+    ],
     // ingest:import-directory pacing for archives of hundreds of GB. The command stops
     // pausing after wait_seconds, and retries an object-store write after each delay (seconds).
     'import' => [

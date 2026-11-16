@@ -10,6 +10,11 @@ return [
         'timeout' => 'Het renderen van dit PDF-bestand duurde te lang en is afgebroken.',
         'unavailable' => 'PDF-verwerking is op deze installatie niet beschikbaar: poppler-utils (pdfinfo en pdftoppm) ontbreekt.',
     ],
+    'raster' => [
+        'unreadable' => 'Dit TIFF- of HEIC-bestand kan niet worden gelezen of is beschadigd.',
+        'timeout' => 'Het omzetten van dit TIFF- of HEIC-bestand duurde te lang en is afgebroken.',
+        'unavailable' => 'TIFF- en HEIC-verwerking is op deze installatie niet beschikbaar: libvips-tools (vips en vipsheader) ontbreekt.',
+    ],
     'title' => 'Hervatbare uploadbatches',
     'intro' => 'Bewaar ontvangstbewijzen en verstuur na een onderbreking alleen ontbrekende delen.',
     'limits' => 'JPEG, PNG of WebP; maximaal 250 bestanden, 100 MiB per bestand en 1 GiB per batch. Vier niet-opgeruimde batches per gebruiker; hervatten binnen zeven dagen.',
