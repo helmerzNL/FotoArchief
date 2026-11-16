@@ -216,7 +216,9 @@ php artisan ingest:import-directory /pad/naar/map --user=beheerder@example.org -
   `ingest:import-directory /srv/import --user=… --max-pending=200`, wacht tot de wachtrij leeg
   is, controleer de uitkomst en leeg de tijdelijke map voor de volgende batch. Een
   `rclone mount` kan als noodoplossing, maar is bij uren durende runs kwetsbaar.
-  Meet eerst: aantal bestanden per extensie en gemiddelde grootte (`rclone size`), de
+  Meet eerst: aantal bestanden per extensie en gemiddelde grootte (`rclone size`, of na een
+  eerste kopie `php artisan ingest:survey-directory /srv/import`, dat per extensie aantal, totale,
+  gemiddelde en grootste omvang toont en wat de import overslaat; `--json` voor een bestand), de
   downloadsnelheid van OneDrive (bij 50–100 Mbit/s kost 500 GB ruwweg 11–22 uur, plus
   throttling) en vrije ruimte in de tijdelijke map van de workers (minimaal 2 GiB plus
   200 MiB per worker). Verwijder de OneDrive-originelen pas nadat een herstelproef uit de
@@ -241,7 +243,9 @@ pauses while that many uploads are still queued or running and stops after `--wa
 600). A progress line with MiB/s appears every 100 files, and every run is resumable. A one-time
 OneDrive-to-bucket move needs no 500 GB of local space: copy in batches with `rclone copy --files-from`
 (never `move`), import each batch, wait for the queue to drain, then clear the staging folder. Measure
-first (file counts per extension, OneDrive download speed, free temporary space of the workers: at least
+first (file counts per extension, for example with `php artisan ingest:survey-directory /srv/import`
+on a first copy, which shows count, total, average and largest size per extension and what the
+import skips, `--json` for a file; OneDrive download speed, free temporary space of the workers: at least
 2 GiB plus 200 MiB per worker) and keep the OneDrive originals until a restore drill from the bucket
 has succeeded. For Docker, mounting the folder read-only into `app` and `worker`
 is an operator change to their own Compose files; this feature changes none.

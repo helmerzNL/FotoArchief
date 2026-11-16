@@ -41,6 +41,7 @@ final class UserVisibleTextScanner
      */
     private const TECHNICAL_PHP_FILES = [
         'app/Console/Commands/ImportDirectoryCommand.php',
+        'app/Console/Commands/SurveyDirectoryCommand.php',
         'app/Http/Controllers/RuntimeHealthController.php',
         'app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php',
         'app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php',
