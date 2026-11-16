@@ -97,7 +97,7 @@ class ImageProcessor
                 // original before it is decoded, then one JPEG feeds the same steps.
                 try {
                     $originalSize = $this->rasters->dimensions($temporary);
-                    if ($originalSize['width'] * $originalSize['height'] > (int) config('ingest.max_image_pixels')) {
+                    if ((int) config('ingest.max_image_pixels') < $originalSize['width'] * $originalSize['height']) {
                         $this->reject(__('shared.generated.t_41c61553c32261d4'));
                     }
                     $rendered = $this->rasters->toJpeg($temporary);
