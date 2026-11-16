@@ -11,7 +11,7 @@ beforeEach(function (): void {
     File::put($this->folder.'/Straten/Havenstraat/haven-1.JPG', str_repeat('a', 3000));
     File::put($this->folder.'/Straten/haven-2.jpg', str_repeat('b', 1000));
     File::put($this->folder.'/Straten/leeg.jpg', '');
-    File::put($this->folder.'/Straten/kaart.tif', str_repeat('c', 5000));
+    File::put($this->folder.'/Straten/kaart.avif', str_repeat('c', 5000));
     File::put($this->folder.'/Thumbs.db', 'x');
 });
 
@@ -27,9 +27,9 @@ it('counts files per extension and shows what the import would do without storin
         ->and($result['bytes'])->toBe(9001)
         ->and($result['folders'])->toBe(3)
         ->and($result['types']['jpg'])->toMatchArray(['files' => 3, 'bytes' => 4000, 'largest' => 3000, 'average' => 1333, 'too_large' => 1, 'action' => 'import'])
-        ->and($result['types']['tif'])->toMatchArray(['files' => 1, 'action' => 'unsupported'])
+        ->and($result['types']['avif'])->toMatchArray(['files' => 1, 'action' => 'unsupported'])
         ->and($result['types']['db'])->toMatchArray(['files' => 1, 'action' => 'ignored'])
-        ->and(array_key_first($result['types']))->toBe('tif');
+        ->and(array_key_first($result['types']))->toBe('avif');
 });
 
 it('prints a readable table and refuses a folder that does not exist', function (): void {

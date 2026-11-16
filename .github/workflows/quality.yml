@@ -40,8 +40,11 @@ jobs:
           tools: composer:v2
           extensions: pdo_sqlite, pdo_pgsql, mbstring, intl, zip, gd, exif
 
-      - name: Install PDF tools
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - name: Install PDF, TIFF and HEIC tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils libvips-tools libheif-plugin-libde265
+          vips --version
 
       - name: Detect Composer project
         id: project
@@ -316,6 +319,31 @@ jobs:
           docker compose -f deploy/compose.yaml exec -T app \
             tesseract /tmp/fotoarchief-ocr.png stdout -l nld+eng --psm 7 | grep -F FOTOARCHIEF
           docker compose -f deploy/compose.yaml exec -T app rm /tmp/fotoarchief-ocr.png
+      - name: Verify bundled TIFF and HEIC conversion
+        run: |
+          # A missing HEVC decoder can still produce a grey picture, so check the colour too.
+          for fixture in oranje-64x48.tif oranje-64x48.heic; do
+            docker compose -f deploy/compose.yaml cp "tests/Fixtures/raster/$fixture" "app:/tmp/$fixture"
+            docker compose -f deploy/compose.yaml exec -T app php -r '
+              require "vendor/autoload.php";
+              $app = require "bootstrap/app.php";
+              $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+              $converter = new App\Modules\Ingest\Services\RasterImageConverter;
+              $path = $argv[1];
+              $type = $converter->detect($path) ?? throw new RuntimeException("Format not detected: ".$path);
+              if ($converter->dimensions($path) !== ["width" => 64, "height" => 48]) {
+                throw new RuntimeException("Unexpected dimensions for ".$path);
+              }
+              $jpeg = $converter->toJpeg($path);
+              $rgb = imagecolorat(imagecreatefromjpeg($jpeg), 32, 24);
+              unlink($jpeg);
+              [$r, $g, $b] = [($rgb >> 16) & 255, ($rgb >> 8) & 255, $rgb & 255];
+              if (abs($r - 200) > 20 || abs($g - 120) > 20 || abs($b - 40) > 20) {
+                throw new RuntimeException("Wrong colour after conversion of ".$path.": ".$r." ".$g." ".$b);
+              }
+              echo $type, " ok\n";
+            ' -- "/tmp/$fixture"
+          done
       - name: Verify pending onboarding state and immutable generated key
         run: |
           ! docker compose -f deploy/compose.yaml logs app | grep -F 'Private installatiecode:'

@@ -36,10 +36,10 @@ use Throwable;
  */
 class ImportDirectoryCommand extends Command
 {
-    public const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf'];
+    public const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf', 'tif', 'tiff', 'heic', 'heif'];
 
     /** Types the archive holds but ingest cannot process yet; counted, never imported. */
-    public const NOT_YET_SUPPORTED = ['tif', 'tiff', 'heic'];
+    public const NOT_YET_SUPPORTED = ['avif'];
 
     protected $signature = 'ingest:import-directory
         {path : Folder on the server with the image files (read only)}

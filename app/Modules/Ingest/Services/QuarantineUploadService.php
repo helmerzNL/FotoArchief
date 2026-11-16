@@ -27,7 +27,7 @@ class QuarantineUploadService
     private const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
     /** Extra types only the server-side folder import offers; browsers keep the plain image list. */
-    private const EXTENDED_TYPES = ['image/bmp', 'image/x-ms-bmp', 'application/pdf'];
+    private const EXTENDED_TYPES = ['image/bmp', 'image/x-ms-bmp', 'application/pdf', 'image/tiff', 'image/heic', 'image/heif'];
 
     public function quarantine(Asset $asset, UploadedFile $upload, ?string $userId = null, ?string $originalPath = null, bool $allowExtendedTypes = false): QuarantineUpload
     {
