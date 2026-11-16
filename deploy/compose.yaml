@@ -11,6 +11,8 @@ x-app: &app
   environment: &app-environment
     APP_NAME: FotoArchief
     FOTOARCHIEF_TAG: ${FOTOARCHIEF_TAG:-latest}
+    FOTOARCHIEF_UPDATE_CHECK: ${FOTOARCHIEF_UPDATE_CHECK:-true}
+    FOTOARCHIEF_DEPLOYMENT: ${FOTOARCHIEF_DEPLOYMENT:-compose}
     APP_ENV: production
     APP_DEBUG: "false"
     APP_URL: ${APP_URL:-http://localhost:8080}

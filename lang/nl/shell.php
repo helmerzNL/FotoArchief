@@ -51,6 +51,7 @@ return [
             'exchange' => 'Uitwisseling',
             'notifications' => 'Mijn meldingen',
             'users' => 'Gebruikers',
+            'system' => 'Systeem',
         ],
     ],
     'status' => [

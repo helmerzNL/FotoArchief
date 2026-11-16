@@ -82,6 +82,11 @@ FotoArchief follows the `beta` → `main` model of App-Guidance
   the container, and a tag containing `beta` shows a **beta** label in the app
   (`App\Support\ReleaseChannel`, `tests/Feature/ReleaseChannelTest.php`).
   `APP_IMAGE` is no longer read by the deployment stack.
+- The update check follows App-Guidance
+  [`shared/guidelines/update-check.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/update-check.md):
+  `UpdateCheckService` reads the latest stable release from the github.com redirect
+  and only tells administrators; `FOTOARCHIEF_UPDATE_CHECK=false` switches it off and
+  `FOTOARCHIEF_DEPLOYMENT` picks the update steps shown. The app never updates itself.
 - Dependabot goes to `beta`: `target-branch: beta` on every entry in
   `.github/dependabot.yml`; security updates follow the Default branch, which is
   `beta`. `.github/workflows/dependabot-auto-merge.yml` merges every Dependabot

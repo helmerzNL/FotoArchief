@@ -19,6 +19,7 @@ use App\Modules\ArchiveOperations\Controllers\OperationsLandingController;
 use App\Modules\ArchiveOperations\Controllers\ProcessingCentreController;
 use App\Modules\ArchiveOperations\Controllers\RecoveryWorkbenchController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
+use App\Modules\ArchiveOperations\Controllers\SystemUpdateController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,6 +32,9 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::post('/support', [OperationalEvidenceController::class, 'support'])->name('support');
     Route::get('/recovery/incidents/{incident}', [OperationalEvidenceController::class, 'timeline'])->name('recovery.timeline');
     Route::get('/diagnostics', [DiagnosticsController::class, 'index'])->name('diagnostics');
+    Route::get('/system', [SystemUpdateController::class, 'show'])->name('system');
+    Route::post('/system/check', [SystemUpdateController::class, 'check'])->name('system.check');
+    Route::get('/system/update-status', [SystemUpdateController::class, 'status'])->name('system.update-status');
     Route::get('/recovery', [RecoveryWorkbenchController::class, 'index'])->name('recovery.index');
     Route::post('/recovery/check', [RecoveryWorkbenchController::class, 'check'])->name('recovery.check');
     Route::post('/recovery/incidents/{incident}/acknowledge', [RecoveryWorkbenchController::class, 'acknowledge'])->name('recovery.acknowledge');
