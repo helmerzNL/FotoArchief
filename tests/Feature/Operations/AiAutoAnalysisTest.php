@@ -11,6 +11,7 @@ use App\Modules\Ai\Services\AiConfigurationService;
 use App\Modules\Ai\Services\AiProviderConfigService;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
+use App\Modules\ArchiveOperations\Services\OperationalAlertService;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use Database\Seeders\DatabaseSeeder;
@@ -271,4 +272,26 @@ it('registers the sweep on the scheduler and prints its outcome', function (): v
 
     Artisan::call('ai:sweep');
     expect(json_decode(trim(Artisan::output()), true))->toMatchArray(['status' => 'disabled']);
+});
+
+it('raises an operational incident while automatic analysis is stopped by the budget', function (): void {
+    Queue::fake();
+    app(AiProviderConfigService::class)->update('openai', ['enabled' => true, 'vision_model' => 'gpt-4.1-mini', 'cost_cents_per_image' => 30, 'monthly_budget_cents' => 25], $this->user);
+    app(AiProviderConfigService::class)->setApiKey('openai', 'test-openai-secret', $this->user);
+    app(AiConfigurationService::class)->update([
+        'global_enabled' => '1', 'image_analysis_enabled' => '1', 'image_analysis_provider' => 'openai', 'image_analysis_native_consent' => '1',
+        'local_provider_enabled' => '1', 'local_endpoint' => 'http://127.0.0.1:8088', 'max_assets_per_batch' => 10, 'derivative_max_pixels' => 512, 'request_timeout_seconds' => 15,
+    ], $this->user);
+    $incidentKeys = fn (): array => collect(app(OperationalAlertService::class)->evaluate(true)['payload']['incidents'])->pluck('key')->all();
+
+    expect($incidentKeys())->not->toContain('ai.auto_analysis.budget');
+
+    autoEnable(backfill: true);
+    autoReadyAsset('old');
+    expect(app(AiAutoAnalysisService::class)->sweep()['status'])->toBe('budget')
+        ->and(app(AiAutoAnalysisService::class)->stoppedReason())->toBe('budget')
+        ->and($incidentKeys())->toContain('ai.auto_analysis.budget');
+
+    $this->travel(2)->hours();
+    expect(app(AiAutoAnalysisService::class)->stoppedReason())->toBeNull();
 });

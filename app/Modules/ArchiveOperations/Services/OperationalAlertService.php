@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\ArchiveOperations\Services;
 
+use App\Modules\Ai\Services\AiAutoAnalysisService;
+
 class OperationalAlertService
 {
     private const SEVERITY_RANK = [
@@ -86,6 +88,20 @@ class OperationalAlertService
                     'detail' => "Er zijn {$failed} mislukte ingesttaken; drempel is {$failedThreshold}.",
                 ];
             }
+        }
+
+        $stopped = app(AiAutoAnalysisService::class)->stoppedReason();
+        if ($stopped !== null && $this->rank('warning') >= $minimum) {
+            $incidents[] = [
+                'key' => 'ai.auto_analysis.'.$stopped,
+                'severity' => 'warning',
+                'title' => __('ai.auto.alert.title'),
+                'detail' => match ($stopped) {
+                    'budget' => __('ai.auto.alert.budget'),
+                    'actor' => __('ai.auto.alert.actor'),
+                    default => __('ai.auto.alert.not_ready'),
+                },
+            ];
         }
 
         return $incidents;

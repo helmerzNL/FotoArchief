@@ -279,6 +279,12 @@ return [
             'not_ready' => 'Zet eerst beeldanalyse aan en kies een gereed gemaakte provider met toestemming en maandbudget.',
             'provider' => 'Automatische analyse kan alleen met de lokale provider of een native provider met maandbudget.',
         ],
+        'alert' => [
+            'title' => 'Automatische beeldanalyse staat stil',
+            'budget' => 'Het maandbudget van de AI-provider is op. Er worden geen foto\'s meer geanalyseerd tot de volgende maand of tot het budget is verhoogd.',
+            'actor' => 'De beheerder die automatische analyse aanzette is niet meer actief of mag het niet meer. Zet de analyse opnieuw aan met een actieve beheerder.',
+            'not_ready' => 'AI-beeldanalyse is niet meer gereed (AI uit, noodstop, sleutel of toestemming ontbreekt). Controleer de AI-instellingen.',
+        ],
         'archive' => [
             'not_ready' => 'AI-beeldanalyse is niet gereed. Controleer de AI-instellingen.',
             'cost_ceiling_required' => 'Geef met --max-cost-cents het hoogste bedrag in eurocenten dat deze run mag kosten.',

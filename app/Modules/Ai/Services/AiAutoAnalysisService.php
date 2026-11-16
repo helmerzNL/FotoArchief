@@ -274,6 +274,24 @@ final class AiAutoAnalysisService
         return is_string($enabledAt) ? CarbonImmutable::parse($enabledAt) : CarbonImmutable::now();
     }
 
+    /**
+     * Why automatic analysis is switched on but cannot run, for operational alerts: the
+     * budget is spent, the enabling administrator may no longer act, or AI is no longer
+     * ready. Null while it runs, waits normally, or is off. Only a recent sweep counts.
+     */
+    public function stoppedReason(): ?string
+    {
+        if (! (bool) ($this->configuration->effective()['auto_analysis_enabled'] ?? false)) {
+            return null;
+        }
+        $last = $this->lastSweep();
+        if ($last === null || CarbonImmutable::parse($last['at'])->lt(now()->subHour())) {
+            return null;
+        }
+
+        return in_array($last['status'], ['budget', 'actor', 'not_ready'], true) ? $last['status'] : null;
+    }
+
     public function actorId(): ?string
     {
         $id = $this->configuration->effective()['auto_analysis_user_id'] ?? null;

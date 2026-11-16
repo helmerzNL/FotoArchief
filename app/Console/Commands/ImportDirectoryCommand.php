@@ -36,10 +36,10 @@ use Throwable;
  */
 class ImportDirectoryCommand extends Command
 {
-    private const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf'];
+    public const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf'];
 
     /** Types the archive holds but ingest cannot process yet; counted, never imported. */
-    private const NOT_YET_SUPPORTED = ['tif', 'tiff', 'heic'];
+    public const NOT_YET_SUPPORTED = ['tif', 'tiff', 'heic'];
 
     protected $signature = 'ingest:import-directory
         {path : Folder on the server with the image files (read only)}
@@ -55,7 +55,8 @@ class ImportDirectoryCommand extends Command
 
     public function handle(QuarantineUploadService $uploads): int
     {
-        $root = realpath((string) $this->argument('path'));
+        $path = $this->argument('path');
+        $root = is_string($path) ? realpath($path) : false;
         if ($root === false || ! is_dir($root) || ! is_readable($root)) {
             $this->error('De map bestaat niet of is niet leesbaar.');
 
@@ -65,7 +66,8 @@ class ImportDirectoryCommand extends Command
         $limit = max(1, (int) $this->option('limit'));
         $user = null;
         if (! $dryRun) {
-            $user = User::query()->where('email', strtolower((string) $this->option('user')))->first();
+            $email = $this->option('user');
+            $user = User::query()->where('email', strtolower(is_string($email) ? $email : ''))->first();
             if ($user === null || ! $user->hasPermission('assets.create') || ! $user->hasPermission('assets.view')) {
                 $this->error('Geef met --user een bestaand account op dat foto\'s mag aanmaken.');
 

@@ -131,7 +131,10 @@ De schatting toont het aantal wachtende foto's, de kosten per foto, de verwachte
 resterende maandbudget. Bij een betaalde provider is `--max-cost-cents` verplicht; een schatting
 boven het plafond of boven het resterende budget wordt geweigerd. Hoogstens 1000 foto's per
 aanroep. De kaart toont wachtende foto's, de kostenschatting, de dagtelling, het resterende
-budget en de laatste controle. Let op: voor iedere foto wordt het origineel uit de opslag
+budget en de laatste controle. Staat automatische analyse aan maar stil omdat het budget op is, de
+beheerder niet meer actief is of AI niet meer gereed is, dan meldt `operations:check-alerts` dat
+(vanaf `0.9.78`) als waarschuwing via de bestaande operationele meldingen; een ongewijzigde melding
+wordt niet herhaald. Let op: voor iedere foto wordt het origineel uit de opslag
 gelezen om de checksum te controleren; bij een S3-bucket buiten de serverregio kost dat
 dataverkeer.
 
@@ -408,7 +411,10 @@ docker compose exec --user www-data app php artisan ai:analyse-archive --limit=2
 The estimate shows the number of waiting photos, the cost per photo, the expected cost and the
 remaining monthly budget. With a paid provider `--max-cost-cents` is required; an estimate above
 the ceiling or above the remaining budget is refused. At most 1000 photos per call. The card shows
-waiting photos, the cost estimate, the daily count, the remaining budget and the last check. Note
+waiting photos, the cost estimate, the daily count, the remaining budget and the last check. When
+automatic analysis is on but stopped because the budget is spent, the administrator is no longer
+active or AI is no longer ready, `operations:check-alerts` reports it (from `0.9.78`) as a warning
+through the existing operational alerts; an unchanged alert is not repeated. Note
 that for every photo the original is read from storage to verify its checksum; with an S3 bucket
 outside the server's region that costs egress.
 
