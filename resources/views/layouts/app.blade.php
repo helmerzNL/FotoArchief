@@ -1,10 +1,13 @@
 <!doctype html>
+@php
+    $betaChannel = config('app.channel') === \App\Support\ReleaseChannel::BETA;
+@endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($interfacePreferences !== null) data-prefs-url="{{ route('identity.preferences.update') }}" data-user-prefs="{{ json_encode($interfacePreferences, JSON_FORCE_OBJECT) }}"@endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', __('shell.title.default'))</title>
+    <title>@yield('title', __('shell.title.default'))@if($betaChannel) {{ __('shell.channel.title_suffix') }}@endif</title>
     <meta name="theme-color" content="#f7f3ec">
     <meta name="application-name" content="{{ __('shell.brand.name') }}">
     <meta property="og:site_name" content="{{ __('shell.brand.name') }}">
@@ -32,13 +35,13 @@
         <div class="app-shell">
             <aside id="sidebar" class="sidebar glass">
                 <div class="sidebar-head">
-                    <a class="brand" href="{{ route('admin.assets.index') }}" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span class="brand-name">{{ __('shell.brand.name') }}</span></a>
+                    <a class="brand" href="{{ route('admin.assets.index') }}" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span class="brand-name">{{ __('shell.brand.name') }}</span>@if($betaChannel)<span class="badge badge-warning channel-badge">{{ __('shell.channel.beta') }}</span>@endif</a>
                     @if($archiveProfile)<p class="sidebar-society">{{ $archiveProfile->name }}</p>@endif
                 </div>
                 <nav class="staff-nav" aria-label="{{ __('shell.nav.staff') }}">
                     <ul>
                         @foreach($staffGroups as $group)
-                            <li><a class="nav-link" href="{{ $group['href'] }}" title="{{ $group['label'] }}"@if($group['active']) aria-current="page"@endif><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-{{ $group['icon'] }}"/></svg><span class="nav-label">{{ $group['label'] }}</span></a></li>
+                            <li><a class="nav-link" href="{{ $group['href'] }}" data-nav-key="{{ $group['key'] }}" title="{{ $group['label'] }}"@if($group['active']) aria-current="page"@endif><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-{{ $group['icon'] }}"/></svg><span class="nav-label">{{ $group['label'] }}</span></a></li>
                         @endforeach
                     </ul>
                 </nav>
@@ -76,7 +79,7 @@
                 @endif
     @else
         <header class="site-header glass">
-            <a class="brand" href="/" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span>{{ __('shell.brand.name') }}</span></a>
+            <a class="brand" href="/" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span>{{ __('shell.brand.name') }}</span>@if($betaChannel)<span class="badge badge-warning channel-badge">{{ __('shell.channel.beta') }}</span>@endif</a>
             @if($archiveProfile)<p class="archive-sender">{{ $archiveProfile->name }}</p>@endif
             <nav class="public-nav" aria-label="{{ __('shell.nav.public') }}">
                 <a href="{{ route('public.discover') }}" aria-current="{{ request()->routeIs('public.discover', 'public.home') ? 'page' : 'false' }}">{{ __('shell.nav.discover') }}</a>
@@ -95,6 +98,15 @@
         </header>
     @endif
     <main id="main" tabindex="-1">
+        @if($updateNotice !== null)
+            {{-- Update check (App-Guidance update-check.md): administrators only, filled by update-check.js. --}}
+            <div class="notice update-banner" role="status" hidden data-update-banner data-status-url="{{ route('admin.operations.system.update-status') }}" data-template="{{ __('operations.update.banner', ['latest' => ':latest', 'current' => ':current']) }}" data-latest="{{ $updateNotice['latest'] ?? '' }}" data-current="{{ $updateNotice['current'] }}" data-available="{{ $updateNotice['available'] ? '1' : '0' }}">
+                <span data-update-text></span>
+                <a class="button secondary" href="{{ route('admin.operations.system') }}">{{ __('operations.update.banner_view') }}</a>
+                <button type="button" class="quiet" data-update-later>{{ __('operations.update.banner_later') }}</button>
+            </div>
+            <script src="/update-check.js?v={{ hash_file('sha256', public_path('update-check.js')) }}" defer></script>
+        @endif
         @if(session('status'))
             <div class="notice" role="status">{{ session('status') }}</div>
         @endif

@@ -3,12 +3,16 @@
 name: ${COMPOSE_PROJECT_NAME:-fotoarchief}
 
 x-app: &app
-  image: ${APP_IMAGE:?Set APP_IMAGE to a published image tag or digest}
+  # FOTOARCHIEF_TAG picks the build: latest (stable, default), beta, or a version such as v0.9.79.
+  image: ghcr.io/helmerznl/fotoarchief:${FOTOARCHIEF_TAG:-latest}
   restart: unless-stopped
   volumes:
     - app-storage:/var/www/html/storage
   environment: &app-environment
     APP_NAME: FotoArchief
+    FOTOARCHIEF_TAG: ${FOTOARCHIEF_TAG:-latest}
+    FOTOARCHIEF_UPDATE_CHECK: ${FOTOARCHIEF_UPDATE_CHECK:-true}
+    FOTOARCHIEF_DEPLOYMENT: ${FOTOARCHIEF_DEPLOYMENT:-compose}
     APP_ENV: production
     APP_DEBUG: "false"
     APP_URL: ${APP_URL:-http://localhost:8080}

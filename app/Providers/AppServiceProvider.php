@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Modules\Archive\Models\ArchiveProfile;
 use App\Modules\Archive\StaffNavigation;
 use App\Modules\ArchiveOperations\Services\SystemHeartbeatService;
+use App\Modules\ArchiveOperations\Services\UpdateCheckService;
 use App\Modules\Identity\InterfacePreferences;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Queue\Events\JobFailed;
@@ -29,7 +30,9 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.app', function (ViewContract $view): void {
             $user = auth()->user();
             $view->with('staffGroups', $user !== null ? app(StaffNavigation::class)->groups(request()) : [])
-                ->with('interfacePreferences', $user instanceof User ? InterfacePreferences::for($user) : null);
+                ->with('interfacePreferences', $user instanceof User ? InterfacePreferences::for($user) : null)
+                // Cached status only: a page view never calls GitHub (App-Guidance update-check.md).
+                ->with('updateNotice', $user instanceof User && $user->hasPermission('users.manage') ? app(UpdateCheckService::class)->cached() : null);
         });
 
         Queue::before(function (JobProcessing $event): void {

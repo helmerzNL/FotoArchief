@@ -8,8 +8,8 @@ directory="$(mktemp -d)"
 trap 'rm -rf "$directory"' EXIT
 
 gh release view "$tag" --repo "$repo" --json isDraft,isPrerelease --jq \
-  'select(.isDraft == false and .isPrerelease == true) | "published-prerelease"' |
-  grep -Fxq 'published-prerelease'
+  'select(.isDraft == false and .isPrerelease == false) | "published-release"' |
+  grep -Fxq 'published-release'
 gh release download "$tag" --repo "$repo" --dir "$directory"
 php "$root/scripts/release-asset-manifest.php" verify "$directory"
 

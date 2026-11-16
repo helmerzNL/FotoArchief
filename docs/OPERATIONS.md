@@ -306,6 +306,49 @@ contents, installation state or image metadata. Use `--dry-run` after changing
 thresholds or routing so the payload can be inspected without sending a
 notification.
 
+## Updatecheck / Update check
+
+### Nederlands
+
+Beheerders (recht `users.manage`) zien op **Beheer > Systeem** welke versie draait, welk kanaal
+(`FOTOARCHIEF_TAG`) en of er een nieuwere stabiele release is, met een link naar de releasenotes
+en de stappen om bij te werken voor de manier waarop de installatie draait (Docker Compose,
+Komodo, Dockhand of het webhostingpakket). Na het inloggen vraagt de browser één keer de status;
+de server vraagt github.com hoogstens eens per zes uur (na een fout eens per tien minuten) en
+**Nu controleren** hoogstens eens per 30 seconden. Een nieuwere versie verschijnt als banner
+bovenaan en als stip bij **Systeem**; **Later** verbergt de banner voor die versie.
+
+De controle leest alleen de doorverwijzing van `https://github.com/helmerzNL/FotoArchief/releases/latest`
+(niet de API, die een limiet van 60 verzoeken per uur per IP-adres heeft) en stuurt niets over de
+installatie mee. FotoArchief werkt zichzelf **nooit** bij: de beheerder kiest het moment. Een
+mislukte controle toont de reden in woorden (bijvoorbeeld `HTTP 403 (rate limit)`, `Timeout`) en
+houdt het laatste goede antwoord. Een beta-installatie krijgt geen melding over nieuwere betaversies:
+`releases/latest` kent alleen stabiele releases.
+
+- `FOTOARCHIEF_UPDATE_CHECK=false` (ook `0`, `no`, `off`) zet de controle uit; standaard aan.
+- `FOTOARCHIEF_DEPLOYMENT` (`compose`, `komodo`, `dockhand`, `webhosting`) kiest welke updatestappen
+  bovenaan staan. Leeg: Docker Compose in een container, anders webhosting.
+
+### English
+
+Administrators (`users.manage`) see under **Admin > System** which version runs, which channel
+(`FOTOARCHIEF_TAG`) and whether a newer stable release exists, with a link to the release notes and
+the update steps for the way the installation runs (Docker Compose, Komodo, Dockhand or the
+webhosting package). After sign-in the browser asks for the status once; the server asks github.com
+at most every six hours (every ten minutes after a failure), and **Check now** at most every 30
+seconds. A newer version appears as a banner at the top and a dot next to **System**; **Later** hides
+the banner for that version.
+
+The check only reads the redirect of `https://github.com/helmerzNL/FotoArchief/releases/latest` (not
+the API, which allows 60 requests per hour per IP address) and sends nothing about the installation.
+FotoArchief **never** updates itself: the administrator chooses when. A failed check names its cause
+(for example `HTTP 403 (rate limit)`, `Timeout`) and keeps the last good answer. A beta installation is
+not told about newer betas: `releases/latest` only knows stable releases.
+
+- `FOTOARCHIEF_UPDATE_CHECK=false` (also `0`, `no`, `off`) switches the check off; on by default.
+- `FOTOARCHIEF_DEPLOYMENT` (`compose`, `komodo`, `dockhand`, `webhosting`) chooses which update steps
+  come first. Empty: Docker Compose inside a container, webhosting otherwise.
+
 ## Upload limits
 
 The default contractual upload ceiling is:
