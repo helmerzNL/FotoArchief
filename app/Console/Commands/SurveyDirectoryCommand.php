@@ -25,7 +25,8 @@ class SurveyDirectoryCommand extends Command
 
     public function handle(): int
     {
-        $root = realpath((string) $this->argument('path'));
+        $path = $this->argument('path');
+        $root = is_string($path) ? realpath($path) : false;
         if ($root === false || ! is_dir($root) || ! is_readable($root)) {
             $this->error('De map bestaat niet of is niet leesbaar.');
 
@@ -61,7 +62,7 @@ class SurveyDirectoryCommand extends Command
             'files' => array_sum(array_column($types, 'files')),
             'bytes' => array_sum(array_column($types, 'bytes')),
             'max_upload_bytes' => $maxBytes,
-            'types' => array_map(fn (array $type): array => $type + ['average' => $type['files'] > 0 ? intdiv($type['bytes'], $type['files']) : 0], $types),
+            'types' => array_map(fn (array $type): array => $type + ['average' => intdiv($type['bytes'], $type['files'])], $types),
         ];
 
         if ((bool) $this->option('json')) {

@@ -40,7 +40,7 @@ class OcrSmokeCommand extends Command
         // necessarily to this one. Probing it here would fail a perfectly healthy
         // installation, so the queued mode asks the worker to prove it instead.
         if ($this->option('queued')) {
-            return $this->smokeQueuedJob((string) $this->option('language'));
+            return $this->smokeQueuedJob($this->language());
         }
 
         $diagnostics = $service->getDiagnostics();
@@ -52,7 +52,7 @@ class OcrSmokeCommand extends Command
             return self::FAILURE;
         }
 
-        $language = (string) $this->option('language');
+        $language = $this->language();
         $languages = $diagnostics['languages'] ?? [];
         if ($languages !== [] && ! in_array($language, $languages, true)) {
             $this->error("Taal [{$language}] ontbreekt. Beschikbaar: ".implode(', ', $languages));
@@ -281,5 +281,12 @@ class OcrSmokeCommand extends Command
         imagedestroy($image);
 
         return $path;
+    }
+
+    private function language(): string
+    {
+        $language = $this->option('language');
+
+        return is_string($language) ? $language : '';
     }
 }
