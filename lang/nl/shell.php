@@ -52,6 +52,7 @@ return [
             'notifications' => 'Mijn meldingen',
             'users' => 'Gebruikers',
             'system' => 'Systeem',
+            'onedrive' => 'OneDrive',
         ],
     ],
     'status' => [

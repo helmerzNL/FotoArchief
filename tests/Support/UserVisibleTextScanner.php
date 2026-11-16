@@ -48,6 +48,8 @@ final class UserVisibleTextScanner
         'app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php',
         'app/Modules/ArchiveOperations/Services/StorageMigrationService.php',
         'app/Modules/ArchiveOperations/Services/UpdateCheckService.php',
+        'app/Modules/Ingest/Services/OneDriveClient.php',
+        'app/Modules/Ingest/Services/OneDriveImportService.php',
         'app/Modules/Ingest/Services/RasterImageConverter.php',
         'app/Modules/Ingest/Services/TransactionalOutbox.php',
         'app/Modules/Ingest/Support/OriginalPath.php',

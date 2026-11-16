@@ -13,6 +13,7 @@ use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\OperationRunAuditEvent;
 use App\Modules\Catalogue\Models\Asset;
+use App\Modules\Ingest\Jobs\OneDriveImportJob;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
@@ -22,7 +23,7 @@ use Illuminate\Validation\ValidationException;
 
 final class OperationWorkbenchService
 {
-    public const PAUSABLE = [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE, VerifyIntegrityJob::TYPE, StorageCopyJob::TYPE];
+    public const PAUSABLE = [ProcessAiAnalysisJob::TYPE, ProcessAiIndexJob::TYPE, VerifyIntegrityJob::TYPE, StorageCopyJob::TYPE, OneDriveImportJob::TYPE];
 
     public function control(OperationRun $run, User $user, string $action): void
     {

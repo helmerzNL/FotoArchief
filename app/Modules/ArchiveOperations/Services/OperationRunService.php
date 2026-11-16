@@ -17,6 +17,7 @@ use App\Modules\ArchiveOperations\Jobs\StorageCopyJob;
 use App\Modules\ArchiveOperations\Jobs\VerifyIntegrityJob;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use App\Modules\ArchiveOperations\Models\StorageMigration;
+use App\Modules\Ingest\Jobs\OneDriveImportJob;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -173,6 +174,7 @@ class OperationRunService
             VerifyIntegrityJob::TYPE => VerifyIntegrityJob::class,
             RebuildDerivativesJob::TYPE => RebuildDerivativesJob::class,
             StorageCopyJob::TYPE => StorageCopyJob::class,
+            OneDriveImportJob::TYPE => OneDriveImportJob::class,
             StorageCleanupJob::TYPE => StorageCleanupJob::class,
             PurgeAssetsJob::TYPE => PurgeAssetsJob::class,
             CleanupOrphanUploadsJob::TYPE => CleanupOrphanUploadsJob::class,
