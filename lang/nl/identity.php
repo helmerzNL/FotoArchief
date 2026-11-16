@@ -52,9 +52,9 @@ return [
         ],
     ],
     'passkey_environment' => [
-        'wrong_origin' => 'Passkeys werken alleen op :configured (APP_URL). Je opent FotoArchief nu via :current. Open de app via :configured, of zet APP_URL op het adres dat je gebruikt en herstart de stack.',
-        'insecure' => 'Passkeys werken alleen via HTTPS (of op localhost). Open FotoArchief via het https-adres uit APP_URL.',
-        'unreachable' => 'De server is vanaf deze pagina niet bereikbaar. Staat FotoArchief achter een reverse proxy met HTTPS? Zet dan TRUSTED_PROXIES op het adres van de proxy en APP_URL op het https-adres, en herstart de stack.',
+        'wrong_origin' => 'Passkeys werken alleen op :configured (APP_URL). Je opent de app nu via :current. Open de app via :configured, of zet APP_URL op het adres dat je gebruikt en herstart de stack.',
+        'insecure' => 'Passkeys werken alleen via HTTPS (of op localhost). Open de app via het https-adres uit APP_URL.',
+        'unreachable' => 'De server is vanaf deze pagina niet bereikbaar. Staat de app achter een reverse proxy met HTTPS? Zet dan TRUSTED_PROXIES op het adres van de proxy en APP_URL op het https-adres, en herstart de stack.',
     ],
     'users' => [
         'title' => 'Identiteit - Vistora',
