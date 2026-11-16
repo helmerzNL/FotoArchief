@@ -129,12 +129,13 @@ SH);
         $prepare($stub, $data);
     }
     try {
-        $result = Process::path(base_path())->env([
+        // $extra first: array union keeps the left value, so a test can override DATA_PATH.
+        $result = Process::path(base_path())->env($extra + [
             'PATH' => $stub.'/bin:'.getenv('PATH'),
             'STUB_DIR' => $stub,
             'DATA_PATH' => $data,
             'COMPOSE_PROJECT_NAME' => 'fotoarchief',
-        ] + $extra)->run(['sh', 'scripts/migrate-data.sh', ...$arguments]);
+        ])->run(['sh', 'scripts/migrate-data.sh', ...$arguments]);
 
         return [
             'exit' => (int) $result->exitCode(),
