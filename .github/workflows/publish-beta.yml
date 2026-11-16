@@ -1,0 +1,57 @@
+# Every push to `beta` publishes the beta channel: `ghcr.io/helmerznl/fotoarchief:beta` (moves on
+# every build) and `:beta-<sha>` (one build). It publishes the exact image that Quality built and
+# accepted, like the release workflow does. It never writes a stable tag (`latest`, `vX.Y.Z`), never
+# changes VERSION and never creates a GitHub Release: a promotion to `main` does that.
+# App-Guidance project-baseline.md section 20.
+#
+# `workflow_dispatch` exists because a merge by the auto-merge workflow uses GITHUB_TOKEN, and a
+# push made with GITHUB_TOKEN does not start other workflows; that workflow dispatches this one.
+name: publish-beta
+
+on:
+  push:
+    branches:
+      - beta
+  workflow_dispatch:
+
+concurrency:
+  group: publish-beta
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  publish:
+    name: Publish the beta image
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Only from beta
+        run: test "$GITHUB_REF" = "refs/heads/beta"
+      - uses: actions/download-artifact@v4
+        with:
+          name: fotoarchief-docker-${{ github.sha }}
+          path: dist
+      - name: Verify the image archive
+        run: cd dist && sha256sum --check DOCKER-SHA256SUMS
+      - name: Push beta and beta-<sha>
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          docker load -i dist/fotoarchief-docker.tar.gz
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for tag in beta "beta-$GITHUB_SHA"; do
+            docker tag "fotoarchief-ci:$GITHUB_SHA" "$repository:$tag"
+            docker push "$repository:$tag"
+          done
+          docker logout ghcr.io

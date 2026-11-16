@@ -1,7 +1,7 @@
-name: Verified test release
+name: Release
 
-# Cut a release by running this workflow manually from main (Actions > Verified test release
-# > Run workflow). It creates the tag and the GitHub Release together, after Quality and the
+# Cut a release by running this workflow manually from main (Actions > Release > Run workflow),
+# after a promotion from beta (App-Guidance project-baseline.md section 20). It creates the tag and the GitHub Release together, after Quality and the
 # release notes have passed, so a version tag without a release cannot come out of it
 # (App-Guidance project-baseline.md section 5). Pushing a v* tag by hand still works for
 # recovery, but is not the normal path.
@@ -96,7 +96,7 @@ jobs:
           printf 'APP_IMAGE=%s\n' "$image" > dist/IMAGE.txt
           printf 'APP_IMAGE=%s\n' "$latest_image" > dist/IMAGE-LATEST.txt
           docker logout ghcr.io
-      - name: Create persistent test release
+      - name: Create the stable release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -105,8 +105,8 @@ jobs:
           php scripts/release-asset-manifest.php create dist "$RELEASE_TAG" "$GITHUB_SHA"
           # shellcheck disable=SC2086 -- RELEASE_FLAGS holds --verify-tag or --target <sha>
           gh release create "$RELEASE_TAG" \
-            $RELEASE_FLAGS --prerelease \
-            --title "FotoArchief $RELEASE_TAG — Testrelease / Test release" \
+            $RELEASE_FLAGS --latest \
+            --title "FotoArchief $RELEASE_TAG — Stabiele release / Stable release" \
             --notes-file "docs/releases/$RELEASE_TAG.md" dist/*
       - name: Verify persistent release
         shell: bash

@@ -57,7 +57,33 @@ changing application structure or domain boundaries.
 - Preserve database-free setup, installation receipt retry behaviour and the
   completed-installer lock. Read [docs/ONBOARDING.md](docs/ONBOARDING.md).
 
-## Development workflow
+## Branches, channels and updates
+
+FotoArchief follows the `beta` → `main` model of App-Guidance
+[project-baseline.md §20](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/project-baseline.md#20-a-new-app-starts-on-beta-and-main).
+
+- `beta` is the integration branch and the repository's Default branch. Feature
+  branches start from `beta` and pull requests go to `beta`, never to `main`.
+- `main` is the stable line. It only receives a promotion pull request **from
+  `beta`**, when the owner asks for one, merged with a **merge commit**. The
+  `only-from-beta` check (`.github/workflows/pr-target.yml`) fails every other
+  pull request into `main`; the owner makes it required and forbids direct
+  pushes to `main` in the branch protection.
+- Promote with the App-Guidance
+  [promotion runbook](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/promotion-runbook.md).
+  The agent prepares the promotion (checks, release notes, pull request) and
+  merges it only after the owner asked for the promotion and every check is
+  green; it then starts the Release workflow from `main`.
+- A push to `beta` publishes the `beta` channel only (`ghcr.io/helmerznl/fotoarchief:beta`
+  and `:beta-<sha>`, `.github/workflows/publish-beta.yml`). A release from `main`
+  publishes the version tag, `latest` and a stable GitHub Release.
+- Dependabot goes to `beta`: `target-branch: beta` on every entry in
+  `.github/dependabot.yml`; security updates follow the Default branch, which is
+  `beta`. `.github/workflows/dependabot-auto-merge.yml` merges every Dependabot
+  pull request into `beta` (patch, minor, major and security) once Quality is
+  green, and asks Dependabot to rebase when it is behind. A Dependabot pull
+  request into `main` is retargeted to `beta`, never merged into `main`.
+
 
 - Preserve existing docs unless the task explicitly updates the documented
   decision.
@@ -82,7 +108,9 @@ changing application structure or domain boundaries.
   The release workflow validates this file before publishing an image and uses
   it as the release body; `tests/Smoke/release-notes.sh` guards that contract.
   After publication, verify the body is visible on the non-draft GitHub Release.
-  Updating historical notes preserves tags, assets and prerelease status.
+  Updating historical notes preserves tags, assets and prerelease status
+  (releases up to v0.9.78 were published as test prereleases; later releases
+  from `main` are stable).
 - Do not modify deployment or CI files owned by another agent unless the task
   explicitly assigns that work.
 - Prefer conventional Laravel structure and names over custom framework

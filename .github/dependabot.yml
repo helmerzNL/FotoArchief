@@ -1,11 +1,32 @@
-# To get started with Dependabot version updates, you'll need to specify which
-# package ecosystems to update and where the package manifests are located.
-# Please see the documentation for all configuration options:
-# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# Dependabot works on the integration branch, like everyone else (App-Guidance
+# project-baseline.md section 20): every entry targets `beta`, so version updates open their
+# pull requests into `beta` and reach production only through a promotion to `main`.
+# `.github/workflows/dependabot-auto-merge.yml` merges them into `beta` once Quality is green.
+#
+# `target-branch` does not apply to security updates: those use the repository's Default
+# branch, which is therefore `beta` as well (a setting the owner makes on GitHub).
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "composer"
+    directory: "/"
+    target-branch: "beta"
     schedule:
       interval: "weekly"
+    groups:
+      dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"         # the PHP/Apache base image in the Dockerfile
+    directory: "/"
+    target-branch: "beta"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "beta"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
