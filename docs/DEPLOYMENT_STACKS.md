@@ -41,7 +41,7 @@ only as a visible manager update indicator unless you deliberately operate a
 rolling tag with a tested rollback path.
 Safe Komodo acceptance needs a disposable Komodo Core/Periphery target and must
 record: Komodo version, target server name, resolved stack fields above,
-resolved `APP_IMAGE`, port mapping, `APP_URL`, `TRUSTED_PROXIES`,
+resolved image (`FOTOARCHIEF_TAG`), port mapping, `APP_URL`, `TRUSTED_PROXIES`,
 `SESSION_SECURE_COOKIE`, completed onboarding, processed photo preview,
 anonymous denial, pre-upgrade backup checksum, `storage/app/installation`
 state hash before/after upgrade, app-key hash before/after upgrade, closed
@@ -58,9 +58,17 @@ environment variables before deployment. No relative bind-mount paths are used,
 so the application does not depend on Dockhand's own data-directory mapping.
 If a Git-backed stack is used, keep its private environment outside Git.
 
-For both managers, validate the resolved `APP_IMAGE` and port binding before
-deploying. A loaded CI image can be used on that same Docker daemon without
-registry credentials (`fotoarchief-ci:<source-commit>`). For deployment to other
+For both managers, validate the resolved image and port binding before
+deploying. The image is always `ghcr.io/helmerznl/fotoarchief:<FOTOARCHIEF_TAG>`:
+`latest` (the newest stable release, the default), `beta` (the test channel,
+rebuilt on every change to the `beta` branch) or a version such as `v0.9.79`.
+`APP_IMAGE` is no longer read; an installation that still sets it moves to
+`FOTOARCHIEF_TAG` (a version number pins a release; a digest can no longer be
+pinned through the stack variable). A beta build shows a **beta** label next to
+the name and in the browser title. Run a beta in its own stack with its own
+`COMPOSE_PROJECT_NAME`, so it has its own database and storage volumes. A loaded
+offline image is tagged `ghcr.io/helmerznl/fotoarchief:vX.Y.Z` and works with
+`FOTOARCHIEF_TAG=vX.Y.Z` on that same Docker daemon without registry credentials. For deployment to other
 servers, distribute/load the saved image or publish it to your own registry;
 do not configure automatic pull of a local-only CI tag.
 
@@ -104,8 +112,8 @@ The bundled Apache virtual host enables front-controller routing itself and
 disables directory indexes; the container does not require `public/.htaccess`.
 
 Registry credentials belong in the manager's registry configuration if the
-chosen image is private. Select a verified release tag or digest for `APP_IMAGE`;
-do not infer a working image name from an example.
+chosen image is private. Choose `FOTOARCHIEF_TAG` deliberately (`latest`, `beta`
+or a verified version); do not infer a working version from an example.
 
 ## Optional local AI service
 
@@ -172,9 +180,9 @@ Komodo's update modes apply to the Stack resource. For pinned FotoArchief
 release tags, prefer `poll_for_updates=true` so Komodo shows an available digest
 change without redeploying unexpectedly. Leave `auto_update=false` unless a
 human has accepted the exact backup, migration and restore procedure for a
-rolling tag. Dockhand does not replace FotoArchief's own release gate; update
-the stack's private `APP_IMAGE` value to the tested tag/digest and redeploy
-without deleting volumes.
+rolling tag. Dockhand does not replace FotoArchief's own release gate; set
+the stack's `FOTOARCHIEF_TAG` to the tested version (or keep `latest`) and
+redeploy without deleting volumes.
 
 For either manager, the acceptance evidence is the same as direct Compose:
 the stack is created by the manager, onboarding completes, a photo is processed
@@ -186,11 +194,11 @@ application key. A Compose parse alone is only a template syntax check.
 
 For Docker/manager deployments where the operator can run Docker Compose
 commands, use `scripts/upgrade-compose.sh` after updating the stack's private
-`APP_IMAGE` variable to the exact tested release tag or digest:
+`FOTOARCHIEF_TAG` variable to the tested release (or keep `latest` to take the newest stable release):
 
 ```bash
 sh scripts/backup-compose.sh /private/fotoarchief-backup-YYYYMMDD
-APP_IMAGE=ghcr.io/helmerznl/fotoarchief:vX.Y.Z \
+FOTOARCHIEF_TAG=vX.Y.Z \
   sh scripts/upgrade-compose.sh /private/fotoarchief-backup-YYYYMMDD
 ```
 
@@ -242,7 +250,7 @@ This is a separate image-only template. For source-build deployments and the
 change from the PHP development server to Apache, also see
 [DEPLOYMENT_LOCAL.md](DEPLOYMENT_LOCAL.md).
 
-- Set `APP_IMAGE` (no default) to an available image.
+- Set `FOTOARCHIEF_TAG` to `latest` (default), `beta` or a version such as `v0.9.79`.
 - Set `APP_URL`, `TRUSTED_PROXIES` and `SESSION_SECURE_COOKIE` as described
   above before registering passkeys.
 - Set `DB_PASSWORD` (no default) once for the PostgreSQL container. Changing

@@ -207,8 +207,9 @@ HTTP wizard, real PostgreSQL, login, image upload, a running ingest worker,
 private JPEG delivery, anonymous denial and installation persistence on restart.
 Successful runs retain a loadable `fotoarchief-docker.tar.gz` for 14 days, with
 SHA-256 checksums. Download the artifact, then use `docker load -i
-fotoarchief-docker.tar.gz`; its tag is `fotoarchief-ci:<source-commit>`.
-Use that exact tag as `APP_IMAGE` when testing the image-only stack locally.
+fotoarchief-docker.tar.gz`; it is tagged `fotoarchief-ci:<source-commit>` and
+`ghcr.io/helmerznl/fotoarchief:vX.Y.Z`. Test the image-only stack locally with
+`FOTOARCHIEF_TAG=vX.Y.Z`, without pulling.
 The separate PHP artifact includes Composer production dependencies and does
 not need Composer on the hosting server.
 

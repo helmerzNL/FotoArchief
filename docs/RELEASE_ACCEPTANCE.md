@@ -184,9 +184,11 @@ A push to `beta` publishes only the `beta` channel image (`beta`, `beta-<sha>`),
 never a version tag or a GitHub Release. Only
 the highest SemVer tag merged into `main` may publish, so a later push of an older
 tag cannot roll `latest` back. `IMAGE-DIGEST.txt` identifies the registry digest,
-`IMAGE-LATEST.txt` selects the rolling tag and `IMAGE-LOCAL.txt` selects the
-versioned tag included in the offline image archive. Prefer the version tag or
-digest for reproducible deployments. Publishing a test release does not declare
+`IMAGE.txt` (`FOTOARCHIEF_TAG=vX.Y.Z`) and `IMAGE-LATEST.txt` (`FOTOARCHIEF_TAG=latest`)
+give the value for the stack variable, and `IMAGE-LOCAL.txt` the version tag of
+the offline image archive (tagged `ghcr.io/helmerznl/fotoarchief:vX.Y.Z`). Prefer
+the version tag for reproducible deployments; releases up to v0.9.78 wrote
+`APP_IMAGE=` lines in these files instead. Publishing a test release does not declare
 the unresolved gates below complete.
 
 The manager acceptance container receives Docker socket access only on the

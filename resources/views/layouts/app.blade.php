@@ -1,10 +1,13 @@
 <!doctype html>
+@php
+    $betaChannel = config('app.channel') === \App\Support\ReleaseChannel::BETA;
+@endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($interfacePreferences !== null) data-prefs-url="{{ route('identity.preferences.update') }}" data-user-prefs="{{ json_encode($interfacePreferences, JSON_FORCE_OBJECT) }}"@endif>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', __('shell.title.default'))</title>
+    <title>@yield('title', __('shell.title.default'))@if($betaChannel) {{ __('shell.channel.title_suffix') }}@endif</title>
     <meta name="theme-color" content="#f7f3ec">
     <meta name="application-name" content="{{ __('shell.brand.name') }}">
     <meta property="og:site_name" content="{{ __('shell.brand.name') }}">
@@ -32,7 +35,7 @@
         <div class="app-shell">
             <aside id="sidebar" class="sidebar glass">
                 <div class="sidebar-head">
-                    <a class="brand" href="{{ route('admin.assets.index') }}" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span class="brand-name">{{ __('shell.brand.name') }}</span></a>
+                    <a class="brand" href="{{ route('admin.assets.index') }}" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span class="brand-name">{{ __('shell.brand.name') }}</span>@if($betaChannel)<span class="badge badge-warning channel-badge">{{ __('shell.channel.beta') }}</span>@endif</a>
                     @if($archiveProfile)<p class="sidebar-society">{{ $archiveProfile->name }}</p>@endif
                 </div>
                 <nav class="staff-nav" aria-label="{{ __('shell.nav.staff') }}">
@@ -76,7 +79,7 @@
                 @endif
     @else
         <header class="site-header glass">
-            <a class="brand" href="/" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span>{{ __('shell.brand.name') }}</span></a>
+            <a class="brand" href="/" aria-label="{{ __('shell.brand.name') }}"><svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path fill="currentColor" d="M14 14H42V22H22V42H14ZM50 50H26V42H42V26H50Z"/></svg><span>{{ __('shell.brand.name') }}</span>@if($betaChannel)<span class="badge badge-warning channel-badge">{{ __('shell.channel.beta') }}</span>@endif</a>
             @if($archiveProfile)<p class="archive-sender">{{ $archiveProfile->name }}</p>@endif
             <nav class="public-nav" aria-label="{{ __('shell.nav.public') }}">
                 <a href="{{ route('public.discover') }}" aria-current="{{ request()->routeIs('public.discover', 'public.home') ? 'page' : 'false' }}">{{ __('shell.nav.discover') }}</a>

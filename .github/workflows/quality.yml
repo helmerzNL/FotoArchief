@@ -263,7 +263,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      APP_IMAGE: fotoarchief-ci:${{ github.sha }}
+      CI_IMAGE: fotoarchief-ci:${{ github.sha }}
+      FOTOARCHIEF_TAG: ci-${{ github.sha }}
       APP_URL: http://localhost:8080
       DB_PASSWORD: ci-disposable-database
       OCR_ENABLED: "true"
@@ -281,7 +282,11 @@ jobs:
       - name: Validate stack configuration
         run: docker compose -f deploy/compose.yaml config --quiet
       - name: Build production image
-        run: docker build --tag "$APP_IMAGE" .
+        # fotoarchief-ci:<sha> is what the release and beta workflows publish; the second tag is
+        # what deploy/compose.yaml resolves for FOTOARCHIEF_TAG=ci-<sha>.
+        run: |
+          docker build --tag "$CI_IMAGE" .
+          docker tag "$CI_IMAGE" "ghcr.io/helmerznl/fotoarchief:$FOTOARCHIEF_TAG"
       - name: Start optional ClamAV scanner
         run: docker compose -f deploy/compose.yaml up -d --wait clamav
       - name: Start HTTP service without configured database or object storage
@@ -381,10 +386,11 @@ jobs:
       - name: Save tested Docker image
         run: |
           mkdir -p dist
-          local_image="fotoarchief:$(cat VERSION)"
-          docker tag "$APP_IMAGE" "$local_image"
-          docker save "$APP_IMAGE" "$local_image" | gzip > dist/fotoarchief-docker.tar.gz
-          printf 'APP_IMAGE=%s\n' "$local_image" > dist/IMAGE-LOCAL.txt
+          local_tag="v$(cat VERSION)"
+          local_image="ghcr.io/helmerznl/fotoarchief:$local_tag"
+          docker tag "$CI_IMAGE" "$local_image"
+          docker save "$CI_IMAGE" "$local_image" | gzip > dist/fotoarchief-docker.tar.gz
+          printf 'FOTOARCHIEF_TAG=%s\n' "$local_tag" > dist/IMAGE-LOCAL.txt
           (cd dist && sha256sum fotoarchief-docker.tar.gz IMAGE-LOCAL.txt > DOCKER-SHA256SUMS)
       - name: Back up the accepted archive consistently
         run: sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-backup"
@@ -437,7 +443,7 @@ jobs:
           exit 1
       - name: Import templates through the real manager API and accept the new stack
         env:
-          APP_IMAGE: ghcr.io/helmerznl/fotoarchief:v0.9.52@sha256:7348497b470e9d40b1dc0c42f087a78c636f6ba0a6aec27fc251cdfe5efa38ef
+          FOTOARCHIEF_TAG: v0.9.52
           FOTOARCHIEF_DISPOSABLE_MANAGER: "1"
           COMPOSE_PROJECT_NAME: fotoarchief-managed
           APP_HTTP_PORT: "8082"
@@ -481,7 +487,7 @@ jobs:
           before_key="$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("app.key");' | sha256sum | awk '{print $1}')"
           docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sh -c 'find storage/app/private -type f -exec sha256sum {} \; | sort' > "$RUNNER_TEMP/upgrade-private-before"
           sh scripts/backup-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
-          FOTOARCHIEF_SKIP_IMAGE_PULL=1 APP_IMAGE="$APP_IMAGE" sh scripts/upgrade-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
+          FOTOARCHIEF_SKIP_IMAGE_PULL=1 sh scripts/upgrade-compose.sh "$RUNNER_TEMP/fotoarchief-managed-upgrade-backup"
           test "$(docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app cat VERSION)" = "$(cat VERSION)"
           docker compose -p fotoarchief-managed -f deploy/compose.yaml exec -T app sh -c 'find storage/app/private -type f -exec sha256sum {} \; | sort' > "$RUNNER_TEMP/upgrade-private-after"
           cmp "$RUNNER_TEMP/upgrade-private-before" "$RUNNER_TEMP/upgrade-private-after"

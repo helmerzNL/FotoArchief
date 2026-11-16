@@ -44,7 +44,7 @@ if ($compose === false || $template === false) {
 }
 $values = [
     'COMPOSE_PROJECT_NAME' => 'fotoarchief-managed',
-    'APP_IMAGE' => getenv('APP_IMAGE'),
+    'FOTOARCHIEF_TAG' => getenv('FOTOARCHIEF_TAG'),
     'APP_BIND_ADDRESS' => '127.0.0.1',
     'APP_HTTP_PORT' => '8082',
     'APP_URL' => 'http://127.0.0.1:8082',

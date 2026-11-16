@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'channel' => [
+        'beta' => 'beta',
+        'title_suffix' => '(beta)',
+    ],
     'brand' => [
         'name' => 'Vistora',
         'tagline' => 'Historische beelden. Dichtbij gebracht.',

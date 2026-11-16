@@ -77,6 +77,11 @@ FotoArchief follows the `beta` → `main` model of App-Guidance
 - A push to `beta` publishes the `beta` channel only (`ghcr.io/helmerznl/fotoarchief:beta`
   and `:beta-<sha>`, `.github/workflows/publish-beta.yml`). A release from `main`
   publishes the version tag, `latest` and a stable GitHub Release.
+- `FOTOARCHIEF_TAG` in `deploy/compose.yaml` and `deploy/.env.example` is the one
+  variable that picks the image (`latest`, `beta` or a version); it is passed into
+  the container, and a tag containing `beta` shows a **beta** label in the app
+  (`App\Support\ReleaseChannel`, `tests/Feature/ReleaseChannelTest.php`).
+  `APP_IMAGE` is no longer read by the deployment stack.
 - Dependabot goes to `beta`: `target-branch: beta` on every entry in
   `.github/dependabot.yml`; security updates follow the Default branch, which is
   `beta`. `.github/workflows/dependabot-auto-merge.yml` merges every Dependabot

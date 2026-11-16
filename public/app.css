@@ -239,6 +239,9 @@ details.card[open] > summary { margin-bottom: 1rem; }
 .badge-warning { background: var(--color-warning-surface); color: var(--color-warning); }
 .badge-error { background: var(--color-error-surface); color: var(--color-error); }
 .badge-info { background: var(--color-info-surface); color: var(--color-info); }
+.channel-badge { margin-inline-start: .5rem; font-size: .75rem; padding: 0 .5rem; }
+.channel-badge::before { display: none; }
+html[data-sidebar="collapsed"] .sidebar .channel-badge { display: none; }
 
 /* Filter toolbar */
 .filter-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 1rem; align-items: end; }
