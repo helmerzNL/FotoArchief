@@ -1,0 +1,64 @@
+# Dependabot pull requests into `beta` are merged automatically once Quality is green, for every
+# update type (patch, minor, major and security). `beta` is the test line; a promotion to `main`
+# stays a human decision. App-Guidance project-baseline.md section 20.
+#
+# It runs after Quality finishes (`workflow_run`) and never checks out or executes code from the
+# pull request: it only reads the pull request through the API and merges it.
+# - Quality failed, or the pull request is not Dependabot's or not into `beta`: nothing happens.
+# - The pull request moved on since Quality ran: nothing happens; the new commit gets its own run.
+# - The pull request is behind `beta`: Dependabot is asked to rebase, so the merged result is what
+#   Quality tested; the rebase starts a new Quality run and this workflow again.
+# - Otherwise it is merged with a merge commit, and publish-beta is dispatched, because a merge made
+#   with GITHUB_TOKEN does not start the push workflows on `beta`.
+name: dependabot-auto-merge
+
+on:
+  workflow_run:
+    workflows: [Quality]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge the Dependabot pull request into beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          pr="$(gh pr list --state open --base beta --head "$HEAD_BRANCH" \
+            --json number,author,headRefOid --jq '.[] | select(.author.login == "app/dependabot" or .author.login == "dependabot[bot]") | .number' | head -n 1)"
+          if [ -z "$pr" ]; then
+            echo "No open Dependabot pull request into beta for $HEAD_BRANCH."
+            exit 0
+          fi
+          current="$(gh pr view "$pr" --json headRefOid --jq .headRefOid)"
+          if [ "$current" != "$HEAD_SHA" ]; then
+            echo "Pull request #$pr moved on since Quality ran ($HEAD_SHA -> $current); its own run decides."
+            exit 0
+          fi
+          behind="$(gh api "repos/$GH_REPO/compare/beta...$HEAD_SHA" --jq .behind_by)"
+          if [ "$behind" != "0" ]; then
+            echo "Pull request #$pr is $behind commit(s) behind beta; asking Dependabot to rebase."
+            gh pr comment "$pr" --body "@dependabot rebase"
+            exit 0
+          fi
+          gh pr merge "$pr" --merge --match-head-commit "$HEAD_SHA"
+          gh workflow run publish-beta.yml --ref beta
+          echo "Merged #$pr into beta and dispatched publish-beta."

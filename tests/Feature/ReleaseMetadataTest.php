@@ -22,7 +22,9 @@ it('keeps package and release metadata bilingual with Dutch first', function ():
         ->toContain('Historische beeldbank')
         ->toContain('Historical image archive')
         ->and($releaseWorkflow)
-        ->toContain('Testrelease / Test release')
+        ->toContain('Stabiele release / Stable release')
+        ->toContain('--latest')
+        ->not->toContain('--prerelease')
         ->toContain('run: sh scripts/check-release-notes.sh "$RELEASE_TAG"')
         ->toContain('--notes-file "docs/releases/$RELEASE_TAG.md" dist/*');
 });
