@@ -47,6 +47,7 @@ final class UserVisibleTextScanner
         'app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php',
         'app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php',
         'app/Modules/ArchiveOperations/Services/StorageMigrationService.php',
+        'app/Modules/ArchiveOperations/Services/UpdateCheckService.php',
         'app/Modules/Ingest/Services/TransactionalOutbox.php',
         'app/Modules/Ingest/Support/OriginalPath.php',
     ];
