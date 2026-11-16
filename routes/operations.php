@@ -21,6 +21,7 @@ use App\Modules\ArchiveOperations\Controllers\RecoveryWorkbenchController;
 use App\Modules\ArchiveOperations\Controllers\StorageMigrationController;
 use App\Modules\ArchiveOperations\Controllers\SystemUpdateController;
 use App\Modules\ArchiveOperations\Controllers\TrashController;
+use App\Modules\Ingest\Controllers\OneDriveController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.')->group(function (): void {
@@ -35,6 +36,14 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/system', [SystemUpdateController::class, 'show'])->name('system');
     Route::post('/system/check', [SystemUpdateController::class, 'check'])->name('system.check');
     Route::get('/system/update-status', [SystemUpdateController::class, 'status'])->name('system.update-status');
+    Route::get('/onedrive', [OneDriveController::class, 'show'])->name('onedrive');
+    Route::post('/onedrive/app', [OneDriveController::class, 'saveApp'])->name('onedrive.app');
+    Route::delete('/onedrive/app', [OneDriveController::class, 'deleteApp'])->name('onedrive.app.delete');
+    Route::post('/onedrive/connect', [OneDriveController::class, 'connect'])->name('onedrive.connect');
+    Route::get('/onedrive/callback', [OneDriveController::class, 'callback'])->name('onedrive.callback');
+    Route::post('/onedrive/folder', [OneDriveController::class, 'chooseFolder'])->name('onedrive.folder');
+    Route::post('/onedrive/start', [OneDriveController::class, 'start'])->name('onedrive.start');
+    Route::post('/onedrive/disconnect', [OneDriveController::class, 'disconnect'])->name('onedrive.disconnect');
     Route::get('/recovery', [RecoveryWorkbenchController::class, 'index'])->name('recovery.index');
     Route::post('/recovery/check', [RecoveryWorkbenchController::class, 'check'])->name('recovery.check');
     Route::post('/recovery/incidents/{incident}/acknowledge', [RecoveryWorkbenchController::class, 'acknowledge'])->name('recovery.acknowledge');

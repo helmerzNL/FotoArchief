@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Support\IngestBacklog;
 use App\Modules\Ingest\Support\OriginalPath;
 use FilesystemIterator;
 use Illuminate\Console\Command;
@@ -198,17 +199,11 @@ class ImportDirectoryCommand extends Command
         }
     }
 
-    /** Uploads that are accepted but not yet scanned and processed. */
-    private function backlog(): int
-    {
-        return QuarantineUpload::query()->whereIn('status', ['queued', 'running'])->count();
-    }
-
     /** Pauses while the workers are behind; false when the queue stays full for $waitSeconds. */
     private function waitForQueue(int $maxPending, int $waitSeconds): bool
     {
         $deadline = microtime(true) + $waitSeconds;
-        while (($pending = $this->backlog()) >= $maxPending) {
+        while (($pending = IngestBacklog::pending()) >= $maxPending) {
             if (microtime(true) >= $deadline) {
                 return false;
             }
