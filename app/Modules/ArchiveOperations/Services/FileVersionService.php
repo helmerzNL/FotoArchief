@@ -8,7 +8,11 @@ use App\Models\User;
 use App\Modules\Catalogue\Models\Asset;
 use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Catalogue\Models\AssetVersion;
+use App\Modules\Ingest\Exceptions\UnreadableImage;
+use App\Modules\Ingest\Exceptions\UnreadablePdf;
+use App\Modules\Ingest\Exceptions\UnreadableRasterImage;
 use App\Modules\Ingest\Models\AssetAuditEvent;
+use App\Modules\Ingest\Services\OriginalImageDecoder;
 use App\Modules\Ingest\Services\QuarantineUploadService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
@@ -19,10 +23,9 @@ use RuntimeException;
 
 class FileVersionService
 {
-    private const TYPES = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp'];
-
     public function __construct(
         private readonly QuarantineUploadService $quarantineUploadService,
+        private readonly OriginalImageDecoder $decoder,
     ) {}
 
     /**
@@ -87,74 +90,17 @@ class FileVersionService
                 throw new RuntimeException(__('operations.generated.t_a0fd9a9a9b63df34'));
             }
 
-            set_error_handler(function (): never {
-                throw ValidationException::withMessages(['reprocess' => __('operations.generated.t_3c2421dae8c49b8b')]);
-            });
-
+            // The same decoding as ingest, so every accepted format (JPEG, PNG, WebP, BMP,
+            // PDF, TIFF, HEIC) can be rebuilt. A damaged original is shown to the user; a
+            // missing poppler or libvips binary stays a RuntimeException.
             try {
-                $info = getimagesize($temporary);
-                if ($info === false || ! isset(self::TYPES[$info[2]])) {
-                    throw new RuntimeException(__('operations.generated.t_8929289bd56274a2'));
-                }
-                [$width, $height, $type] = $info;
-                $orientation = 1;
-                if ($type === IMAGETYPE_JPEG && exif_imagetype($temporary) === IMAGETYPE_JPEG) {
-                    $exif = exif_read_data($temporary, 'IFD0', true);
-                    $orientation = (int) ($exif['IFD0']['Orientation'] ?? 1);
-                }
-
-                $source = match ($type) {
-                    IMAGETYPE_JPEG => imagecreatefromjpeg($temporary),
-                    IMAGETYPE_PNG => imagecreatefrompng($temporary),
-                    IMAGETYPE_WEBP => imagecreatefromwebp($temporary),
-                };
-                if ($source === false) {
-                    throw new RuntimeException(__('operations.generated.t_7239b69474cd661a'));
-                }
-            } finally {
-                restore_error_handler();
+                $decoded = $this->decoder->decode($temporary);
+            } catch (UnreadableImage|UnreadablePdf|UnreadableRasterImage $exception) {
+                throw ValidationException::withMessages(['reprocess' => $exception->getMessage()]);
             }
 
-            if (in_array($orientation, [2, 4, 5, 7], true)) {
-                imageflip($source, $orientation === 4 ? IMG_FLIP_VERTICAL : IMG_FLIP_HORIZONTAL);
-            }
-            $angle = match ($orientation) {
-                3 => 180, 5, 8 => 90, 6, 7 => -90, default => 0
-            };
-            if ($angle !== 0) {
-                $rotated = imagerotate($source, $angle, 0);
-                if ($rotated !== false) {
-                    $source = $rotated;
-                }
-            }
-
-            $displayWidth = imagesx($source);
-            $displayHeight = imagesy($source);
             $derivatives = [];
-
-            foreach ([300, 1200, 2000] as $limit) {
-                $ratio = min(1, $limit / max($displayWidth, $displayHeight));
-                $targetW = max(1, (int) round($displayWidth * $ratio));
-                $targetH = max(1, (int) round($displayHeight * $ratio));
-                $target = imagecreatetruecolor($targetW, $targetH);
-                if ($target === false) {
-                    throw new RuntimeException(__('operations.generated.t_a3bee48f77a8380c'));
-                }
-                imagefill($target, 0, 0, 16777215);
-                imagecopyresampled($target, $source, 0, 0, 0, 0, $targetW, $targetH, $displayWidth, $displayHeight);
-                ob_start();
-                try {
-                    imagejpeg($target, null, 85);
-                    $encoded = ob_get_contents();
-                } finally {
-                    ob_end_clean();
-                }
-                unset($target);
-
-                if (! is_string($encoded)) {
-                    throw new RuntimeException(__('operations.generated.t_e1dcbebc736a4b37'));
-                }
-
+            foreach ($this->decoder->previews($decoded->image) as $limit => $encoded) {
                 $key = 'derivatives/'.$file->id.'/preview-'.$limit.'-'.time().'.jpg';
                 $writtenKeys[] = $key;
                 if (! $disk->put($key, $encoded, ['visibility' => 'private', 'ContentType' => 'image/jpeg'])) {
@@ -162,7 +108,7 @@ class FileVersionService
                 }
                 $derivatives['preview'.$limit] = $key;
             }
-            unset($source);
+            unset($decoded);
 
             DB::transaction(function () use ($file, $derivatives, $actor): void {
                 $file->update([
