@@ -60,7 +60,7 @@ it('renders the account choices into the page for signed-in staff', function ():
     $user = preferenceUser();
     $this->actingAs($user)->get('/admin/assets')->assertOk()
         ->assertSee('data-user-prefs="{}"', false)
-        ->assertSee('data-prefs-url="'.route('identity.preferences.update').'"', false);
+        ->assertSee('data-prefs-url="'.route('identity.preferences.update', [], false).'"', false);
 
     $this->putJson(route('identity.preferences.update'), ['theme' => 'dark', 'accent' => 'pruim'])->assertOk();
     $this->get('/ontdek')->assertOk()

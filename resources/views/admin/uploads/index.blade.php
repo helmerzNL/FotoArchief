@@ -4,7 +4,7 @@
 <h1>{{ __('uploads.title') }}</h1>
 <p>{{ __('uploads.intro') }}</p>
 <section class="card">
-    @php($endpoint = route('admin.uploads.store'))
+    @php($endpoint = route('admin.uploads.store', [], false))
     @php($existing = false)
     @include('admin.uploads.form')
 </section>

@@ -14,7 +14,7 @@
     @if($file)
         <div class="split-media">
         <figure class="viewer" data-viewer
-                @unless($staffPreview ?? false) data-manifest-url="{{ route('iiif.manifest', $publication) }}" @endunless>
+                @unless($staffPreview ?? false) data-manifest-url="{{ route('iiif.manifest', $publication, false) }}" @endunless>
             <div class="viewer-viewport" id="viewer-viewport" role="region" tabindex="0"
                  aria-label="{{ __('publication.viewer.region') }}" aria-describedby="viewer-help">
                 <img class="preview" id="viewer-image"

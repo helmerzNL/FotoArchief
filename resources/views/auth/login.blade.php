@@ -7,6 +7,7 @@
         <p>{{ __('auth.login.intro') }}</p>
         <button id="passkey-login" type="button">{{ __('auth.login.passkey_button') }}</button>
         <p id="passkey-login-status" role="status"></p>
+        @include('identity.partials.passkey-environment')
         <form method="post" action="/login">
             @csrf
             <label for="email">{{ __('auth.login.email') }}</label>
@@ -41,14 +42,18 @@
         };
         document.getElementById('passkey-login').addEventListener('click', async () => {
             try {
+                assertPasskeyEnvironment();
                 if (!navigator.credentials) {
                     throw new Error(passkeyMessages.unsupported);
                 }
                 status.textContent = passkeyMessages.started;
-                const optionsResponse = await fetch('{{ route('identity.passkeys.login.options') }}', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+                const optionsResponse = await passkeyFetch(@json(route('identity.passkeys.login.options', [], false)), { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+                if (!optionsResponse.ok) {
+                    throw new Error(passkeyMessages.rejected);
+                }
                 const options = decodeOptions(await optionsResponse.json());
                 const credential = await navigator.credentials.get(options);
-                const response = await fetch('{{ route('identity.passkeys.login') }}', {
+                const response = await passkeyFetch(@json(route('identity.passkeys.login', [], false)), {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify({
