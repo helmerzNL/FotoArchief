@@ -175,7 +175,11 @@ jobs:
       - name: Install PostgreSQL 16 client tools
         # The runner image ships a newer pg_dump whose dumps a PostgreSQL 16 server cannot
         # restore (for example SET transaction_timeout); production uses postgresql-client-16.
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client-16
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-16
       - name: Exercise real isolated backup and restore drills
         shell: bash
         run: |
