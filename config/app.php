@@ -2,13 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Support\ReleaseChannel;
+
 return [
     'name' => env('APP_NAME', 'FotoArchief'),
     // The image the installation runs, as chosen with FOTOARCHIEF_TAG in Compose (`latest`, `beta`,
     // or a version). A tag containing `beta` is the beta channel; everything else is stable.
     // App-Guidance project-baseline.md section 20.
     'release_tag' => env('FOTOARCHIEF_TAG', 'latest'),
-    'channel' => App\Support\ReleaseChannel::forTag(env('FOTOARCHIEF_TAG', 'latest')),
+    'channel' => ReleaseChannel::forTag(env('FOTOARCHIEF_TAG', 'latest')),
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),
     'url' => env('APP_URL', 'http://localhost'),
