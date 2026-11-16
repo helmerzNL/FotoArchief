@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\QuarantineUploadService;
+use App\Modules\Ingest\Support\IngestBacklog;
 use App\Modules\Ingest\Support\OriginalPath;
 use FilesystemIterator;
 use Illuminate\Console\Command;
@@ -36,10 +37,10 @@ use Throwable;
  */
 class ImportDirectoryCommand extends Command
 {
-    public const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf'];
+    public const SUPPORTED = ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'pdf', 'tif', 'tiff', 'heic', 'heif'];
 
     /** Types the archive holds but ingest cannot process yet; counted, never imported. */
-    public const NOT_YET_SUPPORTED = ['tif', 'tiff', 'heic'];
+    public const NOT_YET_SUPPORTED = ['avif'];
 
     protected $signature = 'ingest:import-directory
         {path : Folder on the server with the image files (read only)}
@@ -198,17 +199,11 @@ class ImportDirectoryCommand extends Command
         }
     }
 
-    /** Uploads that are accepted but not yet scanned and processed. */
-    private function backlog(): int
-    {
-        return QuarantineUpload::query()->whereIn('status', ['queued', 'running'])->count();
-    }
-
     /** Pauses while the workers are behind; false when the queue stays full for $waitSeconds. */
     private function waitForQueue(int $maxPending, int $waitSeconds): bool
     {
         $deadline = microtime(true) + $waitSeconds;
-        while (($pending = $this->backlog()) >= $maxPending) {
+        while (($pending = IngestBacklog::pending()) >= $maxPending) {
             if (microtime(true) >= $deadline) {
                 return false;
             }

@@ -2,7 +2,7 @@
 
 > Generated from `capabilities.json`; run `php scripts/check-capabilities.php --write` after changing capabilities.
 
-Product version / Productversie: **0.9.81**
+Product version / Productversie: **0.9.83**
 
 | Capability | Status | Requirements / Vereisten | Evidence / Bewijs |
 | --- | --- | --- | --- |
@@ -25,6 +25,8 @@ Product version / Productversie: **0.9.81**
 | `vistora-identity` | shipped | - | [`public/brand`](../public/brand), [`docs/BRANDING.md`](../docs/BRANDING.md) |
 | `folder-import` | experimental | - | [`app/Console/Commands/ImportDirectoryCommand.php`](../app/Console/Commands/ImportDirectoryCommand.php), [`app/Modules/Ingest/Support/OriginalPath.php`](../app/Modules/Ingest/Support/OriginalPath.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
 | `pdf-documents` | conditional | poppler-utils (pdfinfo and pdftoppm) in the runtime image | [`app/Modules/Ingest/Services/PdfPageRenderer.php`](../app/Modules/Ingest/Services/PdfPageRenderer.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
+| `onedrive-import` | conditional | an Entra app registration for personal Microsoft accounts per installation; outbound access to login.microsoftonline.com, graph.microsoft.com and *.files.1drv.com | [`app/Modules/Ingest/Services/OneDriveImportService.php`](../app/Modules/Ingest/Services/OneDriveImportService.php), [`app/Modules/Ingest/Services/OneDriveClient.php`](../app/Modules/Ingest/Services/OneDriveClient.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
+| `tiff-heic-originals` | conditional | libvips-tools (vips and vipsheader) with libheif and libde265 in the runtime image | [`app/Modules/Ingest/Services/RasterImageConverter.php`](../app/Modules/Ingest/Services/RasterImageConverter.php), [`docs/PHOTO_WORKFLOW.md`](../docs/PHOTO_WORKFLOW.md) |
 
 ## External acceptance boundaries / Externe acceptatiegrenzen
 

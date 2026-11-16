@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\ArchiveOperations\Jobs;
 
+use App\Modules\ArchiveOperations\Exceptions\PermanentOperationFailure;
 use App\Modules\ArchiveOperations\Models\OperationRun;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -81,7 +82,12 @@ abstract class OperationJob implements ShouldQueue
     /**
      * Process at most CHUNK_SIZE items.
      *
-     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, failed_total?: int, result?: array<string, mixed>}
+     * Optional keys: `delay_seconds` queues the continuation that much later (an
+     * external service asked to wait, or the ingest queue is full), and `progressed`
+     * tells the stall guard that the chunk moved its cursor even though it neither
+     * processed nor failed an item (it only skipped items, or it is waiting).
+     *
+     * @return array{processed: int, failed: int, finished: bool, processed_total?: int, failed_total?: int, result?: array<string, mixed>, delay_seconds?: int, progressed?: bool}
      */
     abstract protected function executeChunk(OperationRun $run): array;
 
@@ -187,7 +193,7 @@ abstract class OperationJob implements ShouldQueue
             // not be recorded as completed: a run marked "completed" that silently
             // skipped 40 000 files is worse than a run that failed, because nobody
             // goes looking. The cursor stays on the run so it can be resumed.
-            $stalled = $outcome['processed'] === 0 && $outcome['failed'] === 0;
+            $stalled = $outcome['processed'] === 0 && $outcome['failed'] === 0 && ! ($outcome['progressed'] ?? false);
             if ($this->chunkNumber >= self::MAX_CHUNKS || $stalled) {
                 $run->forceFill([
                     'status' => OperationRun::STATUS_FAILED,
@@ -213,7 +219,24 @@ abstract class OperationJob implements ShouldQueue
                 'claim_token' => null,
             ])->save();
 
-            Queue::connection('ingest')->push(new static($this->runId, $this->chunkNumber + 1));
+            $continuation = new static($this->runId, $this->chunkNumber + 1);
+            $delay = max(0, (int) ($outcome['delay_seconds'] ?? 0));
+            if ($delay > 0) {
+                $continuation->delay($delay);
+                Queue::connection('ingest')->later($delay, $continuation);
+            } else {
+                Queue::connection('ingest')->push($continuation);
+            }
+        } catch (PermanentOperationFailure $exception) {
+            OperationRun::query()->whereKey($run->id)
+                ->where('claim_token', $token)
+                ->where('status', OperationRun::STATUS_RUNNING)
+                ->update([
+                    'status' => OperationRun::STATUS_FAILED,
+                    'claim_token' => null,
+                    'finished_at' => now(),
+                    'error_message' => $this->describe($exception),
+                ]);
         } catch (Throwable $exception) {
             OperationRun::query()->whereKey($run->id)
                 ->where('claim_token', $token)

@@ -94,6 +94,7 @@ final class StaffNavigation
             ['key' => 'photos', 'label' => __('shell.nav.groups.photos'), 'icon' => 'image', 'items' => [
                 ['key' => 'photos', 'label' => __('shell.nav.items.photos'), 'route' => 'admin.assets.index', 'match' => ['admin.assets.*']],
                 ['key' => 'uploads', 'label' => __('shell.nav.items.uploads'), 'route' => 'admin.uploads.index', 'match' => ['admin.uploads.*'], 'any' => ['assets.create']],
+                ['key' => 'onedrive', 'label' => __('shell.nav.items.onedrive'), 'route' => 'admin.operations.onedrive', 'match' => ['admin.operations.onedrive*'], 'any' => ['users.manage']],
             ]],
             ['key' => 'catalogue', 'label' => __('shell.nav.groups.catalogue'), 'icon' => 'layers', 'items' => [
                 ['key' => 'catalogue_overview', 'label' => __('shell.nav.items.catalogue_overview'), 'route' => 'catalogue.index', 'match' => ['catalogue.index', 'catalogue.bulk.*', 'catalogue.searches.*']],
