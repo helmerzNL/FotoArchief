@@ -83,7 +83,7 @@ class ArchiveBackupJobService
     {
         $error = null;
         if ($job->error_key !== null) {
-            $params = $job->error_params ?? [];
+            $params = $this->arrayOf($job->error_params);
             if (isset($params['reason_key']) && is_string($params['reason_key'])) {
                 $params['reason'] = __($params['reason_key'], is_array($params['reason_params'] ?? null) ? $params['reason_params'] : []);
                 unset($params['reason_key'], $params['reason_params']);
@@ -382,7 +382,7 @@ class ArchiveBackupJobService
     private function exportStep(BackupJob $job): bool
     {
         $work = $this->workDirectory($job);
-        $state = $job->state ?? [];
+        $state = $this->arrayOf($job->state);
 
         if ($job->phase === 'collecting') {
             $result = $this->exporter->writeDocument($work.'/backup.json', $job->includes_files);
@@ -426,7 +426,7 @@ class ArchiveBackupJobService
             if ($cursor >= count($files)) {
                 $zip->finish();
 
-                return $this->finishExport($job, $work.'/backup.zip', $job->summary ?? []);
+                return $this->finishExport($job, $work.'/backup.zip', $this->arrayOf($job->summary));
             }
         } finally {
             $zip->close();
@@ -481,7 +481,7 @@ class ArchiveBackupJobService
     private function restoreStep(BackupJob $job): bool
     {
         $work = $this->workDirectory($job);
-        $state = $job->state ?? [];
+        $state = $this->arrayOf($job->state);
         $token = (string) ($state['token'] ?? '');
         $path = $this->stagedPath($token);
         if (! is_file($path)) {
@@ -535,7 +535,7 @@ class ArchiveBackupJobService
             $job->forceFill([
                 'step' => $finished ? 0 : $cursor,
                 'phase' => $finished ? 'replacing' : 'files',
-                'steps' => $finished ? array_sum((array) ($job->summary['counts'] ?? [])) : $job->steps,
+                'steps' => $finished ? array_sum((array) ($this->arrayOf($job->summary)['counts'] ?? [])) : $job->steps,
             ])->save();
 
             return true;
@@ -639,7 +639,7 @@ class ArchiveBackupJobService
     {
         if ($job->kind === BackupJob::KIND_RESTORE) {
             $this->restorer->removeWritten($this->placements($job));
-            $this->discardStage((string) (($job->state ?? [])['token'] ?? ''));
+            $this->discardStage((string) ($this->arrayOf($job->state)['token'] ?? ''));
         }
         File::deleteDirectory($this->workDirectory($job));
     }
@@ -739,7 +739,7 @@ class ArchiveBackupJobService
             return null;
         }
 
-        return $newest === null || $failure->finished_at->greaterThan($newest) ? $failure : null;
+        return $newest === null || CarbonImmutable::parse($failure->finished_at)->greaterThan($newest) ? $failure : null;
     }
 
     private function nextAutomaticAt(?CarbonImmutable $newest, ?BackupJob $failure): ?CarbonImmutable
@@ -747,7 +747,7 @@ class ArchiveBackupJobService
         $next = $newest?->addHours(max(1, (int) config('operations.backup.auto.interval_hours')));
         $failedAt = $failure instanceof BackupJob ? $failure->finished_at : null;
         if ($failedAt !== null) {
-            $retry = $failedAt->addMinutes((int) config('operations.backup.auto.retry_minutes'));
+            $retry = CarbonImmutable::parse($failedAt)->addMinutes((int) config('operations.backup.auto.retry_minutes'));
             $next = $next === null || $retry->greaterThan($next) ? $retry : $next;
         }
 
@@ -780,6 +780,20 @@ class ArchiveBackupJobService
     private function autoDirectory(): string
     {
         return (string) config('operations.backup.auto.path');
+    }
+
+    /**
+     * A JSON column as an array (Larastan reads these columns as strings).
+     *
+     * @return array<string, mixed>
+     */
+    private function arrayOf(mixed $value): array
+    {
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        return is_array($value) ? $value : [];
     }
 
     private function megabytes(int $bytes): string

@@ -6,6 +6,7 @@ namespace App\Modules\Identity\Services;
 
 use App\Models\User;
 use App\Modules\Identity\Models\UserInvitation;
+use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -237,7 +238,7 @@ class InvitationService
             'invitation_id' => $invitation->id,
             'kind' => $invitation->kind,
             'user_id' => $invitation->user_id,
-            'expires_at' => $invitation->expires_at->toIso8601String(),
+            'expires_at' => CarbonImmutable::parse($invitation->expires_at)->toIso8601String(),
         ]);
     }
 }

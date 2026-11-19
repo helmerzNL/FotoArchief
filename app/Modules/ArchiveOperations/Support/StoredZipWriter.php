@@ -46,8 +46,18 @@ final class StoredZipWriter
             foreach (file($this->entriesPath(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
                 $entry = json_decode($line, true);
                 if (is_array($entry)) {
-                    $this->entries[] = $entry;
-                    $end = (int) $entry['end'];
+                    $end = max(0, (int) ($entry['end'] ?? 0));
+                    $this->entries[] = [
+                        'name' => (string) ($entry['name'] ?? ''),
+                        'method' => (int) ($entry['method'] ?? 0),
+                        'crc' => (int) ($entry['crc'] ?? 0),
+                        'compressed' => (int) ($entry['compressed'] ?? 0),
+                        'size' => (int) ($entry['size'] ?? 0),
+                        'offset' => (int) ($entry['offset'] ?? 0),
+                        'end' => $end,
+                        'time' => (int) ($entry['time'] ?? 0),
+                        'date' => (int) ($entry['date'] ?? 0),
+                    ];
                 }
             }
         }
@@ -74,7 +84,7 @@ final class StoredZipWriter
      */
     public function addStream(string $name, $input, ?int $expectedSize = null, bool $deflate = false, ?int $maxBytes = null): array
     {
-        $offset = (int) ftell($this->handle);
+        $offset = max(0, (int) ftell($this->handle));
         $zip64 = ! $deflate && $expectedSize !== null && $expectedSize >= self::LIMIT;
         [$time, $date] = $this->dosTime(time());
         $method = $deflate ? 8 : 0;
@@ -109,11 +119,17 @@ final class StoredZipWriter
                 hash_update($crc, $chunk);
                 hash_update($sha, $chunk);
                 $out = $deflater !== null ? deflate_add($deflater, $chunk, ZLIB_NO_FLUSH) : $chunk;
+                if ($out === false) {
+                    throw new RuntimeException('Compressing backup.json failed.');
+                }
                 $compressed += strlen($out);
                 $this->write($out);
             }
             if ($deflater !== null) {
                 $out = deflate_add($deflater, '', ZLIB_FINISH);
+                if ($out === false) {
+                    throw new RuntimeException('Compressing backup.json failed.');
+                }
                 $compressed += strlen($out);
                 $this->write($out);
             }

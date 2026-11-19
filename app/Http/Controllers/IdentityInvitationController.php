@@ -11,6 +11,7 @@ use App\Modules\Identity\Models\UserPasskey;
 use App\Modules\Identity\Services\InvitationService;
 use App\Modules\Identity\Services\WebAuthnCeremony;
 use App\Modules\Identity\Services\WebAuthnChallengeRepository;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -95,8 +96,8 @@ class IdentityInvitationController extends Controller
             'name' => $invitation->name,
             'email' => $invitation->email,
             'invitedBy' => $invitation->inviter()->value('name'),
-            'expiresAt' => $invitation->expires_at->toIso8601String(),
-            'expiresAtLocal' => $invitation->expires_at->timezone(config('app.timezone'))->format('d-m-Y H:i'),
+            'expiresAt' => CarbonImmutable::parse($invitation->expires_at)->toIso8601String(),
+            'expiresAtLocal' => CarbonImmutable::parse($invitation->expires_at)->timezone(config('app.timezone'))->format('d-m-Y H:i'),
         ])->header('Cache-Control', 'no-store, private');
     }
 
@@ -193,7 +194,7 @@ class IdentityInvitationController extends Controller
         return redirect()->route('identity.users.index')->with([
             'status' => $status,
             'invitation_url' => $this->invitations->link($result['token']),
-            'invitation_expires_at' => $result['invitation']->expires_at->timezone(config('app.timezone'))->format('d-m-Y H:i'),
+            'invitation_expires_at' => CarbonImmutable::parse($result['invitation']->expires_at)->timezone(config('app.timezone'))->format('d-m-Y H:i'),
         ]);
     }
 
@@ -201,7 +202,8 @@ class IdentityInvitationController extends Controller
     {
         Auth::login($user);
         $request->session()->regenerate();
-        $request->session()->put('identity.session_revoked_at', $user->session_revoked_at?->getTimestamp());
+        $revokedAt = $user->session_revoked_at;
+        $request->session()->put('identity.session_revoked_at', $revokedAt !== null ? CarbonImmutable::parse($revokedAt)->getTimestamp() : null);
 
         return response()->json([
             'ok' => true,
