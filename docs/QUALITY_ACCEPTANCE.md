@@ -42,6 +42,14 @@ de daarin beschreven begrensde JPEG-afgeleide. Hij implementeert geen IIIF
 Image API, tileserver of onbeperkte deep zoom. Bij een manifestfout blijft de
 zichtbare voorbeeldafbeelding beschikbaar en meldt de viewer de fallback.
 
+### Browsertests: logs bij een fout
+
+Faalt de browsertest (`php tests/Browser/fixture.php --run`), dan bewaart de
+fixture de uitvoer van de ingest-worker, de outbox-dispatcher en de server, plus
+de applicatielogs, in `tests/Browser/test-results/fixture-logs/`. In CI zit die
+map in het artefact `browser-acceptance-<sha>`. Een upload die "completed" wordt
+zonder eigen bestand voor de foto staat daar als waarschuwing in.
+
 ## English
 
 ### Benchmark contract
@@ -81,3 +89,11 @@ The embedded viewer reads the existing IIIF Presentation 3 manifest and shows
 its bounded JPEG derivative. It does not implement the IIIF Image API, a tile
 server, or unbounded deep zoom. If manifest loading fails, the visible preview
 remains available and the viewer announces the fallback.
+
+### Browser tests: logs on failure
+
+When the browser test (`php tests/Browser/fixture.php --run`) fails, the fixture
+keeps the output of the ingest worker, the outbox dispatcher and the server, plus
+the application logs, in `tests/Browser/test-results/fixture-logs/`. In CI that
+folder is part of the `browser-acceptance-<sha>` artifact. An upload that ends
+"completed" without a file of its own for its photo is logged there as a warning.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Ingest\Jobs;
 
+use App\Modules\Catalogue\Models\AssetFile;
 use App\Modules\Ingest\Models\AssetAuditEvent;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use App\Modules\Ingest\Services\ImageProcessor;
@@ -46,6 +47,10 @@ class ProcessUpload implements ShouldQueue
         $upload = QuarantineUpload::query()->findOrFail($this->uploadId);
         try {
             $processor->process($upload);
+            if (! AssetFile::query()->where('storage_key', $upload->storage_key)->where('asset_id', $upload->asset_id)->exists()) {
+                // Completed without a file of its own for this photo: never silent.
+                Log::warning(__('shared.ingest_log.completed_without_file'), ['upload_id' => $upload->id, 'asset_id' => $upload->asset_id]);
+            }
             $this->finish($upload, $token, 'completed', null);
         } catch (ValidationException $exception) {
             $reason = implode(' ', array_merge(...array_values($exception->errors())));

@@ -41,6 +41,7 @@ $environment = [
 ];
 $cwd = dirname(__DIR__, 2);
 $server = $worker = $outbox = null;
+$failed = false;
 try {
     (new Process([PHP_BINARY, __DIR__.'/console.php', 'installation:prepare', '--quiet-code'], $cwd, $environment, timeout: 120))->mustRun();
     $server = startReleaseServer($cwd, $environment, __DIR__.'/router.php');
@@ -82,6 +83,10 @@ try {
     if ($test !== null && (! $test->isTerminated() || $test->getExitCode() !== 0)) {
         throw new RuntimeException('Browser acceptance failed; inspect the Playwright report.');
     }
+} catch (Throwable $exception) {
+    $failed = true;
+
+    throw $exception;
 } finally {
     if (isset($test)) {
         $test->stop();
@@ -89,5 +94,31 @@ try {
     $outbox?->stop();
     $worker?->stop();
     $server?->stop();
+    if ($failed) {
+        saveFixtureLogs($root, __DIR__.'/test-results/fixture-logs', ['worker' => $worker, 'outbox' => $outbox, 'server' => $server]);
+    }
     removeReleaseFixture($root);
+}
+
+/**
+ * Keeps what the background processes and the app logged, next to the Playwright
+ * report, so a failure in the ingest worker can be explained afterwards. The CI job
+ * uploads tests/Browser/test-results as an artifact. No secrets: the setup code file
+ * and the fixture settings are not copied.
+ *
+ * @param  array<string, Process|null>  $processes
+ */
+function saveFixtureLogs(string $root, string $target, array $processes): void
+{
+    if (! is_dir($target) && ! mkdir($target, 0755, true) && ! is_dir($target)) {
+        return;
+    }
+    foreach ($processes as $name => $process) {
+        if ($process !== null) {
+            file_put_contents($target.'/'.$name.'.log', $process->getOutput()."\n--- stderr ---\n".$process->getErrorOutput());
+        }
+    }
+    foreach (glob($root.'/storage/logs/*.log') ?: [] as $log) {
+        copy($log, $target.'/app-'.basename($log));
+    }
 }

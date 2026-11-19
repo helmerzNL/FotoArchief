@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 return [
+    'ingest_log' => [
+        'already_stored' => 'Upload already stored; processing skipped.',
+        'completed_without_file' => 'Upload completed without a file of its own for this photo.',
+    ],
     'generated' => [
         't_01903bed4dde40a7' => 'De ingest-worker heeft de OCR-taak uitgevoerd en tekst opgeslagen (taal ',
         't_01c175f3a99f2038' => 'Verwerking mislukt. Controleer worker, opslag en scanner; probeer daarna opnieuw.',
