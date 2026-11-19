@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Models\Role;
 use App\Models\User;
-use App\Modules\Identity\Models\UserInvitation;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -24,49 +23,7 @@ function identityUser(string $roleKey = 'administrator', ?string $email = null):
     return $user;
 }
 
-it('creates a single-use invitation link visible only after creation', function (): void {
-    $admin = identityUser();
-    $role = Role::query()->where('key', 'viewer')->firstOrFail();
-
-    $response = $this->actingAs($admin)->post(route('identity.invitations.store'), [
-        'name' => 'Nieuwe gebruiker',
-        'email' => 'new@example.test',
-        'roles' => [$role->id],
-    ]);
-
-    $response->assertRedirect(route('identity.users.index'))->assertSessionHas('invitation_url');
-    $url = session('invitation_url');
-    expect(UserInvitation::query()->where('email', 'new@example.test')->count())->toBe(1)
-        ->and($url)->toContain('/uitnodigingen/');
-
-    $this->actingAs($admin)->get(route('identity.users.index'))->assertSee($url);
-    $this->actingAs($admin)->get(route('identity.users.index'))->assertDontSee($url);
-});
-
-it('accepts an invitation once and assigns the selected role', function (): void {
-    $admin = identityUser();
-    $role = Role::query()->where('key', 'viewer')->firstOrFail();
-    $this->actingAs($admin)->post(route('identity.invitations.store'), [
-        'name' => 'Viewer',
-        'email' => 'viewer@example.test',
-        'roles' => [$role->id],
-    ]);
-    $token = basename((string) session('invitation_url'));
-
-    $this->post(route('identity.invitations.complete', ['token' => $token]), [
-        'password' => 'a-new-secure-password',
-        'password_confirmation' => 'a-new-secure-password',
-    ])->assertRedirect('/login');
-
-    $user = User::query()->where('email', 'viewer@example.test')->firstOrFail();
-    expect($user->roles()->where('key', 'viewer')->exists())->toBeTrue()
-        ->and(Hash::check('a-new-secure-password', $user->password))->toBeTrue();
-
-    $this->post(route('identity.invitations.complete', ['token' => $token]), [
-        'password' => 'a-new-secure-password',
-        'password_confirmation' => 'a-new-secure-password',
-    ])->assertSessionHasErrors('token');
-});
+// Invitation and reset links: tests/Feature/IdentityInvitationTest.php.
 
 it('manages roles and revokes existing sessions', function (): void {
     $admin = identityUser();

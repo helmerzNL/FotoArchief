@@ -251,6 +251,7 @@ final class UserVisibleTextScanner
             'ALTER TABLE ai_embeddings ADD COLUMN IF NOT EXISTS embedding_vector vector',
             'CREATE INDEX IF NOT EXISTS ai_embeddings_generation_current_idx ON ai_embeddings (ai_embedding_generation_id) WHERE stale_at IS NULL',
             'tesseract unknown',
+            'd-m-Y H:i',
         ], true)
             || str_starts_with($text, 'translations:check ')
             || str_starts_with($text, 'operations:ocr-smoke ')

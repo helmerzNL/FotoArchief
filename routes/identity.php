@@ -10,8 +10,16 @@ use App\Http\Controllers\IdentitySecurityController;
 use App\Http\Controllers\IdentityUserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/uitnodigingen/{token}', [IdentityInvitationController::class, 'accept'])->name('identity.invitations.accept');
-Route::post('/uitnodigingen/{token}', [IdentityInvitationController::class, 'complete'])->name('identity.invitations.complete');
+// Invitation and reset links (App-Guidance user-management.md): public, the token is the
+// credential, and it never appears in a path or query string.
+Route::middleware('throttle:60,1')->prefix('uitnodiging')->name('identity.invitations.')->group(function (): void {
+    Route::get('/', [IdentityInvitationController::class, 'show'])->name('show');
+    Route::get('/gegevens', [IdentityInvitationController::class, 'info'])->name('info');
+    Route::post('/wachtwoord', [IdentityInvitationController::class, 'password'])->name('password');
+    Route::post('/passkey/opties', [IdentityInvitationController::class, 'passkeyOptions'])->name('passkey.options');
+    Route::post('/passkey', [IdentityInvitationController::class, 'passkeyStore'])->name('passkey.store');
+});
+Route::get('/uitnodigingen/{token}', [IdentityInvitationController::class, 'legacy'])->middleware('throttle:60,1')->name('identity.invitations.legacy');
 Route::post('/passkeys/login/options', [IdentityPasskeyController::class, 'loginOptions'])->middleware('guest')->name('identity.passkeys.login.options');
 Route::post('/passkeys/login', [IdentityPasskeyController::class, 'login'])->middleware('guest')->name('identity.passkeys.login');
 Route::post('/herstelcodes/login', [IdentityRecoveryCodeController::class, 'login'])->middleware('guest')->name('identity.recovery.login');
@@ -32,4 +40,6 @@ Route::middleware(['auth', 'can:users.manage'])->prefix('admin/identiteit')->nam
     Route::put('/gebruikers/{user}', [IdentityUserController::class, 'update'])->name('users.update');
     Route::post('/gebruikers/{user}/deactiveren', [IdentityUserController::class, 'deactivate'])->name('users.deactivate');
     Route::post('/gebruikers/{user}/heractiveren', [IdentityUserController::class, 'reactivate'])->name('users.reactivate');
+    Route::post('/gebruikers/{user}/herstellink', [IdentityInvitationController::class, 'reset'])->name('users.reset');
+    Route::delete('/uitnodigingen/{invitation}', [IdentityInvitationController::class, 'revoke'])->name('invitations.revoke');
 });

@@ -21,16 +21,33 @@ class WebAuthnCeremony
      */
     public function enrollmentOptions(User $user): array
     {
-        $server = $this->relyingParty->server();
-        $options = $server->getCreateArgs(
+        return $this->enrollmentOptionsFor(
             $user->id,
             $user->email,
             $user->name,
+            $user->passkeys()->pluck('credential_id')->map(fn (string $id): string => base64_decode($id, true) ?: '')->all(),
+        );
+    }
+
+    /**
+     * The same registration options for an account that is being made or reset through an
+     * invitation link, so an invitation uses this ceremony and no second one.
+     *
+     * @param  array<int, string>  $excludeCredentialIds
+     * @return array{options: object, challenge: string}
+     */
+    public function enrollmentOptionsFor(string $userId, string $email, string $name, array $excludeCredentialIds = []): array
+    {
+        $server = $this->relyingParty->server();
+        $options = $server->getCreateArgs(
+            $userId,
+            $email,
+            $name,
             60,
             'required',
             'preferred',
             null,
-            $user->passkeys()->pluck('credential_id')->map(fn (string $id): string => base64_decode($id, true) ?: '')->all(),
+            $excludeCredentialIds,
         );
 
         return ['options' => $options, 'challenge' => $server->getChallenge()->getBinaryString()];

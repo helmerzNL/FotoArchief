@@ -114,7 +114,26 @@
             <div class="notice" role="status">
                 <strong>{{ __('shell.notices.invitation_link.title') }}</strong>
                 <p>{{ __('shell.notices.invitation_link.body') }}</p>
-                <p><code>{{ session('invitation_url') }}</code></p>
+                <p><input type="text" readonly value="{{ session('invitation_url') }}" data-invitation-link aria-label="{{ __('shell.notices.invitation_link.title') }}"> <button type="button" class="secondary" data-invitation-copy data-copied="{{ __('shell.notices.invitation_link.copied') }}">{{ __('shell.notices.invitation_link.copy') }}</button></p>
+                @if(session('invitation_expires_at'))
+                    <p>{{ __('shell.notices.invitation_link.expires', ['expires_at' => session('invitation_expires_at')]) }}</p>
+                @endif
+                <script>
+                    (function () {
+                        var field = document.querySelector('[data-invitation-link]');
+                        var button = document.querySelector('[data-invitation-copy]');
+                        button.addEventListener('click', function () {
+                            var done = function () { button.textContent = button.dataset.copied; };
+                            field.select();
+                            if (navigator.clipboard && window.isSecureContext) {
+                                navigator.clipboard.writeText(field.value).then(done, function () { document.execCommand('copy'); done(); });
+                            } else {
+                                document.execCommand('copy');
+                                done();
+                            }
+                        });
+                    }());
+                </script>
             </div>
         @endif
         @if(session('recovery_codes'))
