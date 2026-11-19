@@ -15,6 +15,7 @@ use App\Modules\Ingest\Models\ProcessingJob;
 use App\Modules\Ingest\Models\QuarantineUpload;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -34,7 +35,15 @@ class ImageProcessor
 
     public function process(QuarantineUpload $upload): void
     {
-        if (AssetFile::query()->where('storage_key', $upload->storage_key)->exists()) {
+        $existing = AssetFile::query()->where('storage_key', $upload->storage_key)->first(['id', 'asset_id']);
+        if ($existing !== null) {
+            // A retry of an upload that was already stored. Logged so that an upload
+            // that ends "completed" without a file of its own can be explained.
+            Log::warning(__('shared.ingest_log.already_stored'), [
+                'upload_id' => $upload->id, 'asset_id' => $upload->asset_id,
+                'existing_file_id' => $existing->id, 'existing_asset_id' => $existing->asset_id,
+            ]);
+
             return;
         }
         $disk = Storage::disk($upload->storage_disk);
