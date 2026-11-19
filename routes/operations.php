@@ -38,9 +38,9 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/system/update-status', [SystemUpdateController::class, 'status'])->name('system.update-status');
     Route::get('/onedrive', [OneDriveController::class, 'show'])->name('onedrive');
     Route::post('/onedrive/app', [OneDriveController::class, 'saveApp'])->name('onedrive.app');
-    Route::delete('/onedrive/app', [OneDriveController::class, 'deleteApp'])->name('onedrive.app.delete');
     Route::post('/onedrive/connect', [OneDriveController::class, 'connect'])->name('onedrive.connect');
-    Route::get('/onedrive/callback', [OneDriveController::class, 'callback'])->name('onedrive.callback');
+    Route::post('/onedrive/connect/poll', [OneDriveController::class, 'poll'])->name('onedrive.poll');
+    Route::post('/onedrive/connect/cancel', [OneDriveController::class, 'cancel'])->name('onedrive.cancel');
     Route::post('/onedrive/folder', [OneDriveController::class, 'chooseFolder'])->name('onedrive.folder');
     Route::post('/onedrive/start', [OneDriveController::class, 'start'])->name('onedrive.start');
     Route::post('/onedrive/disconnect', [OneDriveController::class, 'disconnect'])->name('onedrive.disconnect');

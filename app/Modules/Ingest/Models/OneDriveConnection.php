@@ -10,8 +10,12 @@ use Illuminate\Support\Carbon;
 /**
  * The single OneDrive connection of this installation (row id 1).
  *
+ * The app connects through the shared, public Vistora app registration
+ * (config ingest.onedrive.client_id). client_id holds an administrator's own client ID
+ * when one was entered; it wins over the shared one. There is no client secret: the
+ * client_secret column of the first version is no longer read or written.
+ *
  * @property string|null $client_id
- * @property string|null $client_secret
  * @property string|null $refresh_token
  * @property string|null $access_token
  * @property Carbon|null $access_token_expires_at
@@ -37,7 +41,6 @@ class OneDriveConnection extends Model
     protected $hidden = ['client_secret', 'refresh_token', 'access_token', 'delta_link', 'resume_link'];
 
     protected $casts = [
-        'client_secret' => 'encrypted',
         'refresh_token' => 'encrypted',
         'access_token' => 'encrypted',
         'access_token_expires_at' => 'datetime',
@@ -50,10 +53,20 @@ class OneDriveConnection extends Model
         return self::query()->firstOrCreate(['id' => 1]);
     }
 
+    /** The client ID the app signs in with: the own one, else the shared Vistora app. */
+    public function clientId(): string
+    {
+        return $this->usesCustomApp() ? (string) $this->client_id : (string) config('ingest.onedrive.client_id', '');
+    }
+
+    public function usesCustomApp(): bool
+    {
+        return is_string($this->client_id) && $this->client_id !== '';
+    }
+
     public function hasApp(): bool
     {
-        return is_string($this->client_id) && $this->client_id !== ''
-            && is_string($this->client_secret) && $this->client_secret !== '';
+        return $this->clientId() !== '';
     }
 
     public function isConnected(): bool

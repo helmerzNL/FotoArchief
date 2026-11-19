@@ -17,11 +17,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
 
 const ONEDRIVE_GRAPH = 'https://graph.microsoft.com/v1.0';
 const ONEDRIVE_LOGIN = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
+const ONEDRIVE_APP = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 
 function oneDriveUser(string $role = 'administrator'): User
 {
@@ -36,8 +38,6 @@ function connectedDrive(array $overrides = []): OneDriveConnection
 {
     $connection = OneDriveConnection::current();
     $connection->forceFill($overrides + [
-        'client_id' => '11111111-2222-3333-4444-555555555555',
-        'client_secret' => 'app-secret-value',
         'refresh_token' => 'refresh-token-value',
         'access_token' => 'access-token-value',
         'access_token_expires_at' => now()->addHour(),
@@ -123,7 +123,7 @@ function fakeDrive(): void
 
 beforeEach(function (): void {
     $this->seed(DatabaseSeeder::class);
-    config(['filesystems.default' => 'local', 'ingest.scanner' => 'none']);
+    config(['filesystems.default' => 'local', 'ingest.scanner' => 'none', 'ingest.onedrive.client_id' => ONEDRIVE_APP]);
     Storage::fake('local');
     Queue::fake();
 });
@@ -238,10 +238,12 @@ it('renews the access token, stores the new refresh token and keeps both secret'
     $raw = (array) DB::table('onedrive_connections')->first();
     expect($connection->refresh_token)->toBe('new-refresh')
         ->and($connection->access_token)->toBe('new-access')
-        ->and(implode(' ', array_map('strval', $raw)))->not->toContain('new-refresh')->not->toContain('app-secret-value')
+        ->and(implode(' ', array_map('strval', $raw)))->not->toContain('new-refresh')
         ->and($connection->toArray())->not->toHaveKeys(['client_secret', 'refresh_token', 'access_token']);
+    // A public client: the shared app's ID and never a secret.
     Http::assertSent(fn (Request $request): bool => $request->url() === ONEDRIVE_LOGIN.'/token'
-        && $request['grant_type'] === 'refresh_token' && $request['scope'] === 'Files.Read offline_access');
+        && $request['grant_type'] === 'refresh_token' && $request['scope'] === 'Files.Read offline_access'
+        && $request['client_id'] === ONEDRIVE_APP && ! isset($request['client_secret']));
 });
 
 it('stops with a reconnect message when Microsoft no longer accepts the connection', function (): void {
@@ -280,43 +282,172 @@ it('never sends the access token to a link outside Microsoft Graph', function ()
     Http::assertNothingSent();
 });
 
-it('connects with state and PKCE and refuses a callback with the wrong state', function (): void {
-    connectedDrive(['refresh_token' => null, 'access_token' => null, 'folder_item_id' => null]);
+/** A sign-in that is not connected yet; Microsoft answers the device code endpoint. */
+function startDeviceLogin(User $admin, mixed $test, array $deviceAnswer = []): void
+{
+    OneDriveConnection::current();
+    Http::fake([
+        ONEDRIVE_LOGIN.'/devicecode' => Http::response($deviceAnswer + [
+            'device_code' => 'secret-device-code', 'user_code' => 'ABCD-EFGH',
+            'verification_uri' => 'https://www.microsoft.com/link', 'expires_in' => 900, 'interval' => 5,
+        ]),
+    ]);
+    $test->actingAs($admin)->post(route('admin.operations.onedrive.connect'))
+        ->assertRedirect(route('admin.operations.onedrive'));
+}
+
+function pollDeviceLogin(mixed $test): TestResponse
+{
+    return $test->postJson(route('admin.operations.onedrive.poll'));
+}
+
+it('shows only a connect button, and after it a code to enter at Microsoft', function (): void {
     $admin = oneDriveUser();
+    $this->actingAs($admin)->get(route('admin.operations.onedrive'))->assertOk()
+        ->assertSee('Koppel OneDrive')
+        ->assertDontSee('data-onedrive-device', false)
+        ->assertDontSee('Clientgeheim')
+        ->assertDontSee('/callback');
 
-    $redirect = $this->actingAs($admin)->post(route('admin.operations.onedrive.connect'));
-    $location = (string) $redirect->headers->get('Location');
-    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
-    expect($location)->toStartWith(ONEDRIVE_LOGIN.'/authorize?')
-        ->and($query)->toMatchArray(['client_id' => '11111111-2222-3333-4444-555555555555', 'scope' => 'Files.Read offline_access', 'code_challenge_method' => 'S256', 'redirect_uri' => route('admin.operations.onedrive.callback')])
-        ->and($query['state'])->toHaveLength(40);
+    startDeviceLogin($admin, $this);
 
-    $this->get(route('admin.operations.onedrive.callback', ['code' => 'c', 'state' => 'wrong']))
-        ->assertRedirect(route('admin.operations.onedrive'))
-        ->assertSessionHasErrors('onedrive');
+    $page = $this->get(route('admin.operations.onedrive'))->assertOk()
+        ->assertSee('ABCD-EFGH')
+        ->assertSee('href="https://www.microsoft.com/link"', false)
+        ->assertSee('data-poll-url="/admin/operations/onedrive/connect/poll"', false);
+    expect($page->getContent())->not->toContain('secret-device-code')
+        ->and(json_encode(session()->all()))->not->toContain('secret-device-code');
+    Http::assertSent(fn (Request $request): bool => $request->url() === ONEDRIVE_LOGIN.'/devicecode'
+        && $request['client_id'] === ONEDRIVE_APP && $request['scope'] === 'Files.Read offline_access');
+});
+
+it('waits for the interval Microsoft asked for and slows down when told to', function (): void {
+    $admin = oneDriveUser();
+    startDeviceLogin($admin, $this);
+    Http::fake([ONEDRIVE_LOGIN.'/token' => Http::sequence()
+        ->push(['error' => 'authorization_pending'], 400)
+        ->push(['error' => 'slow_down'], 400)]);
+
+    // Too early: Microsoft is not asked.
+    pollDeviceLogin($this)->assertOk()->assertJson(['status' => 'pending']);
+    Http::assertNotSent(fn (Request $request): bool => str_ends_with($request->url(), '/token'));
+
+    $this->travel(6)->seconds();
+    pollDeviceLogin($this)->assertOk()->assertJson(['status' => 'pending', 'retry_after' => 5]);
+    $this->travel(6)->seconds();
+    pollDeviceLogin($this)->assertOk()->assertJson(['status' => 'pending', 'retry_after' => 10]);
+
+    Http::assertSent(fn (Request $request): bool => $request->url() === ONEDRIVE_LOGIN.'/token'
+        && $request['grant_type'] === 'urn:ietf:params:oauth:grant-type:device_code'
+        && $request['device_code'] === 'secret-device-code' && $request['client_id'] === ONEDRIVE_APP && ! isset($request['client_secret']));
     expect(OneDriveConnection::current()->isConnected())->toBeFalse();
 });
 
-it('stores the connection after a valid callback and shows the account', function (): void {
-    connectedDrive(['refresh_token' => null, 'access_token' => null, 'folder_item_id' => null, 'account_name' => null]);
+it('stores the connection once the administrator signed in and goes on to choosing a folder', function (): void {
+    $admin = oneDriveUser();
+    startDeviceLogin($admin, $this);
     Http::fake([
         ONEDRIVE_LOGIN.'/token' => Http::response(['access_token' => 'first-access', 'refresh_token' => 'first-refresh', 'expires_in' => 3600]),
         ONEDRIVE_GRAPH.'/me/drive*' => Http::response(['id' => 'drive-1', 'owner' => ['user' => ['displayName' => 'HV Zwartsluis']]]),
     ]);
-    $admin = oneDriveUser();
-    $location = (string) $this->actingAs($admin)->post(route('admin.operations.onedrive.connect'))->headers->get('Location');
-    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+    $this->travel(6)->seconds();
 
-    $this->get(route('admin.operations.onedrive.callback', ['code' => 'auth-code', 'state' => $query['state']]))
-        ->assertRedirect(route('admin.operations.onedrive', ['browse' => 'root']));
+    pollDeviceLogin($this)->assertOk()->assertJson(['status' => 'connected', 'redirect' => '/admin/operations/onedrive?browse=root']);
 
     $connection = OneDriveConnection::current();
     expect($connection->isConnected())->toBeTrue()
         ->and($connection->account_name)->toBe('HV Zwartsluis')
+        ->and($connection->connected_by_user_id)->toBe($admin->id)
+        ->and(session()->has('onedrive.device'))->toBeFalse()
         ->and(DB::table('onedrive_connection_audits')->pluck('action')->all())->toContain('connected');
-    Http::assertSent(fn (Request $request): bool => $request->url() === ONEDRIVE_LOGIN.'/token' && $request['grant_type'] === 'authorization_code'
-        && $request['code'] === 'auth-code' && is_string($request['code_verifier']) && strlen($request['code_verifier']) === 64);
-    $this->get(route('admin.operations.onedrive'))->assertOk()->assertSee('HV Zwartsluis')->assertDontSee('app-secret-value');
+    $this->get(route('admin.operations.onedrive'))->assertOk()->assertSee('HV Zwartsluis')->assertDontSee('ABCD-EFGH');
+});
+
+it('ends the sign-in with a message when it is declined or the code expired', function (string $error, string $message): void {
+    $admin = oneDriveUser();
+    startDeviceLogin($admin, $this);
+    Http::fake([ONEDRIVE_LOGIN.'/token' => Http::response(['error' => $error, 'error_description' => 'secret-device-code'], 400)]);
+    $this->travel(6)->seconds();
+
+    $answer = pollDeviceLogin($this)->assertOk()->assertJson(['status' => 'error']);
+
+    expect($answer->json('message'))->toContain($message)->not->toContain('secret-device-code')
+        ->and(session()->has('onedrive.device'))->toBeFalse()
+        ->and(OneDriveConnection::current()->isConnected())->toBeFalse();
+})->with([
+    'declined' => ['authorization_declined', 'geweigerd'],
+    'expired' => ['expired_token', 'verlopen'],
+]);
+
+it('works without script: the button asks once and returns to the page', function (): void {
+    $admin = oneDriveUser();
+    startDeviceLogin($admin, $this);
+    Http::fake([ONEDRIVE_LOGIN.'/token' => Http::response(['error' => 'authorization_pending'], 400)]);
+    $this->travel(6)->seconds();
+
+    $this->post(route('admin.operations.onedrive.poll'))->assertRedirect('/admin/operations/onedrive')->assertSessionHas('status');
+    $this->post(route('admin.operations.onedrive.cancel'))->assertRedirect(route('admin.operations.onedrive'));
+    expect(session()->has('onedrive.device'))->toBeFalse();
+    pollDeviceLogin($this)->assertJson(['status' => 'expired']);
+});
+
+it('shows only a Microsoft page to enter the code', function (): void {
+    $admin = oneDriveUser();
+    startDeviceLogin($admin, $this, ['verification_uri' => 'https://phish.example/link']);
+
+    $this->get(route('admin.operations.onedrive'))->assertSee('href="https://www.microsoft.com/link"', false)->assertDontSee('phish.example');
+});
+
+it('uses an own client ID from the browser and returns to the shared app when it is emptied', function (): void {
+    $admin = oneDriveUser();
+    connectedDrive();
+    $own = '11111111-2222-3333-4444-555555555555';
+
+    $this->actingAs($admin)->post(route('admin.operations.onedrive.app'), ['client_id' => strtoupper($own)])
+        ->assertRedirect(route('admin.operations.onedrive'));
+    $connection = OneDriveConnection::current();
+    // Tokens belong to the old app: the connection is gone.
+    expect($connection->clientId())->toBe($own)
+        ->and($connection->usesCustomApp())->toBeTrue()
+        ->and($connection->isConnected())->toBeFalse();
+
+    Http::fake([ONEDRIVE_LOGIN.'/devicecode' => Http::response(['device_code' => 'd', 'user_code' => 'U', 'verification_uri' => 'https://www.microsoft.com/link', 'expires_in' => 900, 'interval' => 5])]);
+    $this->post(route('admin.operations.onedrive.connect'));
+    Http::assertSent(fn (Request $request): bool => $request['client_id'] === $own);
+
+    $this->post(route('admin.operations.onedrive.app'), ['client_id' => ''])->assertRedirect(route('admin.operations.onedrive'));
+    expect(OneDriveConnection::current()->clientId())->toBe(ONEDRIVE_APP)
+        ->and(session()->has('onedrive.device'))->toBeFalse()
+        ->and(DB::table('onedrive_connection_audits')->pluck('action')->all())->toContain('custom_app_saved', 'custom_app_reset');
+    $this->post(route('admin.operations.onedrive.app'), ['client_id' => 'geen-id'])->assertSessionHasErrors('client_id');
+});
+
+it('says OneDrive is not set up when there is neither a shared nor an own client ID', function (): void {
+    config(['ingest.onedrive.client_id' => '']);
+    $admin = oneDriveUser();
+
+    $page = $this->actingAs($admin)->get(route('admin.operations.onedrive'))->assertOk()
+        ->assertSee('data-onedrive-unavailable', false)
+        ->assertDontSee('data-onedrive-connect', false);
+    expect($page->getContent())->toMatch('/<details[^>]*data-onedrive-advanced[^>]*\sopen[\s>]/');
+    $this->post(route('admin.operations.onedrive.connect'))->assertSessionHasErrors('onedrive');
+});
+
+it('resets a connection made with an own client secret, and keeps the list of imported files', function (): void {
+    DB::table('onedrive_connections')->insert(['id' => 1, 'client_id' => '11111111-2222-3333-4444-555555555555', 'client_secret' => 'x', 'refresh_token' => 'y', 'folder_item_id' => 'F1', 'created_at' => now(), 'updated_at' => now()]);
+    DB::table('onedrive_imported_items')->insert(['item_id' => 'A', 'outcome' => 'imported', 'original_path' => "/Foto's/a.jpg", 'created_at' => now()]);
+    $migration = require database_path('migrations/2026_11_19_000000_onedrive_public_client.php');
+
+    $migration->up();
+    $migration->up();
+
+    $row = DB::table('onedrive_connections')->first();
+    expect($row->client_id)->toBeNull()
+        ->and($row->client_secret)->toBeNull()
+        ->and($row->refresh_token)->toBeNull()
+        ->and($row->folder_item_id)->toBeNull()
+        ->and(DB::table('onedrive_imported_items')->count())->toBe(1)
+        ->and(DB::table('onedrive_connection_audits')->where('action', 'reset_for_public_client')->count())->toBe(1);
 });
 
 it('is for administrators only', function (): void {
@@ -324,6 +455,9 @@ it('is for administrators only', function (): void {
 
     $this->actingAs($editor)->get(route('admin.operations.onedrive'))->assertForbidden();
     $this->actingAs($editor)->post(route('admin.operations.onedrive.start'), ['mode' => 'import'])->assertForbidden();
+    $this->actingAs($editor)->post(route('admin.operations.onedrive.connect'))->assertForbidden();
+    $this->actingAs($editor)->postJson(route('admin.operations.onedrive.poll'))->assertForbidden();
+    $this->actingAs($editor)->post(route('admin.operations.onedrive.app'), ['client_id' => ''])->assertForbidden();
 });
 
 it('refuses a second OneDrive task while one is still running', function (): void {

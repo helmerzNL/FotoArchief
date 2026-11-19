@@ -2,7 +2,7 @@
 @section('title', __('operations.onedrive.title'))
 @section('content')
     @php
-        $steps = __('operations.onedrive.app_steps');
+        $advancedSteps = __('operations.onedrive.advanced.steps');
         $privacy = __('operations.onedrive.privacy');
         $actions = __('operations.onedrive.actions');
         $hints = __('operations.onedrive.hints');
@@ -33,40 +33,90 @@
     <h1>{{ __('operations.onedrive.title') }}</h1>
     <p class="intro">{{ __('operations.onedrive.intro') }}</p>
 
-    <section class="card" data-onedrive-step="app">
-        <h2>{{ __('operations.onedrive.app_title') }}</h2>
-        @unless($hasApp)
-            <p>{{ __('operations.onedrive.app_intro') }}</p>
-            <ol>
-                @foreach($steps as $step)
-                    <li>{{ $step }}</li>
-                @endforeach
-            </ol>
-        @endunless
-        <p>{{ __('operations.onedrive.redirect_label') }}<br><code data-onedrive-redirect>{{ $redirectUri }}</code></p>
-        <form method="POST" action="{{ route('admin.operations.onedrive.app') }}">
-            @csrf
-            <label>{{ __('operations.onedrive.client_id') }} <input type="text" name="client_id" value="{{ old('client_id', $connection->client_id) }}" required autocomplete="off" spellcheck="false"></label>
-            <label>{{ __('operations.onedrive.client_secret') }} <input type="password" name="client_secret" autocomplete="new-password" @unless($hasApp) required @endunless></label>
-            @if($hasApp)
-                <p>{{ __('operations.onedrive.secret_set') }}</p>
-            @endif
-            <button type="submit">{{ __('operations.onedrive.save_app') }}</button>
-        </form>
-        @if($hasApp)
-            <form method="POST" action="{{ route('admin.operations.onedrive.app.delete') }}">
-                @csrf
-                @method('DELETE')
-                <label><input type="checkbox" name="confirm_delete" value="1" required> {{ __('operations.onedrive.confirm_delete') }}</label>
-                <button type="submit">{{ __('operations.onedrive.delete_app') }}</button>
-            </form>
-        @endif
-    </section>
+    @unless($hasApp)
+        <p role="alert" data-onedrive-unavailable>{{ __('operations.onedrive.errors.not_available') }}</p>
+    @endunless
 
     @if($hasApp)
         <section class="card" data-onedrive-step="connect">
             <h2>{{ __('operations.onedrive.connect_title') }}</h2>
-            @if($connected)
+            @if($device !== null)
+                <div data-onedrive-device data-poll-url="{{ route('admin.operations.onedrive.poll', [], false) }}" data-interval="{{ $device['interval'] }}">
+                    <p>{{ __('operations.onedrive.device.intro') }}</p>
+                    <ol>
+                        <li><a href="{{ $device['verification_uri'] }}" target="_blank" rel="noopener noreferrer" data-onedrive-verification>{{ __('operations.onedrive.device.open', ['site' => preg_replace('#^https://(www\.)?#', '', $device['verification_uri'])]) }}</a></li>
+                        <li>{{ __('operations.onedrive.device.enter') }}
+                            <strong data-onedrive-user-code style="font-size: 1.75rem; letter-spacing: 0.15em; font-family: ui-monospace, monospace;">{{ $device['user_code'] }}</strong>
+                            <button type="button" data-onedrive-copy hidden>{{ __('operations.onedrive.device.copy') }}</button>
+                        </li>
+                        <li>{{ __('operations.onedrive.device.approve') }}</li>
+                    </ol>
+                    <p role="status" aria-live="polite" data-onedrive-device-status>{{ __('operations.onedrive.device.waiting') }}</p>
+                    <form method="POST" action="{{ route('admin.operations.onedrive.poll') }}" data-onedrive-poll-form>
+                        @csrf
+                        <button type="submit">{{ __('operations.onedrive.device.done') }}</button>
+                    </form>
+                    <form method="POST" action="{{ route('admin.operations.onedrive.cancel') }}">
+                        @csrf
+                        <button type="submit">{{ __('operations.onedrive.device.cancel') }}</button>
+                    </form>
+                </div>
+                <script>
+                    (() => {
+                        const box = document.querySelector('[data-onedrive-device]');
+                        const status = box.querySelector('[data-onedrive-device-status]');
+                        const copy = box.querySelector('[data-onedrive-copy]');
+                        const code = box.querySelector('[data-onedrive-user-code]').textContent.trim();
+                        const messages = @json(__('operations.onedrive.device'));
+                        const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+                        if (navigator.clipboard) {
+                            copy.hidden = false;
+                            copy.addEventListener('click', async () => {
+                                try {
+                                    await navigator.clipboard.writeText(code);
+                                    copy.textContent = messages.copied;
+                                } catch (error) {
+                                    copy.hidden = true;
+                                }
+                            });
+                        }
+                        let failures = 0;
+                        const poll = async () => {
+                            let answer;
+                            try {
+                                const response = await fetch(box.dataset.pollUrl, {
+                                    method: 'POST',
+                                    credentials: 'same-origin',
+                                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token },
+                                });
+                                answer = await response.json();
+                            } catch (error) {
+                                failures += 1;
+                                if (failures >= 3) {
+                                    status.textContent = messages.unreachable;
+                                    return;
+                                }
+                                window.setTimeout(poll, 5000);
+                                return;
+                            }
+                            failures = 0;
+                            if (answer.status === 'pending') {
+                                window.setTimeout(poll, Math.max(1, answer.retry_after ?? Number(box.dataset.interval)) * 1000);
+                                return;
+                            }
+                            if (answer.status === 'connected' && answer.redirect) {
+                                status.textContent = messages.connected;
+                                window.location.assign(answer.redirect);
+                                return;
+                            }
+                            status.setAttribute('role', 'alert');
+                            status.textContent = answer.message ?? messages.unreachable;
+                            box.querySelector('[data-onedrive-poll-form]').hidden = true;
+                        };
+                        window.setTimeout(poll, Number(box.dataset.interval) * 1000);
+                    })();
+                </script>
+            @elseif($connected)
                 <p data-onedrive-account>{{ __('operations.onedrive.connected_as', ['name' => $connection->account_name ?? __('operations.onedrive.unknown_owner'), 'date' => $connectedAt]) }}</p>
                 <form method="POST" action="{{ route('admin.operations.onedrive.connect') }}">
                     @csrf
@@ -82,7 +132,7 @@
                 <p>{{ __('operations.onedrive.connect_intro') }}</p>
                 <form method="POST" action="{{ route('admin.operations.onedrive.connect') }}">
                     @csrf
-                    <button type="submit">{{ __('operations.onedrive.connect') }}</button>
+                    <button type="submit" data-onedrive-connect>{{ __('operations.onedrive.connect') }}</button>
                 </form>
             @endif
         </section>
@@ -169,4 +219,21 @@
             @endforeach
         </ul>
     </section>
+
+    <details class="card" data-onedrive-advanced @unless($hasApp) open @endunless>
+        <summary>{{ __('operations.onedrive.advanced.title') }}</summary>
+        <p data-onedrive-app>{{ $connection->usesCustomApp() ? __('operations.onedrive.advanced.current_custom', ['id' => $connection->client_id]) : ($defaultClientId !== '' ? __('operations.onedrive.advanced.current_default') : __('operations.onedrive.advanced.current_none')) }}</p>
+        <p>{{ __('operations.onedrive.advanced.intro') }}</p>
+        <ol>
+            @foreach($advancedSteps as $step)
+                <li>{{ $step }}</li>
+            @endforeach
+        </ol>
+        <form method="POST" action="{{ route('admin.operations.onedrive.app') }}">
+            @csrf
+            <label>{{ __('operations.onedrive.client_id') }} <input type="text" name="client_id" value="{{ old('client_id', $connection->client_id) }}" autocomplete="off" spellcheck="false" placeholder="00000000-0000-0000-0000-000000000000"></label>
+            <p>{{ __('operations.onedrive.advanced.hint') }}</p>
+            <button type="submit">{{ __('operations.onedrive.save_app') }}</button>
+        </form>
+    </details>
 @endsection
