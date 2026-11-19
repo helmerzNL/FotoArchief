@@ -7,6 +7,7 @@ use App\Modules\Ai\Controllers\AiRelevanceController;
 use App\Modules\Ai\Controllers\AiSemanticSearchController;
 use App\Modules\Ai\Controllers\AiSettingsController;
 use App\Modules\Ai\Controllers\AiSuggestionReviewController;
+use App\Modules\ArchiveOperations\Controllers\ArchiveBackupController;
 use App\Modules\ArchiveOperations\Controllers\DiagnosticsController;
 use App\Modules\ArchiveOperations\Controllers\DuplicateDossierController;
 use App\Modules\ArchiveOperations\Controllers\FileVersionController;
@@ -36,6 +37,19 @@ Route::middleware(['auth'])->prefix('admin/operations')->name('admin.operations.
     Route::get('/system', [SystemUpdateController::class, 'show'])->name('system');
     Route::post('/system/check', [SystemUpdateController::class, 'check'])->name('system.check');
     Route::get('/system/update-status', [SystemUpdateController::class, 'status'])->name('system.update-status');
+    // In-app archive backup (App-Guidance backup-restore.md); administrators only.
+    Route::get('/backup', [ArchiveBackupController::class, 'show'])->name('backup');
+    Route::post('/backup/export', [ArchiveBackupController::class, 'export'])->name('backup.export');
+    Route::post('/backup/stage', [ArchiveBackupController::class, 'stageStart'])->name('backup.stage');
+    Route::put('/backup/stage/{token}', [ArchiveBackupController::class, 'stageChunk'])->where('token', '[0-9a-f]{32}')->name('backup.stage.chunk');
+    Route::post('/backup/stage/{token}/check', [ArchiveBackupController::class, 'stageFinish'])->where('token', '[0-9a-f]{32}')->name('backup.stage.check');
+    Route::delete('/backup/stage/{token}', [ArchiveBackupController::class, 'discard'])->where('token', '[0-9a-f]{32}')->name('backup.discard');
+    Route::post('/backup/jobs', [ArchiveBackupController::class, 'restore'])->name('backup.restore');
+    Route::get('/backup/jobs/latest', [ArchiveBackupController::class, 'latest'])->name('backup.latest');
+    Route::delete('/backup/jobs/{job}', [ArchiveBackupController::class, 'dismiss'])->name('backup.dismiss');
+    Route::get('/backup/jobs/{job}/download', [ArchiveBackupController::class, 'download'])->name('backup.download');
+    Route::get('/backup/auto/{name}', [ArchiveBackupController::class, 'downloadAutomatic'])->where('name', 'fotoarchief-auto-[0-9TZ-]+\\.(zip|json)')->name('backup.auto.download');
+    Route::post('/backup/auto/{name}/stage', [ArchiveBackupController::class, 'stageAutomatic'])->where('name', 'fotoarchief-auto-[0-9TZ-]+\\.(zip|json)')->name('backup.auto.stage');
     Route::get('/onedrive', [OneDriveController::class, 'show'])->name('onedrive');
     Route::post('/onedrive/app', [OneDriveController::class, 'saveApp'])->name('onedrive.app');
     Route::post('/onedrive/connect', [OneDriveController::class, 'connect'])->name('onedrive.connect');

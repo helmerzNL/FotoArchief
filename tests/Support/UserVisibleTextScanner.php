@@ -43,11 +43,15 @@ final class UserVisibleTextScanner
         'app/Console/Commands/ImportDirectoryCommand.php',
         'app/Console/Commands/SurveyDirectoryCommand.php',
         'app/Http/Controllers/RuntimeHealthController.php',
+        'app/Modules/ArchiveOperations/Services/ArchiveBackupExporter.php',
+        'app/Modules/ArchiveOperations/Services/ArchiveBackupRestorer.php',
+        'app/Modules/ArchiveOperations/Services/ArchiveBackupSchema.php',
         'app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php',
         'app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php',
         'app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php',
         'app/Modules/ArchiveOperations/Services/StorageMigrationService.php',
         'app/Modules/ArchiveOperations/Services/UpdateCheckService.php',
+        'app/Modules/ArchiveOperations/Support/StoredZipWriter.php',
         'app/Modules/Ingest/Services/OneDriveClient.php',
         'app/Modules/Ingest/Services/OneDriveImportService.php',
         'app/Modules/Ingest/Services/RasterImageConverter.php',
@@ -251,6 +255,7 @@ final class UserVisibleTextScanner
             'ALTER TABLE ai_embeddings ADD COLUMN IF NOT EXISTS embedding_vector vector',
             'CREATE INDEX IF NOT EXISTS ai_embeddings_generation_current_idx ON ai_embeddings (ai_embedding_generation_id) WHERE stale_at IS NULL',
             'tesseract unknown',
+            'd-m-Y H:i',
         ], true)
             || str_starts_with($text, 'translations:check ')
             || str_starts_with($text, 'operations:ocr-smoke ')

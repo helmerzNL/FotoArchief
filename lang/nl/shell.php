@@ -52,6 +52,7 @@ return [
             'notifications' => 'Mijn meldingen',
             'users' => 'Gebruikers',
             'system' => 'Systeem',
+            'backup' => 'Back-up',
             'onedrive' => 'OneDrive',
         ],
     ],
@@ -109,7 +110,10 @@ return [
     'notices' => [
         'invitation_link' => [
             'title' => 'Eenmalige uitnodigingslink',
-            'body' => 'Kopieer deze link nu en deel hem via een kanaal dat je vertrouwt. Vistora toont hem niet opnieuw.',
+            'body' => 'Kopieer deze link nu en deel hem via een kanaal dat je vertrouwt. Vistora toont hem niet opnieuw. Wie hem opent, kiest zelf een wachtwoord of passkey; jij krijgt die nooit te zien.',
+            'copy' => 'Kopiëren',
+            'copied' => 'Gekopieerd',
+            'expires' => 'De link werkt één keer en verloopt op :expires_at.',
         ],
         'recovery_codes' => [
             'title' => 'Eenmalige herstelcodes',

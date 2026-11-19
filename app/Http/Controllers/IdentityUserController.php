@@ -6,7 +6,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Modules\Identity\Models\UserInvitation;
 use App\Modules\Identity\Services\AdministratorProtection;
+use App\Modules\Identity\Services\InvitationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +20,18 @@ class IdentityUserController extends Controller
     public function index(): View
     {
         return view('identity.users.index', [
-            'users' => User::query()->with('roles')->orderBy('name')->get(),
+            'users' => User::query()
+                ->with('roles')
+                ->withCount(['passkeys', 'recoveryCodes' => fn ($query) => $query->whereNull('used_at')])
+                ->orderBy('name')
+                ->get(),
             'roles' => Role::query()->orderBy('name')->get(),
+            'invitations' => UserInvitation::query()
+                ->whereNull('accepted_at')
+                ->where('expires_at', '>', now())
+                ->with('inviter')
+                ->orderBy('expires_at')
+                ->get(),
         ]);
     }
 
@@ -44,9 +56,9 @@ class IdentityUserController extends Controller
         return redirect()->route('identity.users.index')->with('status', __('identity.generated.t_e428b4f28d705346'));
     }
 
-    public function deactivate(User $user, AdministratorProtection $protection): RedirectResponse
+    public function deactivate(User $user, AdministratorProtection $protection, InvitationService $invitations): RedirectResponse
     {
-        DB::transaction(function () use ($user, $protection): void {
+        DB::transaction(function () use ($user, $protection, $invitations): void {
             $lockedUser = User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             if (! $lockedUser->is_active) {
                 return;
@@ -59,6 +71,8 @@ class IdentityUserController extends Controller
                 'session_revoked_at' => now(),
                 'remember_token' => null,
             ])->save();
+            // A reset link for a deactivated account must not bring it back.
+            $invitations->revokeResetsFor($lockedUser);
         });
 
         return redirect()->route('identity.users.index')->with('status', __('identity.generated.t_dea2c3ee98eddc77'));

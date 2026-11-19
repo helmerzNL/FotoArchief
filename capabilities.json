@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "product_version": "0.9.88",
+  "product_version": "0.9.89",
   "capabilities": [
     {"id":"onboarding","status":"shipped","evidence":["app/Modules/Installation/InstallationBootstrap.php","docs/ONBOARDING.md"]},
     {"id":"private-ingest","status":"shipped","evidence":["app/Modules/Ingest/Jobs/ProcessUpload.php","docs/PHOTO_WORKFLOW.md"]},
@@ -12,6 +12,9 @@
     {"id":"data-exchange","status":"shipped","evidence":["app/Modules/DataExchange","docs/DATA_EXCHANGE.md"]},
     {"id":"archive-operations","status":"shipped","evidence":["app/Modules/ArchiveOperations","docs/OPERATIONS.md"]},
     {"id":"backup-and-restore","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/BackupRegisterService.php","app/Modules/ArchiveOperations/Services/RestoreDrillService.php","app/Modules/ArchiveOperations/Services/DisposableRestoreDrillService.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"in-app-archive-backup","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/ArchiveBackupJobService.php","app/Modules/ArchiveOperations/Services/ArchiveBackupRestorer.php","tests/Feature/Operations/ArchiveBackupTest.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"automatic-archive-backups","status":"conditional","requires":["FOTOARCHIEF_AUTO_BACKUP=true","a running scheduler and ingest worker","disk space for the kept backups in storage/app/backups/auto"],"evidence":["app/Modules/ArchiveOperations/Services/ArchiveBackupJobService.php","docs/BACKUP_RESTORE.md"]},
+    {"id":"invitation-and-reset-links","status":"shipped","evidence":["app/Modules/Identity/Services/InvitationService.php","tests/Feature/IdentityInvitationTest.php","docs/ONBOARDING.md"]},
     {"id":"encrypted-offsite-backup-copy","status":"conditional","requires":["operator-configured private Laravel filesystem disk","externally encrypted backup bytes"],"evidence":["app/Modules/ArchiveOperations/Services/EncryptedOffsiteCopyService.php","docs/BACKUP_RESTORE.md"]},
     {"id":"storage-migration-preflight","status":"shipped","evidence":["app/Modules/ArchiveOperations/Services/StorageMigrationService.php","docs/OPERATIONS.md"]},
     {"id":"s3-versioned-cleanup","status":"conditional","requires":["S3 source disk","provider bucket versioning status Enabled","provider noncurrent-version retention"],"evidence":["app/Modules/ArchiveOperations/Services/S3ProtectionPolicy.php","app/Modules/ArchiveOperations/Models/StorageTombstone.php","docs/BACKUP_RESTORE.md"]},

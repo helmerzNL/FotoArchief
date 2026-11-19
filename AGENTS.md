@@ -93,6 +93,18 @@ FotoArchief follows the `beta` → `main` model of App-Guidance
   `UpdateCheckService` reads the latest stable release from the github.com redirect
   and only tells administrators; `FOTOARCHIEF_UPDATE_CHECK=false` switches it off and
   `FOTOARCHIEF_DEPLOYMENT` picks the update steps shown. The app never updates itself.
+- The in-app archive backup follows App-Guidance
+  [`shared/guidelines/backup-restore.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/backup-restore.md)
+  (`ArchiveBackupJobService`, `docs/BACKUP_RESTORE.md`): a JSON or ZIP file with
+  what people entered and never credentials, restored through stage → confirm →
+  a queue job in one transaction. A new table that holds archive data belongs in
+  `ArchiveBackupSchema::SECTIONS` and in `tests/Feature/Operations/ArchiveBackupTest.php`
+  in the same change. Automatic backups are off unless `FOTOARCHIEF_AUTO_BACKUP=true`.
+- User management follows App-Guidance
+  [`shared/guidelines/user-management.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md)
+  (`InvitationService`, `docs/ONBOARDING.md`): invitation and reset links with the
+  token in the URL fragment, only its hash stored, the guest choosing their own
+  password or passkey. Removing a user stays deactivation.
 - Dependabot goes to `beta`: `target-branch: beta` on every entry in
   `.github/dependabot.yml`; security updates follow the Default branch, which is
   `beta`. `.github/workflows/dependabot-auto-merge.yml` merges every Dependabot

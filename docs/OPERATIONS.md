@@ -351,6 +351,9 @@ not told about newer betas: `releases/latest` only knows stable releases.
 
 ## Upload limits
 
+The in-app archive backup has its own limits; see
+[BACKUP_RESTORE.md](BACKUP_RESTORE.md#in-app-back-up--in-app-archive-backup).
+
 The default contractual upload ceiling is:
 
 - `APP_MAX_UPLOAD_MB=100`

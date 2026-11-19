@@ -15,6 +15,189 @@ FotoArchief must back up PostgreSQL metadata, S3-compatible object storage,
 deployment configuration and required secrets separately. A backup is not a
 recovery control until a restore has been tested.
 
+## In-app back-up / In-app archive backup
+
+### Nederlands
+
+Beheerders vinden onder **Beheer › Back-up** (`/admin/operations/backup`) een
+back-up van het archief als één bestand dat zij zelf bewaren, en het terugzetten
+daarvan, zonder shell. Dit volgt App-Guidance
+[`backup-restore.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/backup-restore.md).
+Het is de eigen kopie van wat er is ingevoerd, **geen vervanging** van de
+serverback-up hieronder (database-dump plus opslag plus installatiestatus).
+
+**Wat erin zit.** De catalogus (foto's en hun beschrijving, personen, plaatsen,
+tags, bronnen, makers, licenties en rechten, collecties, OCR-tekst), de
+versiegeschiedenis en het auditspoor per foto, publicaties en bezoekerssuggesties,
+opgeslagen zoekopdrachten en werklijsten
+(`ArchiveBackupSchema::SECTIONS`). **Nooit:** gebruikers, rollen, wachtwoorden,
+passkeys, herstelcodes, uitnodigingen, sessies, AI-providersleutels en de
+OneDrive-koppeling. Een back-up kan dus niemand toegang geven, ook niet op een
+andere server. Verwijzingen naar een gebruiker die op de doelinstallatie niet
+bestaat worden leeggemaakt; een verplichte eigenaar (van een werklijst) wordt de
+beheerder die terugzet. Previews zitten er niet in en worden na het terugzetten
+door de worker opnieuw gemaakt.
+
+**Twee vormen, keuze per download.**
+
+- *Met originelen*: een ZIP met `backup.json` (gecomprimeerd) en elk origineel
+  los en ongecomprimeerd onder `files/<eigen bestandsnaam>` (een tweede bestand
+  met dezelfde naam krijgt ` (2)`). `backup.json` verwijst per origineel naar
+  `archive_path` en de SHA-256. Je kunt de ZIP openen en één foto eruit halen
+  zonder de app.
+- *Alleen metadata*: één JSON-bestand. Dat kan alleen terug op een installatie
+  waar de originelen nog op dezelfde plek in de opslag staan; dat wordt voor elk
+  origineel gecontroleerd.
+
+**Terugzetten** gaat in stappen: kiezen → uploaden (in delen van 16 MiB, met
+voortgang) → controleren → bevestigen → vervangen. De controle leest het hele
+bestand: versie, bekende onderdelen en velden, unieke id's, elke verwijzing,
+controlegetallen en groottes. Een bestand van een **nieuwere** versie wordt
+geweigerd met de versie die het maakte; een **oudere** gaat terug (velden die
+later zijn verwijderd worden genegeerd). Pas na bevestiging start een job op de
+worker die het bestand **opnieuw** controleert, elk origineel opnieuw leest en
+tegen zijn SHA-256 controleert, en dan alles in **één transactie** vervangt. Een
+geweigerd of mislukt bestand verandert niets; originelen die al waren geschreven
+worden weer verwijderd. Een identiek origineel dat al in de opslag staat (zelfde
+installatie) wordt hergebruikt in plaats van dubbel opgeslagen.
+
+**Het werk hoort bij de server.** Maken en terugzetten zijn jobs op de
+`ingest`-queue (tabel `backup_jobs`), in stappen van ongeveer een minuut binnen de
+workerlimiet van 120 seconden. De pagina verlaten, herladen of sluiten stopt niets;
+het scherm pakt de job weer op. Er loopt er één tegelijk. Een job die 15 minuten
+niet beweegt (herstart) wordt als onderbroken gemeld: er is dan niets veranderd.
+Het geüploade bestand staat tot het gebruikt is in
+`DATA_PATH/storage/app/backup-staging/.restore-<token>`; ongebruikt wordt het na
+een uur opgeruimd, net als een gemaakte download.
+
+**Voortgang.** Eén blok onder de knoppen met een label en, waar te tellen, een
+gevulde balk: uploaden (megabytes van totaal), controleren (origineel 4 van 10),
+vervangen (rijen). Wat niet te tellen is beweegt zonder getal. Na afloop staat
+waar de tijd heen ging (server, controleren, vervangen); de serverlog noemt
+dezelfde getallen.
+
+**Limieten (buiten de repository vast te leggen).**
+
+- Upload van een back-up om terug te zetten: hoogstens
+  `FOTOARCHIEF_BACKUP_UPLOAD_MAX_BYTES` (standaard 10737418240 = 10 GiB), plus
+  ongeveer dezelfde vrije ruimte in `storage/app/backup-staging`. Elk deel is
+  16 MiB, dus PHP's `post_max_size` (110 MB in het image) en de standaard
+  bodylimiet van Apache (1 GiB) begrenzen een back-up niet.
+- Elk origineel in een back-up blijft onder `APP_MAX_UPLOAD_BYTES`.
+- `backup.json` zelf: hoogstens 512 MiB.
+- Het vervangen is één transactie in één workerstap; op zeer grote archieven
+  (honderdduizenden rijen) kan die de 120 seconden van de worker naderen. Gebruik
+  dan de scripts hieronder.
+- Het maken van een back-up met originelen heeft tijdelijk de grootte van het
+  archief vrij nodig in `storage/app/backup-staging`.
+
+**Automatische back-ups** (standaard uit). Met `FOTOARCHIEF_AUTO_BACKUP=true`
+maakt de server zelf hetzelfde bestand, elke `FOTOARCHIEF_AUTO_BACKUP_HOURS`
+uur (standaard 12), en bewaart de nieuwste `FOTOARCHIEF_AUTO_BACKUP_KEEP`
+(standaard 14) in `DATA_PATH/storage/app/backups/auto` als
+`fotoarchief-auto-JJJJ-MM-DD-UUMMSSZ.zip` (`.json` met
+`FOTOARCHIEF_AUTO_BACKUP_FILES=false`). De scheduler kijkt elke vijf minuten
+(`operations:auto-backup`); wanneer er een nodig is volgt uit de bestandsnamen,
+niet uit de database, zodat een terugzetting het schema niet verschuift. Een
+nieuwe wordt onder een tijdelijke naam geschreven, gesynchroniseerd en hernoemd;
+pas daarna valt de oudste af, zodat een volle schijf nooit een back-up kost. Geen
+back-up zolang er geen actieve beheerder is of terwijl een terugzetting loopt.
+Een mislukte back-up staat in rood op het scherm en wordt na een uur opnieuw
+geprobeerd. Elke back-up bevat elk origineel: reken op ongeveer
+*aantal × (originelen + database)* schijfruimte. Ze staan op dezelfde schijf als
+het archief en beschermen tegen vergissingen, niet tegen het verlies van de
+server: kopieer er af en toe een naar een andere plek. Ze worden op het scherm
+getoond om te downloaden of terug te zetten (via een kopie; het bewaarde bestand
+blijft staan).
+
+Geen Compose- of `.env`-bestand is hiervoor gewijzigd; alle variabelen zijn
+optioneel en hebben een standaardwaarde.
+
+### English
+
+Administrators find **Admin › Backup** (`/admin/operations/backup`): the archive
+as one file they keep themselves, and restoring it, without a shell, following
+App-Guidance
+[`backup-restore.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/backup-restore.md).
+It is the owner's own copy of what was entered, **not a replacement** for the
+server backup below (database dump plus storage plus installation state).
+
+**Contents.** The catalogue (photos and their description, people, places, tags,
+sources, contributors, licences and rights, collections, OCR text), each photo's
+version history and audit trail, publications and visitor suggestions, saved
+searches and work lists (`ArchiveBackupSchema::SECTIONS`). **Never:** users,
+roles, passwords, passkeys, recovery codes, invitations, sessions, AI provider
+keys and the OneDrive connection, so a backup cannot give anyone access, on this
+server or another. Links to a user who does not exist on the target are emptied;
+a required owner (of a work list) becomes the administrator who restores.
+Previews are not included; the worker makes them again after a restore.
+
+**Two forms, chosen per download.** *With originals*: a ZIP with `backup.json`
+(deflated) and every original loose and stored (not deflated) under
+`files/<its own name>` (a second file with the same name gets ` (2)`);
+`backup.json` refers to each by `archive_path` and SHA-256, and the ZIP can be
+opened to take one photo out without the app. *Metadata only*: one JSON file,
+which restores only where the originals are still at the same place in storage;
+that is checked for every original.
+
+**Restoring** is choose → upload (in 16 MiB chunks, with progress) → check →
+confirm → replace. The check reads the whole file: version, known sections and
+columns, unique ids, every link, checksums and sizes. A file from a **newer**
+version is refused with the version that wrote it; an **older** one restores
+(columns removed since are ignored). Only after confirmation does a worker job
+check the file **again**, read every original again against its SHA-256, and
+replace everything in **one transaction**. A refused or failed file changes
+nothing, and originals already written are removed again. An identical original
+already in storage (the same installation) is reused rather than stored twice.
+
+**The work belongs to the server.** Making and restoring are jobs on the
+`ingest` queue (table `backup_jobs`), in steps of about a minute inside the
+worker's 120-second limit. Leaving, reloading or closing the page stops nothing;
+the screen picks the job up again. One runs at a time; a job that has not moved
+for 15 minutes (a restart) is reported as interrupted, with nothing changed. The
+uploaded file waits in `DATA_PATH/storage/app/backup-staging/.restore-<token>`
+until used; unused, it is removed after an hour, like a finished download.
+
+**Progress.** One block under the buttons with a label and, where countable, a
+filled bar: upload (megabytes of total), checking (original 4 of 10), replacing
+(rows). What cannot be counted moves without a figure. Afterwards the screen
+shows where the time went (server, checking, replacing); the server log has the
+same numbers.
+
+**Limits (to record outside the repository).**
+
+- Restore upload: at most `FOTOARCHIEF_BACKUP_UPLOAD_MAX_BYTES` (default
+  10737418240 = 10 GiB), plus about the same free space in
+  `storage/app/backup-staging`. Each chunk is 16 MiB, so PHP's `post_max_size`
+  (110 MB in the image) and Apache's default body limit (1 GiB) do not cap a
+  backup.
+- Each original in a backup stays under `APP_MAX_UPLOAD_BYTES`.
+- `backup.json` itself: at most 512 MiB.
+- Replacing is one transaction in one worker step; on very large archives
+  (hundreds of thousands of rows) it can approach the worker's 120 seconds. Use
+  the scripts below then.
+- Making a backup with originals temporarily needs the archive's size free in
+  `storage/app/backup-staging`.
+
+**Automatic backups** (off by default). With `FOTOARCHIEF_AUTO_BACKUP=true` the
+server makes the same file every `FOTOARCHIEF_AUTO_BACKUP_HOURS` hours (default
+12) and keeps the newest `FOTOARCHIEF_AUTO_BACKUP_KEEP` (default 14) in
+`DATA_PATH/storage/app/backups/auto` as `fotoarchief-auto-YYYY-MM-DD-HHMMSSZ.zip`
+(`.json` with `FOTOARCHIEF_AUTO_BACKUP_FILES=false`). The scheduler looks every
+five minutes (`operations:auto-backup`); when one is due follows from the file
+names, not the database, so a restore does not shift the schedule. A new one is
+written under a temporary name, synced and renamed; only then is the oldest
+removed, so a full disk never costs a backup. None is made while there is no
+active administrator or while a restore runs. A failure is shown in red on the
+screen and retried after an hour. Every backup holds every original: plan for
+about *number × (originals + database)* of disk space. They sit on the same disk
+as the archive and guard against mistakes, not against losing the server: copy
+one elsewhere now and then. The screen lists them to download or restore (through
+a copy; the kept file stays).
+
+No Compose or `.env` file changed for this; every variable is optional and has a
+default.
+
 ## Consistent local-storage backup scripts
 
 With Docker all data lives in plain folders under `DATA_PATH` (see

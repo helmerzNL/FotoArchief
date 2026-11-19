@@ -63,6 +63,16 @@ return [
                 ],
                 'reason' => 'The required extension map selects one of these fixed purpose labels at runtime.',
             ],
+            [
+                'file' => 'app/Modules/ArchiveOperations/Services/ArchiveBackupJobService.php',
+                'keys' => ['operations.backup.errors.*'],
+                'reason' => 'A backup job stores its error as a message key with parameters and words it when read, in the reader\'s language (App-Guidance backup-restore.md).',
+            ],
+            [
+                'file' => 'app/Modules/ArchiveOperations/Controllers/ArchiveBackupController.php',
+                'keys' => ['operations.backup.errors.*'],
+                'reason' => 'A refused backup file carries the message key of its reason; the controller words it for the answer.',
+            ],
         ],
 
         /*

@@ -117,6 +117,7 @@ final class StaffNavigation
                 ['key' => 'notifications', 'label' => __('shell.nav.items.notifications'), 'route' => 'admin.operations.notifications', 'match' => ['admin.operations.notifications*'], 'any' => ['assets.view']],
                 ['key' => 'users', 'label' => __('shell.nav.items.users'), 'route' => 'identity.users.index', 'match' => ['identity.users.*', 'identity.invitations.*'], 'any' => ['users.manage']],
                 ['key' => 'system', 'label' => __('shell.nav.items.system'), 'route' => 'admin.operations.system', 'match' => ['admin.operations.system*'], 'any' => ['users.manage']],
+                ['key' => 'backup', 'label' => __('shell.nav.items.backup'), 'route' => 'admin.operations.backup', 'match' => ['admin.operations.backup*'], 'any' => ['users.manage']],
             ]],
         ];
     }

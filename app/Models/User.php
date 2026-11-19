@@ -22,6 +22,7 @@ class User extends Authenticatable
 
     protected $attributes = [
         'is_active' => true,
+        'has_password' => true,
         'preferred_locale' => 'nl',
     ];
 
@@ -29,6 +30,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'has_password',
         'is_active',
         'deactivated_at',
         'session_revoked_at',
@@ -44,6 +46,7 @@ class User extends Authenticatable
     {
         return [
             'is_active' => 'boolean',
+            'has_password' => 'boolean',
             'deactivated_at' => 'immutable_datetime',
             'session_revoked_at' => 'immutable_datetime',
             'interface_preferences' => 'array',
@@ -64,6 +67,16 @@ class User extends Authenticatable
     public function sentInvitations(): HasMany
     {
         return $this->hasMany(UserInvitation::class, 'invited_by_user_id');
+    }
+
+    /**
+     * Reset invitations made for this user (App-Guidance user-management.md).
+     *
+     * @return HasMany<UserInvitation, $this>
+     */
+    public function resetInvitations(): HasMany
+    {
+        return $this->hasMany(UserInvitation::class)->where('kind', UserInvitation::KIND_RESET);
     }
 
     /**
