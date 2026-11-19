@@ -68,6 +68,7 @@ class ArchiveBackupJobService
             ->whereIn('kind', [BackupJob::KIND_EXPORT, BackupJob::KIND_RESTORE])
             ->where(fn ($query) => $query->where('status', BackupJob::STATUS_RUNNING)->orWhereNull('dismissed_at'))
             ->orderByDesc('created_at')
+            ->orderByDesc('id') // ULIDs are time-ordered: two jobs made in the same second
             ->first();
     }
 

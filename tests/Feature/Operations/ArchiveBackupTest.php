@@ -100,15 +100,18 @@ function bkSnapshot(): array
 /** Runs the queued steps the way the worker does, until the job is finished. */
 function bkRun(): ?BackupJob
 {
+    $ran = null;
     for ($i = 0; $i < 200; $i++) {
         $job = BackupJob::query()->where('status', BackupJob::STATUS_RUNNING)->first();
         if ($job === null) {
             break;
         }
+        $ran = $job->id;
         (new RunArchiveBackupJob($job->id))->handle(app(ArchiveBackupJobService::class));
     }
 
-    return BackupJob::query()->orderByDesc('created_at')->first();
+    // The job that was run, not the newest by created_at: two jobs made in the same second tie.
+    return $ran !== null ? BackupJob::query()->find($ran) : BackupJob::query()->orderByDesc('created_at')->orderByDesc('id')->first();
 }
 
 /** Makes a backup through the routes and returns the path of the downloaded file. */
