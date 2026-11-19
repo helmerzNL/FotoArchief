@@ -193,7 +193,7 @@ class InvitationService
             $base = rtrim(url('/'), '/');
         }
 
-        return $base.route('identity.invitations.show', [], false).'#'.$token;
+        return $base.route('identity.invitations.show', [], false).'#invite='.$token;
     }
 
     /** Pending reset links for a user disappear with the account's deactivation. */

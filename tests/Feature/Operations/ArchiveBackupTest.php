@@ -69,8 +69,8 @@ function bkSeedArchive(User $admin, string $bytes = 'original-bytes-one'): array
     ]);
     DB::table('asset_versions')->insert(['id' => bkId(), 'asset_id' => $asset, 'asset_file_id' => $file, 'version_number' => 1, 'created_at' => $now, 'updated_at' => $now]);
     DB::table('locations')->insert([
-        ['id' => $parentPlace, 'name' => 'Gelderland', 'parent_id' => null, 'created_at' => $now, 'updated_at' => $now],
-        ['id' => $place, 'name' => 'Zutphen', 'parent_id' => $parentPlace, 'created_at' => $now, 'updated_at' => $now],
+        ['id' => $parentPlace, 'name' => 'Gelderland', 'normalized_name' => 'gelderland', 'parent_id' => null, 'created_at' => $now, 'updated_at' => $now],
+        ['id' => $place, 'name' => 'Zutphen', 'normalized_name' => 'zutphen', 'parent_id' => $parentPlace, 'created_at' => $now, 'updated_at' => $now],
     ]);
     DB::table('asset_locations')->insert(['id' => bkId(), 'asset_id' => $asset, 'location_id' => $place, 'relationship_type' => 'depicted', 'created_at' => $now, 'updated_at' => $now]);
     DB::table('tags')->insert(['id' => $tag, 'name' => 'Molen', 'slug' => 'molen', 'created_at' => $now, 'updated_at' => $now]);
