@@ -39,8 +39,10 @@ opensource-licentie gekozen.
   SHA-256-controle en asynchrone JPEG-afgeleiden;
 - metadata- en rechtenbeheer met optimistic locking en revisiehistorie;
 - begrensde CSV-import en geautoriseerde JSON-, CSV- en ZIP-export;
-- uitnodigingen, rollen, sessie-intrekking, passkeys en eenmalige
-  herstelcodes;
+- uitnodigingen en herstellinks (de gast kiest zelf wachtwoord of passkey),
+  rollen, sessie-intrekking, passkeys en eenmalige herstelcodes;
+- een back-up van het archief als één bestand (met of zonder originelen) en
+  terugzetten vanuit het beheerscherm, optioneel automatisch op de server;
 - collecties, personen, organisaties, historische locaties, herkomst, tags,
   synoniemen, geavanceerd zoeken en bulkacties;
 - publicatiereview, embargo- en privacycontrole, publieke collecties,
@@ -202,7 +204,10 @@ separate owner decisions; no open-source licence has been selected.
   verification and asynchronous JPEG derivatives;
 - metadata and rights management with optimistic locking and revision history;
 - bounded CSV import and authorised JSON, CSV and ZIP export;
-- invitations, roles, session revocation, passkeys and one-time recovery codes;
+- invitation and reset links (the guest chooses their own password or passkey),
+  roles, session revocation, passkeys and one-time recovery codes;
+- an archive backup as one file (with or without originals) and restoring it
+  from the administration screen, optionally automatic on the server;
 - collections, people, organisations, historical locations, provenance, tags,
   synonyms, advanced search and bulk actions;
 - publication review, embargo and privacy controls, public collections,

@@ -123,6 +123,39 @@ that URL through a trusted out-of-band channel. Role changes and deactivations
 immediately invalidate existing sessions on their next request, and concurrent
 updates are guarded so at least one active administrator remains.
 
+Invitations follow App-Guidance
+[`user-management.md`](https://github.com/Flux76HQ/App-Guidance/blob/main/shared/guidelines/user-management.md):
+
+- The link is `<APP_URL>/uitnodiging#invite=<token>`, built from `APP_URL`, never
+  from the request. The token (32 random bytes) is in the fragment, which a
+  browser never sends to a server; the page sends it only in the
+  `X-Invite-Token` header or a JSON body and removes it from the address bar.
+  The database keeps only its SHA-256.
+- The guest chooses their own password (minimum 14 characters) or a passkey,
+  through the same WebAuthn ceremony as the security page, and is signed in.
+  The administrator never learns either. The guest may adjust their name; the
+  e-mail address is fixed by the invitation.
+- A link works once and expires after 7 days (`IDENTITY_INVITATION_TTL_MINUTES`).
+  A used invitation is deleted; expired ones are purged when the next invitation
+  is made. Unknown, expired, used and malformed links all answer the same `404`.
+- **New login link** (a reset) on the user list brings back a user who lost
+  their password or passkey. Nothing changes until the guest has set the new
+  login; then the old password, passkeys and recovery codes are removed and every
+  session of that user is signed out. One reset link per user; your own login is
+  changed on the security page instead. Deactivating a user revokes an open reset
+  link.
+- Open invitations are listed with their expiry and can be revoked. An address
+  with an open invitation is reserved. At most 50 users (active users plus open
+  new-account invitations, `IDENTITY_MAX_USERS`) and 50 open invitations
+  (`IDENTITY_MAX_OPEN_INVITATIONS`).
+- Creation, use and revocation of an invitation are written to the application
+  log (who, what, when; never the token).
+- Removing someone stays **deactivation**: the account and its history remain,
+  and the user cannot sign in. Invitations, passkeys and recovery codes are never
+  part of the in-app archive backup.
+- Links in the old form `/uitnodigingen/<token>` (made before 0.9.89) still work
+  once; they lead to the new page.
+
 Users can register passkeys from `/admin/identiteit/beveiliging`. Passkey
 Relying Party ID and allowed origin are derived from the configured `APP_URL`;
 set it to the exact public HTTPS origin before enrolling users. `http://localhost`

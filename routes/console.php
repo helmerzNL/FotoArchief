@@ -8,6 +8,7 @@ use App\Modules\Ai\Services\ExternalAiProvider;
 use App\Modules\Ai\Services\LocalAiProvider;
 use App\Modules\ArchiveOperations\Models\BackupRecord;
 use App\Modules\ArchiveOperations\Models\RestoreDrill;
+use App\Modules\ArchiveOperations\Services\ArchiveBackupJobService;
 use App\Modules\ArchiveOperations\Services\BackupRegisterService;
 use App\Modules\ArchiveOperations\Services\DisposableRestoreDrillService;
 use App\Modules\ArchiveOperations\Services\EncryptedOffsiteCopyService;
@@ -297,7 +298,17 @@ Artisan::command('ai:analyse-archive {--dry-run : Report the estimate without qu
     return 0;
 })->purpose('Estimate or queue image analysis for photos that have none yet; the cost ceiling is explicit and nothing is written without review');
 
+Artisan::command('operations:auto-backup', function (ArchiveBackupJobService $backups): int {
+    $job = $backups->runAutomaticIfDue();
+    if ($job !== null) {
+        $this->info('Automatische back-up gestart: '.$job->id);
+    }
+
+    return 0;
+})->purpose('Start an automatic archive backup when one is due (FOTOARCHIEF_AUTO_BACKUP=true); App-Guidance backup-restore.md');
+
 Schedule::command('ai:sweep')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('operations:auto-backup')->everyFiveMinutes()->withoutOverlapping(10);
 Schedule::command('exchange:prune-exports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('exchange:recover-imports')->everyFifteenMinutes()->withoutOverlapping();
 Schedule::command('operations:heartbeat scheduler')->everyMinute()->withoutOverlapping();

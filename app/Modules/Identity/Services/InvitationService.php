@@ -7,7 +7,9 @@ namespace App\Modules\Identity\Services;
 use App\Models\User;
 use App\Modules\Identity\Models\UserInvitation;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -208,9 +210,9 @@ class InvitationService
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Builder<UserInvitation>
+     * @return Builder<UserInvitation>
      */
-    private function pendingNew(): \Illuminate\Database\Eloquent\Builder
+    private function pendingNew(): Builder
     {
         return UserInvitation::query()
             ->where('kind', UserInvitation::KIND_NEW)
@@ -223,7 +225,7 @@ class InvitationService
         UserInvitation::query()->where('expires_at', '<=', now())->delete();
     }
 
-    private function expiry(): \Illuminate\Support\Carbon
+    private function expiry(): Carbon
     {
         return now()->addMinutes((int) config('identity.invitation_ttl_minutes'));
     }
@@ -235,7 +237,7 @@ class InvitationService
             'invitation_id' => $invitation->id,
             'kind' => $invitation->kind,
             'user_id' => $invitation->user_id,
-            'expires_at' => $invitation->expires_at?->toIso8601String(),
+            'expires_at' => $invitation->expires_at->toIso8601String(),
         ]);
     }
 }
