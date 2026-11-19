@@ -287,18 +287,22 @@ is an operator change to their own Compose files; this feature changes none.
 ### Importeren vanuit OneDrive / Importing from OneDrive
 
 Een beheerder kan de **persoonlijke** OneDrive van de vereniging koppelen en daaruit importeren,
-zonder rclone of commandoregel (besluit: ADR-0022 in App-Guidance). FotoArchief leest alleen
-(`Files.Read`): op OneDrive wordt nooit iets gewijzigd, verplaatst of verwijderd. Werk- of
+zonder rclone of commandoregel (besluiten: ADR-0022 en ADR-0023 in App-Guidance). FotoArchief leest
+alleen (`Files.Read`): op OneDrive wordt nooit iets gewijzigd, verplaatst of verwijderd. Werk- of
 schoolaccounts (OneDrive for Business) worden niet ondersteund.
 
-1. **App registreren bij Microsoft** (eenmalig, gratis, per installatie): ga naar
-   [entra.microsoft.com](https://entra.microsoft.com) → *App-registraties* → *Nieuwe registratie*,
-   accounttype **alleen persoonlijke Microsoft-accounts**, platform **Web** met de redirect-URL die
-   FotoArchief op **Foto's → OneDrive** toont (`<APP_URL>/admin/operations/onedrive/callback`).
-   Maak onder *Certificaten en geheimen* een clientgeheim. Controleer onder *API-machtigingen* dat
-   Microsoft Graph, gedelegeerd, `Files.Read` en `offline_access` aanwezig zijn.
-2. **Foto's → OneDrive:** vul toepassings-ID en clientgeheim in (het geheim wordt versleuteld
-   opgeslagen en daarna nooit meer getoond), kies **Koppelen met Microsoft** en meld u aan.
+1. **Foto's → OneDrive → Koppel OneDrive.** De app toont een code. Open
+   [microsoft.com/link](https://www.microsoft.com/link) (mag op een telefoon), vul de code in, meld
+   u aan met het Microsoft-account waarop de foto's staan en geef toestemming om bestanden te lezen.
+   De pagina gaat vanzelf door naar de mapkeuze. Er is geen app-registratie, clientgeheim,
+   redirect-URL of https nodig: de app gebruikt één gedeelde, openbare app-registratie (OAuth 2.0
+   *device code flow*, tenant `consumers`). De code is 15 minuten geldig; daarna klikt u opnieuw.
+2. **Geavanceerd (optioneel): eigen app-registratie.** Wie liever een eigen registratie gebruikt,
+   maakt die op [entra.microsoft.com](https://entra.microsoft.com): *alleen persoonlijke
+   Microsoft-accounts*, *Verificatie → Openbare clientstromen toestaan: Ja*, gedelegeerd
+   `Files.Read` en `offline_access`; geen redirect-URI en geen clientgeheim. Vul de toepassings-ID
+   in onder **Geavanceerd** op dezelfde pagina; een leeg veld gaat terug naar de gedeelde
+   registratie. Een andere registratie verbreekt de koppeling.
 3. **Map kiezen**, dan **Tellen** (aantal per extensie, wat wordt geïmporteerd en wat overgeslagen;
    er wordt niets opgeslagen) en **Importeren**. De voortgang staat bij *Taken*, met pauzeren,
    annuleren en opnieuw proberen.
@@ -315,19 +319,25 @@ minuten). Verwijderde of verplaatste bestanden op OneDrive blijven in FotoArchie
 automatische synchronisatie: een beheerder start elke import.
 
 **Netwerk:** de server moet `login.microsoftonline.com`, `graph.microsoft.com` en
-`*.files.1drv.com` (downloads) kunnen bereiken. **Onderhoud:** Microsoft laat een clientgeheim
-hoogstens 24 maanden geldig zijn; vervang het op tijd op dezelfde pagina. Een koppeling die 90
+`*.files.1drv.com` (downloads) kunnen bereiken; de browser van de beheerder opent
+`microsoft.com/link`. **Onderhoud:** er is geen clientgeheim dat verloopt. Een koppeling die 90
 dagen niet is gebruikt vervalt; een import stopt dan met de melding om opnieuw te koppelen.
 **Ontkoppelen** wist de tokens (al geïmporteerde foto's blijven staan); trek de toestemming ook in
 via account.microsoft.com → *Privacy* → *Apps en services*. Operatoractie: geen Compose- of
-omgevingswijziging.
+omgevingswijziging. Bij de update naar 0.9.87 wordt een bestaande koppeling met een eigen
+clientgeheim eenmalig gewist; koppel daarna opnieuw (al geïmporteerde bestanden worden niet nog eens
+geïmporteerd).
 
 **English.** An administrator can connect the society's **personal** OneDrive and import from it
-without rclone (ADR-0022 in App-Guidance), read-only (`Files.Read`); work or school accounts are not
-supported. Register an app once per installation at entra.microsoft.com (*personal Microsoft
-accounts only*, platform Web with the redirect URL shown on **Photos → OneDrive**, a client secret,
-delegated `Files.Read` and `offline_access`), enter client ID and secret on that page (the secret is
-stored encrypted and never shown again), connect, choose a folder, **Count** (nothing is stored) and
+without rclone (ADR-0022 and ADR-0023 in App-Guidance), read-only (`Files.Read`); work or school
+accounts are not supported. On **Photos → OneDrive** click **Connect OneDrive**: the app shows a code
+to enter at [microsoft.com/link](https://www.microsoft.com/link) (a phone works too); sign in with the
+account that holds the photos, approve read access, and the page moves on by itself. No app
+registration, client secret, redirect URL or HTTPS is needed: the app uses one shared, public app
+registration (OAuth 2.0 device code flow, tenant `consumers`). Under **Advanced** an administrator
+can enter an own client ID instead (*personal Microsoft accounts only*, *Allow public client flows:
+Yes*, delegated `Files.Read` and `offline_access`, no redirect URI, no secret); an empty field returns
+to the shared registration. Then choose a folder, **Count** (nothing is stored) and
 **Import**; progress appears under *Runs*. **Fetch new files** later reads only changes since the
 previous import, **Continue importing** resumes a stopped, failed or cancelled import, and an
 imported file is never offered twice. Every file takes the same checks as the folder import, with
@@ -335,10 +345,11 @@ imported file is never offered twice. Every file takes the same checks as the fo
 most 25 files within the 120 s job timeout, the import pauses at 200 pending uploads and follows
 `Retry-After` (up to 15 minutes), and files deleted or moved on OneDrive stay in FotoArchief. There
 is no automatic sync. The server must reach `login.microsoftonline.com`, `graph.microsoft.com` and
-`*.files.1drv.com`. Renew the client secret before it expires (24 months at most); a connection
-unused for 90 days expires and the import then asks to reconnect. **Disconnect** wipes the tokens;
+`*.files.1drv.com`; the administrator's browser opens `microsoft.com/link`. There is no client
+secret to renew; a connection unused for 90 days expires and the import then asks to reconnect. **Disconnect** wipes the tokens;
 also revoke the consent at account.microsoft.com → *Privacy* → *Apps and services*. Operator action:
-no Compose or environment change.
+no Compose or environment change; the update to 0.9.87 wipes a connection made with an own client
+secret once, so connect again (already imported files are not imported twice).
 
 ### Autorisatie
 

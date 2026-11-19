@@ -6,6 +6,7 @@ namespace App\Modules\Ingest\Services;
 
 use App\Models\User;
 use App\Modules\Ingest\Exceptions\OneDriveDeltaExpired;
+use App\Modules\Ingest\Exceptions\OneDriveDevicePending;
 use App\Modules\Ingest\Exceptions\OneDriveReconnectRequired;
 use App\Modules\Ingest\Exceptions\OneDriveThrottled;
 use App\Modules\Ingest\Models\OneDriveConnection;
@@ -18,36 +19,70 @@ use RuntimeException;
 
 /**
  * Talks to the Microsoft identity platform and Microsoft Graph for one personal
- * OneDrive, read-only (ADR-0022): tenant "consumers", delegated Files.Read and
- * offline_access, and only GET requests to Graph. The token endpoint is the only
- * place a POST goes, and secrets or tokens never appear in an exception message.
+ * OneDrive, read-only (ADR-0022, ADR-0023): tenant "consumers", a public client that
+ * signs in with a code (device code flow), delegated Files.Read and offline_access,
+ * and only GET requests to Graph. The device code and token endpoints are the only
+ * places a POST goes, and codes or tokens never appear in an exception message.
  */
 class OneDriveClient
 {
-    public function authorizationUrl(OneDriveConnection $connection, string $redirectUri, string $state, string $codeChallenge): string
+    public const VERIFICATION_URI = 'https://www.microsoft.com/link';
+
+    /**
+     * Starts a sign-in with a code (OAuth 2.0 device code flow): the administrator opens
+     * the verification page, enters the code and approves read access.
+     *
+     * @return array{device_code: string, user_code: string, verification_uri: string, expires_in: int, interval: int}
+     */
+    public function startDeviceLogin(OneDriveConnection $connection): array
     {
-        return $this->authority().'/authorize?'.http_build_query([
-            'client_id' => (string) $connection->client_id,
-            'response_type' => 'code',
-            'redirect_uri' => $redirectUri,
-            'response_mode' => 'query',
-            'scope' => $this->scopes(),
-            'state' => $state,
-            'code_challenge' => $codeChallenge,
-            'code_challenge_method' => 'S256',
-            'prompt' => 'select_account',
-        ], '', '&', PHP_QUERY_RFC3986);
+        try {
+            $response = Http::asForm()->acceptJson()
+                ->timeout((int) config('ingest.onedrive.timeout_seconds', 30))
+                ->post($this->authority().'/devicecode', [
+                    'client_id' => $connection->clientId(),
+                    'scope' => $this->scopes(),
+                ]);
+        } catch (ConnectionException $exception) {
+            throw new RuntimeException(__('operations.onedrive.errors.connection'), previous: $exception);
+        }
+        $error = $response->json('error');
+        if (in_array($error, ['invalid_client', 'unauthorized_client'], true)) {
+            throw new RuntimeException(__('operations.onedrive.errors.app_rejected'));
+        }
+        $deviceCode = $response->json('device_code');
+        $userCode = $response->json('user_code');
+        if (! $response->successful() || ! is_string($deviceCode) || $deviceCode === '' || ! is_string($userCode) || $userCode === '') {
+            // Only the error code, never the body: it can echo request values.
+            throw new RuntimeException(__('operations.onedrive.errors.token', ['code' => is_string($error) ? $error : 'HTTP '.$response->status()]));
+        }
+        $uri = $response->json('verification_uri');
+
+        return [
+            'device_code' => $deviceCode,
+            'user_code' => mb_substr($userCode, 0, 40),
+            'verification_uri' => self::safeVerificationUri(is_string($uri) ? $uri : ''),
+            'expires_in' => min(max(60, (int) $response->json('expires_in', 900)), 3600),
+            'interval' => min(max((int) config('ingest.onedrive.device_poll_min_seconds', 5), (int) $response->json('interval', 5)), 60),
+        ];
     }
 
-    /** Redeems the authorization code, stores the tokens and reads who owns the drive. */
-    public function connect(OneDriveConnection $connection, string $code, string $verifier, string $redirectUri, User $user): void
+    /**
+     * Asks once whether the administrator finished signing in. On success the tokens are
+     * stored and the drive owner is read.
+     *
+     * @return 'pending'|'slow_down'|'connected'
+     */
+    public function pollDeviceLogin(OneDriveConnection $connection, string $deviceCode, User $user): string
     {
-        $tokens = $this->token($connection, [
-            'grant_type' => 'authorization_code',
-            'code' => $code,
-            'redirect_uri' => $redirectUri,
-            'code_verifier' => $verifier,
-        ]);
+        try {
+            $tokens = $this->token($connection, [
+                'grant_type' => 'urn:ietf:params:oauth:grant-type:device_code',
+                'device_code' => $deviceCode,
+            ]);
+        } catch (OneDriveDevicePending $pending) {
+            return $pending->slowDown ? 'slow_down' : 'pending';
+        }
         $this->storeTokens($connection, $tokens);
 
         $drive = $this->get($connection, '/me/drive', ['$select' => 'id,owner']);
@@ -62,7 +97,27 @@ class OneDriveClient
             'folder_name' => null,
             'folder_path' => null,
             'delta_link' => null,
+            'resume_link' => null,
+            'resume_offset' => 0,
         ])->save();
+
+        return 'connected';
+    }
+
+    /**
+     * The page the administrator opens to enter the code. Only an https page of
+     * Microsoft is shown; anything else becomes Microsoft's own short link.
+     */
+    public static function safeVerificationUri(string $uri): string
+    {
+        $parts = parse_url($uri);
+        $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+        if (is_array($parts) && ($parts['scheme'] ?? '') === 'https' && ! isset($parts['user']) && ! isset($parts['port'])
+            && ($host === 'microsoft.com' || str_ends_with($host, '.microsoft.com') || $host === 'live.com' || str_ends_with($host, '.live.com'))) {
+            return $uri;
+        }
+
+        return self::VERIFICATION_URI;
     }
 
     /**
@@ -245,14 +300,22 @@ class OneDriveClient
             $response = Http::asForm()->acceptJson()
                 ->timeout((int) config('ingest.onedrive.timeout_seconds', 30))
                 ->post($this->authority().'/token', $form + [
-                    'client_id' => (string) $connection->client_id,
-                    'client_secret' => (string) $connection->client_secret,
+                    'client_id' => $connection->clientId(),
                     'scope' => $this->scopes(),
                 ]);
         } catch (ConnectionException $exception) {
             throw new RuntimeException(__('operations.onedrive.errors.connection'), previous: $exception);
         }
         $error = $response->json('error');
+        if ($error === 'authorization_pending' || $error === 'slow_down') {
+            throw new OneDriveDevicePending($error === 'slow_down');
+        }
+        if ($error === 'authorization_declined') {
+            throw new RuntimeException(__('operations.onedrive.errors.declined'));
+        }
+        if ($error === 'expired_token' || $error === 'bad_verification_code' || $error === 'code_expired') {
+            throw new RuntimeException(__('operations.onedrive.errors.expired'));
+        }
         if (in_array($error, ['invalid_grant', 'interaction_required', 'consent_required'], true)) {
             throw new OneDriveReconnectRequired(__('operations.onedrive.errors.reconnect'));
         }

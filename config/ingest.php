@@ -24,13 +24,19 @@ return [
         'wait_seconds' => 600,
         'retry_delays' => [2, 10, 30],
     ],
-    // Read-only import from a personal OneDrive (ADR-0022 in App-Guidance). The app
-    // registration (client ID and secret) is entered in the admin screen, not here.
+    // Read-only import from a personal OneDrive (ADR-0022/ADR-0023 in App-Guidance). The
+    // administrator connects with a code (device code flow) through one shared, public
+    // app registration: no secret, no redirect URL. An administrator can enter an own
+    // client ID in the admin screen instead; that one wins over this default.
     'onedrive' => [
+        // The client ID of the shared Vistora app registration (public, not a secret).
+        'client_id' => '',
         'authority' => 'https://login.microsoftonline.com/consumers/oauth2/v2.0',
         'graph' => 'https://graph.microsoft.com/v1.0',
         'scopes' => 'Files.Read offline_access',
         'timeout_seconds' => 30,
+        // Microsoft's own polling interval wins when it is longer.
+        'device_poll_min_seconds' => 5,
         'files_per_chunk' => 25,
         // A chunk starts no new download after this many seconds and gives each
         // download at most the rest of chunk_seconds, so a chunk ends well inside the

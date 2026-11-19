@@ -12,20 +12,23 @@ use App\Modules\Ingest\Jobs\OneDriveImportJob;
 use App\Modules\Ingest\Models\OneDriveConnection;
 use App\Modules\Ingest\Services\OneDriveClient;
 use App\Modules\Ingest\Services\OneDriveImportService;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use RuntimeException;
 
 /**
- * Admin → OneDrive: register the app, connect a personal OneDrive, choose a folder,
- * count and import (ADR-0022). Administrators only; secrets are write-only.
+ * Admin → OneDrive: connect a personal OneDrive with a code, choose a folder, count and
+ * import (ADR-0022, ADR-0023). Administrators only. The app signs in through the shared,
+ * public Vistora app registration unless an administrator entered an own client ID.
  */
 class OneDriveController extends Controller
 {
-    private const SESSION_KEY = 'onedrive.oauth';
+    private const SESSION_KEY = 'onedrive.device';
 
     private const ACTIVE = [OperationRun::STATUS_QUEUED, OperationRun::STATUS_RUNNING, OperationRun::STATUS_PAUSED];
 
@@ -49,7 +52,8 @@ class OneDriveController extends Controller
 
         return view('operations.onedrive', [
             'connection' => $connection,
-            'redirectUri' => $this->redirectUri(),
+            'device' => $this->pendingDevice($request),
+            'defaultClientId' => (string) config('ingest.onedrive.client_id', ''),
             'browse' => $browse,
             'browseError' => $browseError,
             'runs' => $runs,
@@ -62,84 +66,107 @@ class OneDriveController extends Controller
         ]);
     }
 
+    /** Saves an own client ID; an empty field returns to the shared Vistora app. */
     public function saveApp(Request $request): RedirectResponse
     {
         $user = $this->authorizeAdmin($request);
-        $connection = OneDriveConnection::current();
-        $validated = $request->validate([
-            'client_id' => ['required', 'uuid'],
-            'client_secret' => [$connection->hasApp() ? 'nullable' : 'required', 'string', 'max:255'],
-        ]);
-        $clientId = strtolower((string) $validated['client_id']);
-        $changes = ['client_id' => $clientId];
-        $secret = trim((string) ($validated['client_secret'] ?? ''));
-        if ($secret !== '') {
-            $changes['client_secret'] = $secret;
-        }
-        if ($clientId !== $connection->client_id) {
-            // Tokens belong to the old app; they cannot be used with a new one.
-            $changes += $this->disconnectedState();
-        }
-        DB::transaction(function () use ($connection, $changes, $user): void {
-            $connection->forceFill($changes)->save();
-            $this->audit($user, 'app_saved');
-        });
-
-        return redirect()->route('admin.operations.onedrive')->with('status', __('operations.onedrive.flash.app_saved'));
-    }
-
-    public function deleteApp(Request $request): RedirectResponse
-    {
-        $user = $this->authorizeAdmin($request);
-        $request->validate(['confirm_delete' => ['accepted']]);
+        $validated = $request->validate(['client_id' => ['nullable', 'uuid']]);
         $this->refuseWhileRunning();
-        DB::transaction(function () use ($user): void {
-            OneDriveConnection::current()->forceFill(['client_id' => null, 'client_secret' => null] + $this->disconnectedState())->save();
-            $this->audit($user, 'app_deleted');
+        $connection = OneDriveConnection::current();
+        $clientId = strtolower(trim((string) ($validated['client_id'] ?? '')));
+        $clientId = $clientId === '' ? null : $clientId;
+        if ($clientId === $connection->client_id) {
+            return redirect()->route('admin.operations.onedrive');
+        }
+        $request->session()->forget(self::SESSION_KEY);
+        DB::transaction(function () use ($connection, $clientId, $user): void {
+            // Tokens belong to the old app; they cannot be used with another one.
+            $connection->forceFill(['client_id' => $clientId] + $this->disconnectedState())->save();
+            $this->audit($user, $clientId === null ? 'custom_app_reset' : 'custom_app_saved');
         });
 
-        return redirect()->route('admin.operations.onedrive')->with('status', __('operations.onedrive.flash.app_deleted'));
+        return redirect()->route('admin.operations.onedrive')
+            ->with('status', $clientId === null ? __('operations.onedrive.flash.custom_app_reset') : __('operations.onedrive.flash.custom_app_saved'));
     }
 
+    /** Asks Microsoft for a code and shows it; the page then waits for the sign-in. */
     public function connect(Request $request): RedirectResponse
     {
         $this->authorizeAdmin($request);
+        $this->refuseWhileRunning();
         $connection = OneDriveConnection::current();
         if (! $connection->hasApp()) {
-            return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => __('operations.onedrive.errors.no_app')]);
-        }
-        $state = Str::random(40);
-        $verifier = Str::random(64);
-        $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
-        $request->session()->put(self::SESSION_KEY, ['state' => $state, 'verifier' => $verifier, 'expires' => now()->addMinutes(10)->getTimestamp()]);
-
-        return redirect()->away($this->client->authorizationUrl($connection, $this->redirectUri(), $state, $challenge));
-    }
-
-    public function callback(Request $request): RedirectResponse
-    {
-        $user = $this->authorizeAdmin($request);
-        $pending = $request->session()->pull(self::SESSION_KEY);
-        $state = (string) $request->query('state', '');
-        if (! is_array($pending) || ! is_string($pending['state'] ?? null) || ! is_string($pending['verifier'] ?? null)
-            || (int) ($pending['expires'] ?? 0) < now()->getTimestamp() || $state === '' || ! hash_equals($pending['state'], $state)) {
-            return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => __('operations.onedrive.errors.state')]);
-        }
-        if ($request->filled('error')) {
-            return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => __('operations.onedrive.errors.denied', ['code' => Str::limit((string) $request->query('error'), 60)])]);
-        }
-        $code = (string) $request->query('code', '');
-        if ($code === '') {
-            return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => __('operations.onedrive.errors.state')]);
+            return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => __('operations.onedrive.errors.not_available')]);
         }
         try {
-            $this->client->connect(OneDriveConnection::current(), $code, $pending['verifier'], $this->redirectUri(), $user);
+            $login = $this->client->startDeviceLogin($connection);
         } catch (RuntimeException $exception) {
             return redirect()->route('admin.operations.onedrive')->withErrors(['onedrive' => $exception->getMessage()]);
         }
-        $this->audit($user, 'connected');
+        $request->session()->put(self::SESSION_KEY, [
+            // The device code lets whoever holds it finish the sign-in; keep it unreadable.
+            'device_code' => Crypt::encryptString($login['device_code']),
+            'client_id' => $connection->clientId(),
+            'user_code' => $login['user_code'],
+            'verification_uri' => $login['verification_uri'],
+            'expires' => now()->addSeconds($login['expires_in'])->getTimestamp(),
+            'interval' => $login['interval'],
+            'next_poll' => now()->addSeconds($login['interval'])->getTimestamp(),
+        ]);
 
-        return redirect()->route('admin.operations.onedrive', ['browse' => 'root'])->with('status', __('operations.onedrive.flash.connected'));
+        return redirect()->route('admin.operations.onedrive');
+    }
+
+    /**
+     * Asks Microsoft once whether the sign-in is finished, never faster than the interval
+     * Microsoft asked for. Answers JSON for the waiting page, or redirects without script.
+     */
+    public function poll(Request $request): JsonResponse|RedirectResponse
+    {
+        $user = $this->authorizeAdmin($request);
+        $connection = OneDriveConnection::current();
+        $pending = $this->pendingDevice($request);
+        if ($pending === null || $pending['client_id'] !== $connection->clientId()) {
+            $request->session()->forget(self::SESSION_KEY);
+
+            return $this->pollAnswer($request, 'expired', __('operations.onedrive.errors.expired'));
+        }
+        if ($pending['next_poll'] > now()->getTimestamp()) {
+            return $this->pollAnswer($request, 'pending', null, $pending['next_poll'] - now()->getTimestamp());
+        }
+        try {
+            $deviceCode = Crypt::decryptString($pending['device_code']);
+            $status = $this->client->pollDeviceLogin($connection, $deviceCode, $user);
+        } catch (DecryptException) {
+            $request->session()->forget(self::SESSION_KEY);
+
+            return $this->pollAnswer($request, 'expired', __('operations.onedrive.errors.expired'));
+        } catch (RuntimeException $exception) {
+            $request->session()->forget(self::SESSION_KEY);
+
+            return $this->pollAnswer($request, 'error', $exception->getMessage());
+        }
+        if ($status === 'connected') {
+            $request->session()->forget(self::SESSION_KEY);
+            $this->audit($user, 'connected');
+
+            return $this->pollAnswer($request, 'connected');
+        }
+        $interval = $pending['interval'] + ($status === 'slow_down' ? 5 : 0);
+        $request->session()->put(self::SESSION_KEY, array_merge($pending, [
+            'interval' => min($interval, 60),
+            'next_poll' => now()->addSeconds(min($interval, 60))->getTimestamp(),
+        ]));
+
+        return $this->pollAnswer($request, 'pending', null, min($interval, 60));
+    }
+
+    public function cancel(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin($request);
+        $request->session()->forget(self::SESSION_KEY);
+
+        return redirect()->route('admin.operations.onedrive');
     }
 
     public function chooseFolder(Request $request): RedirectResponse
@@ -214,9 +241,50 @@ class OneDriveController extends Controller
         }
     }
 
-    private function redirectUri(): string
+    /**
+     * The sign-in that waits for the administrator, when it has not expired.
+     *
+     * @return array{device_code: string, client_id: string, user_code: string, verification_uri: string, expires: int, interval: int, next_poll: int}|null
+     */
+    private function pendingDevice(Request $request): ?array
     {
-        return route('admin.operations.onedrive.callback');
+        $pending = $request->session()->get(self::SESSION_KEY);
+        if (! is_array($pending) || ! is_string($pending['device_code'] ?? null) || ! is_string($pending['user_code'] ?? null)
+            || ! is_string($pending['client_id'] ?? null) || (int) ($pending['expires'] ?? 0) <= now()->getTimestamp()) {
+            return null;
+        }
+
+        return [
+            'device_code' => $pending['device_code'],
+            'client_id' => $pending['client_id'],
+            'user_code' => $pending['user_code'],
+            'verification_uri' => OneDriveClient::safeVerificationUri((string) ($pending['verification_uri'] ?? '')),
+            'expires' => (int) $pending['expires'],
+            'interval' => max(1, (int) ($pending['interval'] ?? 5)),
+            'next_poll' => (int) ($pending['next_poll'] ?? 0),
+        ];
+    }
+
+    private function pollAnswer(Request $request, string $status, ?string $message = null, int $retryAfter = 0): JsonResponse|RedirectResponse
+    {
+        $target = $status === 'connected'
+            ? route('admin.operations.onedrive', ['browse' => 'root'], false)
+            : route('admin.operations.onedrive', [], false);
+        if ($request->expectsJson()) {
+            return response()->json(array_filter([
+                'status' => $status,
+                'message' => $message,
+                'retry_after' => $status === 'pending' ? max(1, $retryAfter) : null,
+                'redirect' => $status === 'pending' ? null : $target,
+            ], fn (mixed $value): bool => $value !== null));
+        }
+        $redirect = redirect()->to($target);
+
+        return match ($status) {
+            'connected' => $redirect->with('status', __('operations.onedrive.flash.connected')),
+            'pending' => $redirect->with('status', __('operations.onedrive.device.still_waiting')),
+            default => $redirect->withErrors(['onedrive' => (string) $message]),
+        };
     }
 
     private function audit(User $user, string $action): void

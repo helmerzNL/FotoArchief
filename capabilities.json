@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "product_version": "0.9.86",
+  "product_version": "0.9.87",
   "capabilities": [
     {"id":"onboarding","status":"shipped","evidence":["app/Modules/Installation/InstallationBootstrap.php","docs/ONBOARDING.md"]},
     {"id":"private-ingest","status":"shipped","evidence":["app/Modules/Ingest/Jobs/ProcessUpload.php","docs/PHOTO_WORKFLOW.md"]},
@@ -21,7 +21,7 @@
     {"id":"vistora-identity","status":"shipped","evidence":["public/brand","docs/BRANDING.md"]},
     {"id":"folder-import","status":"experimental","evidence":["app/Console/Commands/ImportDirectoryCommand.php","app/Modules/Ingest/Support/OriginalPath.php","docs/PHOTO_WORKFLOW.md"]},
     {"id":"pdf-documents","status":"conditional","requires":["poppler-utils (pdfinfo and pdftoppm) in the runtime image"],"evidence":["app/Modules/Ingest/Services/PdfPageRenderer.php","app/Modules/Ingest/Services/OriginalImageDecoder.php","docs/PHOTO_WORKFLOW.md"]},
-    {"id":"onedrive-import","status":"conditional","requires":["an Entra app registration for personal Microsoft accounts per installation","outbound access to login.microsoftonline.com, graph.microsoft.com and *.files.1drv.com"],"evidence":["app/Modules/Ingest/Services/OneDriveImportService.php","app/Modules/Ingest/Services/OneDriveClient.php","docs/PHOTO_WORKFLOW.md"]},
+    {"id":"onedrive-import","status":"conditional","requires":["the client ID of the shared public app registration in this version, or an own one entered under Advanced","outbound access to login.microsoftonline.com, graph.microsoft.com and *.files.1drv.com"],"evidence":["app/Modules/Ingest/Services/OneDriveImportService.php","app/Modules/Ingest/Services/OneDriveClient.php","app/Modules/Ingest/Controllers/OneDriveController.php","docs/PHOTO_WORKFLOW.md"]},
     {"id":"tiff-heic-originals","status":"conditional","requires":["libvips-tools (vips and vipsheader) with libheif and libde265 in the runtime image"],"evidence":["app/Modules/Ingest/Services/RasterImageConverter.php","app/Modules/Ingest/Services/OriginalImageDecoder.php","docs/PHOTO_WORKFLOW.md"]}
   ],
   "acceptance_boundaries": [
