@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: Only from beta
         run: test "$GITHUB_REF" = "refs/heads/beta"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: fotoarchief-docker-${{ github.sha }}
           path: dist
