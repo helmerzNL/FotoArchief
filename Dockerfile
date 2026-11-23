@@ -1,4 +1,4 @@
-FROM php:8.5.12-apache-bookworm AS runtime
+FROM php:8.6.0-apache-bookworm AS runtime
 
 WORKDIR /var/www/html
 
