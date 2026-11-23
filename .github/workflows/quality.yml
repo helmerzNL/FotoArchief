@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Test release-note publication guard
         run: sh tests/Smoke/release-notes.sh
@@ -154,7 +154,7 @@ jobs:
       FOTOARCHIEF_BENCH_PASSWORD: ci-disposable-database
       FOTOARCHIEF_DISPOSABLE_BENCH: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.5"
@@ -193,7 +193,7 @@ jobs:
           pg_dump --version
           pg_restore --version
           vendor/bin/pest tests/Feature/Operations/RecoveryPostgresTest.php --compact
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - name: Measure real HTTP on 50000 synthetic records
@@ -201,7 +201,7 @@ jobs:
         run: |
           node --version
           php tests/Performance/fixture.php 2>&1 | tee performance-acceptance.log
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: fotoarchief-performance-${{ github.sha }}
@@ -227,14 +227,14 @@ jobs:
           --health-cmd "pg_isready -U browser_fixture -d acceptance_browser_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.5"
           coverage: none
           tools: composer:v2
           extensions: pdo_pgsql, pdo_sqlite, gd, exif, fileinfo, zip
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -253,7 +253,7 @@ jobs:
           FOTOARCHIEF_BROWSER_DB_PORT: "5432"
           FOTOARCHIEF_BROWSER_DB_USER: browser_fixture
         run: php tests/Browser/fixture.php --run
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-acceptance-${{ github.sha }}
@@ -277,7 +277,7 @@ jobs:
       INGEST_SCANNER: clamav
       CLAMAV_HOST: clamav
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Set up smoke-test PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -458,7 +458,7 @@ jobs:
           docker compose -f deploy/compose.yaml up -d --wait app worker scheduler
           php tests/Smoke/http-onboarding.php
       - name: Upload tested image for offline installation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fotoarchief-docker-${{ github.sha }}
           path: |
@@ -574,7 +574,7 @@ jobs:
           --health-cmd "pg_isready -U fotoarchief -d zip_release_test"
           --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.5"
@@ -623,7 +623,7 @@ jobs:
           php artisan --version
           php artisan installation:prepare --quiet-code
           php artisan route:list --except-vendor > /dev/null
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: fotoarchief-php-${{ github.sha }}
           path: dist/
